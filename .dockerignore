@@ -1,0 +1,10 @@
+.git
+.env
+.env.*
+data
+keys
+**/__pycache__
+**/node_modules
+frontend
+spacetimedb
+ingestion/actor/storage

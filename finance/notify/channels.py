@@ -135,7 +135,15 @@ class EmailChannel(Channel):
         super().__init__(http, env)
         self.smtp_factory = smtp_factory
 
+    def graph(self) -> bool:
+        """Outlook / Exchange Online via Microsoft Graph sendMail (EMAIL_TRANSPORT=graph, GRAPH_SENDER=mailbox)."""
+        return self.env.get("EMAIL_TRANSPORT", "smtp") == "graph" and bool(self.env.get("GRAPH_SENDER"))
+
     def configured(self) -> bool:
+        if self.graph():
+            from ..microsoft.auth import configured
+
+            return configured(self.env)
         return bool(self.env.get("SMTP_HOST") and self.env.get("SMTP_FROM"))
 
     def recipient(self, person: Person | None) -> str:
@@ -160,6 +168,8 @@ class EmailChannel(Channel):
     def deliver(self, payload: dict, person: Person | None) -> str:
         if not payload.get("to"):
             raise DeliveryError("email: no recipient address configured")
+        if self.graph():
+            return self._send_graph(payload)
         m = EmailMessage()
         m["From"], m["To"], m["Subject"] = self.env["SMTP_FROM"], payload["to"], payload["subject"]
         m.set_content(payload["text"])
@@ -171,6 +181,26 @@ class EmailChannel(Channel):
                 s.login(self.env["SMTP_USER"], self.env.get("SMTP_PASSWORD", ""))
             s.send_message(m)
         return m["Message-ID"] or "smtp"
+
+    def _send_graph(self, payload: dict) -> str:
+        """POST /users/{sender}/sendMail with an app token (Mail.Send application permission, scoped by an
+        Exchange application access policy to the one finance mailbox)."""
+        from ..microsoft.auth import AuthError, token
+
+        try:
+            tok = token("https://graph.microsoft.com/.default", self.env, self.http)
+        except AuthError as exc:
+            raise DeliveryError(f"graph auth: {exc}") from exc
+        html = payload.get("html")
+        body = {"message": {"subject": payload["subject"],
+                            "body": {"contentType": "HTML" if html else "Text", "content": html or payload["text"]},
+                            "toRecipients": [{"emailAddress": {"address": a.strip()}} for a in payload["to"].split(",") if a.strip()]},
+                "saveToSentItems": True}
+        r = self.http.post(f"https://graph.microsoft.com/v1.0/users/{self.env['GRAPH_SENDER']}/sendMail", json=body,
+                           headers={"Authorization": f"Bearer {tok}"})
+        if r.status_code != 202:
+            raise DeliveryError(f"graph sendMail {r.status_code}: {r.text[:200]}")
+        return r.headers.get("request-id", "graph")
 
 
 class TeamsChannel(Channel):

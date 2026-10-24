@@ -150,6 +150,12 @@ def new_run(season: int, *, world: World | None = None, run_id: str | None = Non
     from .notify.dispatcher import maybe_attach as attach_notifier
     from .spacetime_mirror import maybe_attach
 
+    from .audit.seal import attach as attach_sealer
+
+    attach_sealer(ledger, run_id)  # evidence seals for the independent auditor (PITWALL_SEALS=0 to turn off)
+    from .telemetry import attach as attach_telemetry
+
+    attach_telemetry(ledger)  # Azure Monitor metrics, only when APPLICATIONINSIGHTS_CONNECTION_STRING is set
     maybe_attach(ledger, run_id)
     attach_notifier(ledger, run_id)
     reqs = load_requests(world, season) if requests is None else requests

@@ -17,6 +17,22 @@ import os
 import httpx
 
 
+def cli_token() -> str:
+    """Token of the `spacetime` CLI login (the identity that published the module), like ingestion/ingest.py."""
+    import re
+    import shutil
+    import subprocess
+    from pathlib import Path
+
+    cli = shutil.which("spacetime") or str(Path.home() / ".local" / "bin" / "spacetime")
+    try:
+        out = subprocess.run([cli, "login", "show", "--token"], capture_output=True, text=True, timeout=20).stdout
+    except (OSError, subprocess.SubprocessError):
+        return ""
+    m = re.search(r"auth token .* is (\S+)", out)
+    return m.group(1) if m else ""
+
+
 def doc_key(season: int, slug: str, url: str) -> str:
     # Same formula as ingestion/ingest.py (captured URLs are already canonical).
     return hashlib.sha256(f"fia|{season}|{slug}|{url}".encode()).hexdigest()
@@ -27,12 +43,23 @@ class SpacetimeMirror:
         self.run_id = run_id
         base = (base_url or os.environ.get("SPACETIME_URL", "http://127.0.0.1:3000")).rstrip("/")
         self.url = f"{base}/v1/database/{database or os.environ.get('SPACETIME_DB', 'pit-wall')}"
-        token = token or os.environ.get("SPACETIME_TOKEN", "")
+        token = token or os.environ.get("SPACETIME_TOKEN", "") or cli_token()
         self.http = httpx.Client(timeout=10, headers={"Authorization": f"Bearer {token}"} if token else {})
         self.errors = 0
 
     def call(self, reducer: str, args: list) -> None:
-        r = self.http.post(f"{self.url}/call/{reducer}", json=args)
+        if getattr(self, "disabled", False):
+            return
+        try:
+            r = self.http.post(f"{self.url}/call/{reducer}", json=args)
+        except httpx.HTTPError as exc:
+            self.disabled = True
+            print(f"  SpacetimeDB unreachable at {self.url} ({exc}); mirror off for this run. Is `spacetime start` running?")
+            return
+        if r.status_code == 404 and "not found" in r.text:
+            self.disabled = True
+            print(f"  SpacetimeDB has no database at {self.url}; mirror off for this run. Publish first: npm run stdb:publish:local")
+            return
         if r.status_code != 200:
             self.errors += 1
             print(f"  spacetime {reducer} -> {r.status_code}: {r.text.strip()[:200]}")
@@ -52,9 +79,9 @@ class SpacetimeMirror:
                  "fx_rate": x["fx_rate"] or "", "sponsor_id": x["sponsor_id"] or ""} for x in e["lines"]]])
         elif name in ("memo", "question", "billing"):
             item_id = payload.get("memo_id") or payload.get("q_id") or payload.get("request_id")
-            self.call("mirror_item", [{"item_id": f"{self.run_id}:{item_id}", "run_id": self.run_id, "item_type": name,
-                                       "status": payload.get("status", ""), "payload_json": json.dumps(payload, default=str)[:8000],
-                                       "updated_at": payload.get("at", "")}])
+            # mirror_item takes six separate arguments, in order (not one object like mirror_entry).
+            self.call("mirror_item", [f"{self.run_id}:{item_id}", self.run_id, name, payload.get("status", ""),
+                                      json.dumps(payload, default=str)[:8000], payload.get("at", "")])
         elif name == "event":
             p = payload.get("payload", {})
             if p.get("url") and p.get("slug"):

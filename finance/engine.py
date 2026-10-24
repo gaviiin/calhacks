@@ -334,8 +334,8 @@ class Engine:
         e = event["payload"]
         sponsor = self.world.sponsor(e["sponsor_id"])
         usd_bal, orig_bal = ledger.ar(sponsor["id"])
-        paid = int(round(orig_bal * e.get("fraction", 1.0)))
-        if paid <= 0:
+        paid = int(e["paid_orig"]) if e.get("paid_orig") is not None else int(round(orig_bal * e.get("fraction", 1.0)))
+        if paid <= 0 or orig_bal <= 0:
             return []
         when = ledger.posting_date(event["at"][:10])
         carrying = usd_bal if paid == orig_bal else prorate(usd_bal, paid, orig_bal)
