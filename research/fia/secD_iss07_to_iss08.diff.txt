@@ -1,0 +1,146 @@
+--- 
++++ 
+@@ -1,8 +1,8 @@
+-Version: Issue 07
++Version: Issue 08
+ Status: PUBLISHED
+-Date: 25/06/2026
+-WMSC approval date: 23/06/2026
++Date: 01/10/2026
++WMSC approval date: 30/09/2026
+ CONVENTION:
+ Black Text: Text unchanged from 2026 FIA F1 Regulations – Section D [Financial – F1 Teams] – Iss 06
+-Pink Text: Changes relatives to 2026 FIA F1 Regulations – Section D [ Financial – F1 Teams ] – Iss 0 6,
++Pink Text: Changes relatives to 2026 FIA F1 Regulations – Section D [ Financial – F1 Teams ] – Iss 0 7,
+ approved by WMSC on 23/06/2026
+@@ -136,3 +136,3 @@
+ D2.1.1 In addition to its obligations under Article D4 to comply with the Cost Cap and to its obligations
+-under Articles A5.1.1 and A5.8, each F1 Team must, at its own cost:
++under Articles A5.1.1 and A5.8 A5.7, each F1 Team must, at its own cost:
+ a. submit the required Reporting Documentation to the Cost Cap Administration by the Reporting
+@@ -176,3 +176,3 @@
+ Regulations; and
+-ii. the F1 Team has complied with the requirements of Article A5.8.2; and
++ii. the F1 Team has complied with the requirements of Article A5.7.2 A5.8.2; and
+ b. in respect of the Full Year Reporting Documentation only, signed by or on behalf of the F1
+@@ -361,3 +361,3 @@
+ Competition or Testing of Current Cars takes place incurred by F1 Activities Personnel;
+-s. all costs incurred with a Power Unit Manufacturer supplier that are Directly Attributable to the
++s. all costs incurre d with a Power Unit Manufacturer that are Directly Attributable to the
+ development, testing, and validation of an Alternative Fuel and Oil for use with the Power Unit
+@@ -553,3 +553,3 @@
+ costs and amounts recorded within Total Costs of the Reporting Group and the costs and
+-amounts that would have been recorded within Total Costs o f the Reporting Group had each
++amounts that would have been recorded within Total Costs of the Reporting Group had each
+ Reporting Group Entity adopted the cost model with residual asset values of zero and using
+@@ -562,3 +562,3 @@
+ undertake F1 Team’s F1 Activities, the F1 Team must make an upward adjustment in the
+-calculation of Relevant Costs equal to the amount of acce lerated depreciation, impairment
++calculation of Relevant Costs equal to the amount of accelerated depreciation, impairment
+ loss, or loss on disposal in the Financial Regulations Reporting Period from 2026 onwards in
+@@ -571,3 +571,3 @@
+ Activities, Legal Activities, Finance Activities or Sustainability Initiative Costs), the amount so
+-excluded must be included in Relevant Cos ts via an upward adjustment in the Financial
++excluded must be included in Relevant Costs via an upward adjustment in the Financial
+ Regulations Reporting Period in which the asset is first used to undertake F1 Team’s F1
+@@ -598,3 +598,3 @@
+ allocated by the F1 Team in whatever proportion it so chooses, between the Full Year
+-Financial Regu lations Reporting Period ending on 31 December 2026 and the Full Year
++Financial Regulations Reporting Period ending on 31 December 2026 and the Full Year
+ Financial Regulations Reporting Period ending on 31 December 2027. This allocation
+@@ -666,3 +666,3 @@
+ order to help identify potential anomalies, and conducting (or assisting with) investigations. The
+-Cost Cap Administration ma y also be assisted in the fulfilment of its functions under these
++Cost Cap Administration may also be assisted in the fulfilment of its functions under these
+ Financial Regulations by FIA Legal and external legal advisors.
+@@ -790,3 +790,3 @@
+ account under these Financial Regulations for such breach pursuant to Article D12. If the F1 Team
+-accepts the breach and the proposed s anctions, the Cost Cap Administration may at any time
++accepts the breach and the proposed sanctions , the Cost Cap Administration may at any time
+ during the proceedings enter into an ABA with the F1 Team reflecting the acceptance. There shall
+@@ -850,5 +850,5 @@
+ If, after considering the response to the Initial Notice, the Cost Cap Administration considers that
+-the F1 Team has fa iled to comply with the ABA, the Cost Cap Administration shall issue a Final
++the F1 Team has failed to comply with the ABA, the Cost Cap Administration shall issue a Final
+ Notice for such non -compliance and refer the matter to the Cost Cap Adjudication Panel for a
+-hearing and determination in accordance with the provisions of Article D9. Such non-compliance
++hearing and determination in accordance with the prov isions of Article D9. Such non-compliance
+ shall be treated as a distinct breach of these Financial Regulations.
+@@ -1123,3 +1123,3 @@
+ Documentation when such F1 Team has failed to meet the applicable deadlines in order to use
+-Subset Accounts stipulated by the Cost Cap Administration via a Determi nation shall have
++Subset Accounts stipulated by the Cost Cap Administration via a Determination shall have
+ committed a Non -Submission Breach. The Cost Cap Administration will refer the matter to the
+@@ -1250,6 +1250,6 @@
+ Team, as set out in Appendix C4 of the 2026 Technical Regulations; and
+-d. the purchase and/or manufacture of F1 Car components provided to a Power Unit
+-Manufacturer supplier for the Sole Purpose Of Testing Power Units For Performance And
+-Reliability on either a Single Cylinder Dynamometer, Power Unit Dynamometer, Power Train
+-Dynamometer, or ERS Test Bench.
++d. the purchas e and/or manufacture of F1 Car components provided to a Power Unit
++Manufacturer for the Sole Purpose Of Testing Power Units For Performance And Reliability on
++either a Single Cylinder Dynamometer, Power Unit Dynamometer, Power Train Dynamometer,
++or ERS Test Bench.
+ "Adjusted Indexation Rate" means the weighted average annual inflation rate for the year to 30 June of the
+@@ -1259,3 +1259,3 @@
+ "Alternative Fuel and Oil" means fuel and oil from a supplier other than the supplier that has been specified
+-by the Power Unit Manufacturer supplier to be used with the Power Units that it supplied to the F1 Team;
++by the Power Unit Manufacturer to be used with the Power Units that it supplied to the F1 Team;
+ "Applicable Rate" means:
+@@ -1361,3 +1361,3 @@
+ weighted average annual wages of the jurisdictions of the F1 Teams for the latest available year as published
+-by the Organisation for Econo mic Co -operation and Development
++by the Organisation for Economic Co -operation and Development
+ (https://www.oecd.org/en/data/indicators/average-annual-wages.html). If such data ceases to exist, the
+@@ -1451,4 +1451,4 @@
+ "F1 Activities Personnel" means any individual engaged in the undertaking of F1 Team’s F1 Activities by an
+-entity in the Legal Group on behalf of the F1 Team in question and/or on behalf of any other member of the F1
+-Team’s Legal Group, which for the avoidance of doubt includes Individual F1 Team Members.
++entity in the Legal Group of the F1 Team, which for the avoidance of doubt includes Individual F1 Team
++Members.
+ "F1 Cars " means Current Cars, Previous Cars, Historic Cars , Mule Cars and any cars intended for future
+@@ -1559,3 +1559,3 @@
+ a. TV screens that are used wholly and exclusively to display the televised race footage as
+-distributed to broadcasters and available to the general public, and/or the public relations
++distributed to broadcasters and available to the general public , and/or the public relations
+ external communications, and/or marketing communications made by the F1 Team;
+@@ -1686,3 +1686,3 @@
+ connection with any existing or reasonably contemplated litigation (including any proceedings before the
+-International Tribunal, Cost Cap Adjudication Panel, or ICA). Legal professional privilege applie s to both
++International Tribunal, Cost Cap Adjudication Panel, or ICA). Legal professional privilege applies to both
+ external and in-house lawyers. As to any document that contains non-legal advice in any part(s), such part(s)
+@@ -1744,5 +1744,4 @@
+ applicable Financial Regulations Reporting Period.
+-"Power Unit Transaction " means a transaction (other than a Related Party Transaction, Exchange
+-Transaction, or Inter-Team Transaction) between a Reporting Group Entity and a Power Unit Manufacturer
+-supplier.
++"Power Unit Transaction " means a tr ansaction (other than a Related Party Transaction, Exchange
++Transaction, or Inter-Team Transaction) between a Reporting Group Entity and a Power Unit Manufacturer.
+ "Presentation Currency" means, in relation to a Reporting Group Entity, the currency in which the Audited
+@@ -1910,7 +1909,6 @@
+ on disposal;
+-d. costs included within the Total Costs of the Reporting Group to procure up to a maximum in
+-aggregate and across different at any given point in time in the Financial Regulations Reporting
+-Periods of 50 fully electric, hydrogen powered or Hybrid Powered road vehicles and to procure
+-and install associated refuelling infrastructures at the F1 Team’s premises , including
+-depreciation, impairment loss, and loss on disposal;
++d. costs included within the Total Costs of the Reporting Group to procure up to a maximum at
++any given point in time in the Financial Regulations Reporting Periods of 50 fully electric,
++hydrogen powered or Hybrid Powered road vehicles and to procure and install associated
++refuelling infrastructures at the F1 Team’s premises;
+ e. costs Directly Attributable to the procurement and operation of fully electric or hydrogen
+@@ -1970,3 +1968,3 @@
+ Relevant Costs in respect of the preceding Full Year Financial Regulations Reporting Period. The Unused Cost
+-Cap Amount will be equal to zero in all c ases where the Cost Cap Administration ’s review of the preceding
++Cap Amount will be equal to zero in all cases where the Cost Cap Administration ’s review of the preceding
+ Full Year Financial Regulations Reporting Period is not completed by 30 November of the Full Year Financial
+@@ -2019,3 +2017,3 @@
+ D6.1 Adjustments
+-qr. Non-compliance with Article F6 of Operational Regulations
++q. Non-compliance with Article F6 of Operational Regulations
+ In the event that in the Full Year Financial Regulations Reporting Period any of the Workforce
+@@ -2055,3 +2053,3 @@
+ D6.1 Adjustments
+-qr. Non-compliance with Article F6 of Operational Regulations
++q. Non-compliance with Article F6 of Operational Regulations
+ In the event that in the Full Year Financial Regulations Reporting Period any of the Workforce
