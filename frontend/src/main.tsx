@@ -1,51 +1,65 @@
-import { StrictMode, useMemo } from 'react';
+import { StrictMode, useMemo, type ReactNode } from 'react';
 import { createRoot } from 'react-dom/client';
 import { SpacetimeDBProvider } from 'spacetimedb/react';
-import { DbConnection } from './module_bindings';
+import { DbConnection as CostCapConnection } from './cost_cap_bindings';
+import { DbConnection as EvidenceConnection } from './module_bindings';
 import App from './App';
+import { CostCapDataProvider } from './lib/costcap';
+import { EvidenceBridge } from './lib/evidence';
+import { RevenueProvider } from './lib/revenue';
+import { COST_CAP_DB, EVIDENCE_DB, HOST, SeatProvider, readToken, saveToken } from './lib/seat';
+import { SeatConnectionProvider } from './lib/seatConnection';
 import './styles.css';
 
-const HOST = import.meta.env.VITE_SPACETIMEDB_HOST ?? 'ws://localhost:3000';
-const DB_NAME = import.meta.env.VITE_SPACETIMEDB_DB_NAME ?? 'pit-wall';
-const TOKEN_KEY = `${HOST}/${DB_NAME}/auth_token`;
+// Two SpacetimeDB databases on one server, both read with this browser's read-only identity. The
+// cost cap desk is written through the seat's own connection (lib/seatConnection.tsx).
 
-// The browser gets its own read-only identity; it can subscribe to public
-// evidence but the ingest reducer rejects it.
-function readToken(): string | undefined {
-  try {
-    return localStorage.getItem(TOKEN_KEY) ?? undefined;
-  } catch {
-    return undefined;
-  }
-}
-
-function saveToken(token: string) {
-  try {
-    localStorage.setItem(TOKEN_KEY, token);
-  } catch {
-    // Private mode / blocked storage: a fresh identity next load is fine.
-  }
-}
-
-function Root() {
-  const connectionBuilder = useMemo(
+function EvidenceRoot({ children }: { children: ReactNode }) {
+  const builder = useMemo(
     () =>
-      DbConnection.builder()
+      EvidenceConnection.builder()
         .withUri(HOST)
-        .withDatabaseName(DB_NAME)
-        .withToken(readToken())
-        .onConnect((_conn, _identity, token) => saveToken(token)),
+        .withDatabaseName(EVIDENCE_DB)
+        .withToken(readToken(EVIDENCE_DB, 'observer'))
+        .onConnect((_c, _id, token) => saveToken(EVIDENCE_DB, 'observer', token)),
     []
   );
   return (
-    <SpacetimeDBProvider connectionBuilder={connectionBuilder}>
-      <App host={HOST} database={DB_NAME} />
+    <SpacetimeDBProvider connectionBuilder={builder}>
+      <EvidenceBridge>{children}</EvidenceBridge>
+    </SpacetimeDBProvider>
+  );
+}
+
+function CostCapRoot({ children }: { children: ReactNode }) {
+  const builder = useMemo(
+    () =>
+      CostCapConnection.builder()
+        .withUri(HOST)
+        .withDatabaseName(COST_CAP_DB)
+        .withToken(readToken(COST_CAP_DB, 'observer'))
+        .onConnect((_c, _id, token) => saveToken(COST_CAP_DB, 'observer', token)),
+    []
+  );
+  return (
+    <SpacetimeDBProvider connectionBuilder={builder}>
+      <CostCapDataProvider>{children}</CostCapDataProvider>
     </SpacetimeDBProvider>
   );
 }
 
 createRoot(document.getElementById('root')!).render(
   <StrictMode>
-    <Root />
+    <SeatProvider>
+      <SeatConnectionProvider>
+      <RevenueProvider>
+        <EvidenceRoot>
+          <CostCapRoot>
+            <App />
+          </CostCapRoot>
+        </EvidenceRoot>
+      </RevenueProvider>
+      </SeatConnectionProvider>
+    </SeatProvider>
   </StrictMode>
 );

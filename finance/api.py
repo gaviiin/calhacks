@@ -13,8 +13,10 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from collections import defaultdict
 
+from anyio import to_thread
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -31,6 +33,22 @@ from .world import World
 
 app = FastAPI(title="Pit Wall", version="0.1")
 app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("PITWALL_CORS", "*").split(","), allow_methods=["*"], allow_headers=["*"])
+
+# Every request shares the runs' ledgers, one SQLite connection each, and the sync endpoints run on a
+# thread pool. sqlite3 connections are not safe to use from two threads at once (a dashboard that
+# loads six panels in parallel got "bad parameter or other API misuse" and phantom KeyErrors), so
+# requests are served one at a time. A thread lock, taken off the event loop, so it also holds when
+# requests arrive on different event loops (the test client runs one per thread).
+_ONE_AT_A_TIME = threading.Lock()
+
+
+@app.middleware("http")
+async def one_request_at_a_time(request, call_next):
+    await to_thread.run_sync(_ONE_AT_A_TIME.acquire)
+    try:
+        return await call_next(request)
+    finally:
+        _ONE_AT_A_TIME.release()
 
 WORLD = World()
 STORE = AgentStore(DATA_DIR / "agents.db")

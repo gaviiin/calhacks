@@ -13,7 +13,7 @@ AGENT_MODE := $(if $(OFFLINE),--offline,)
 
 .PHONY: setup test stdb-start bindings dashboard landing \
         rulebook world api stdb-publish stdb-test bootstrap advance sync learner review-policies \
-        analyst review-items gateway redteam cost-cap-run \
+        analyst review-items gateway redteam score cost-cap-run \
         revenue-api revenue-sim revenue-demo evidence-publish evidence-replay
 
 # ---------------------------------------------------------------- shared
@@ -78,8 +78,8 @@ review-policies:  ## the Head of Cost Cap approves the proposed policies (REJECT
 analyst:          ## Cap Analyst over the NEW queue once (Claude decides what no policy covers)
 	$(ENV) uv run python -m agents.cap_analyst --once --limit 500 $(AGENT_MODE)
 
-review-items:     ## approve proposed items: the controller below materiality, the Head of Cost Cap above
-	uv run python -m agents.review items --approve-all
+review-items:     ## the Controller approves routine proposals (code-decided, below materiality); the rest wait in the dashboard
+	uv run python -m agents.review items --approve-all --source deterministic --below-materiality
 
 gateway:          ## post APPROVED items to the ERP mock once
 	uv run python -m agents.gateway --once
@@ -87,8 +87,11 @@ gateway:          ## post APPROVED items to the ERP mock once
 redteam:          ## probe the roles matrix: every forbidden action must be denied and logged
 	uv run python -m agents.redteam --probe
 
+score:            ## score proposals against the truth file (writes agents/out/scorecard.json for the dashboard)
+	uv run python -m agents.score
+
 cost-cap-run:     ## January end to end against a fresh module (needs stdb-start and api running)
-	$(MAKE) stdb-publish bootstrap advance sync learner review-policies analyst
+	$(MAKE) stdb-publish bootstrap advance sync learner review-policies analyst review-items gateway redteam score
 
 # ---------------------------------------------------------------- revenue desk (finance/) and evidence (ingestion/, spacetimedb/)
 

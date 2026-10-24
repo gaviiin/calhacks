@@ -36,3 +36,6 @@ agents/out/
 spacetime.local.json
 research/review/redteam-repro/ts/node_modules/
 replay/.cache/
+
+# typescript incremental build info
+*.tsbuildinfo

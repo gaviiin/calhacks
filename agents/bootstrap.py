@@ -11,8 +11,8 @@
      reads it back; identities.json records it on every actor entry. When the module already has an
      epoch and identities.json carries the same one, the role step is a no-op. An identities.json from
      another epoch is refused (the module was bootstrapped with other identities: republish or restore).
-  7. dashboard seats: admin mints SEATS_PER_ROLE one-time invite codes for each human role and writes
-     them to agents/state/seat_codes.json (mode 600). A person takes a seat in the dashboard by claiming
+  7. dashboard seats: admin keeps SEATS_PER_ROLE unused one-time invite codes for each human role,
+     minting new ones as seats are taken, in agents/state/seat_codes.json (mode 600). A person takes a seat in the dashboard by claiming
      one with the browser's own identity, so their approvals are checked by the same roles matrix and
      land in the audit log under that identity. The module stores only the codes' hashes.
 
@@ -28,6 +28,7 @@ Usage:
 from __future__ import annotations
 
 import argparse
+import hashlib
 import json
 import os
 import secrets
@@ -160,24 +161,35 @@ def bootstrap(stdb: StdbClient, *, identities_path: Path | None = None, rulebook
 
 
 def mint_seats(stdb: StdbClient, admin_token: str, module_epoch: str | None, path: Path | None = None) -> dict:
-    """One-time invite codes for the people who use the dashboard. Kept while the file carries the module's
-    epoch (republishing wipes agents/state/ and the invites with it); returns what was minted."""
+    """Keep SEATS_PER_ROLE unused one-time invite codes per dashboard seat: codes from this module's
+    epoch that nobody has claimed are kept, the rest are replaced (republishing wipes agents/state/ and
+    the invites with it). Returns how many were minted per role."""
     p = Path(path or config.SEAT_CODES_PATH)
-    if p.exists() and json.loads(p.read_text()).get("db_epoch") == module_epoch:
-        return {}
-    seats: dict[str, list[dict]] = {}
+    data = json.loads(p.read_text()) if p.exists() else {}
+    seats: dict[str, list[dict]] = data.get("seats", {}) if data.get("db_epoch") == module_epoch else {}
+    # the module stores each code's SHA-256 (a test double may store it as given)
+    invites = {r["code"]: r["used"] for r in stdb.sql(admin_token, "SELECT * FROM role_invite")}
+
+    def unused(code: str) -> bool:
+        key = hashlib.sha256(code.encode()).hexdigest()
+        return invites.get(key, invites.get(code, True)) is False
+
+    minted: dict[str, int] = {}
     for role, label in config.DASHBOARD_SEATS.items():
-        seats[role] = []
-        for _ in range(SEATS_PER_ROLE):
+        keep = [s for s in seats.get(role, []) if unused(s["code"])]
+        while len(keep) < SEATS_PER_ROLE:
             code = f"seat-{role.removeprefix('human_').replace('_', '-')}-{secrets.token_hex(8)}"
             stdb.call(admin_token, R.CREATE_ROLE_INVITE, R.create_role_invite(role, label, code))
-            seats[role].append({"code": code, "label": label})
-    p.parent.mkdir(parents=True, exist_ok=True)
-    tmp = p.with_suffix(".tmp")
-    tmp.write_text(json.dumps({"db_epoch": module_epoch, "seats": seats}, indent=2))
-    os.chmod(tmp, 0o600)
-    tmp.replace(p)
-    return {role: len(codes) for role, codes in seats.items()}
+            keep.append({"code": code, "label": label})
+            minted[role] = minted.get(role, 0) + 1
+        seats[role] = keep
+    if minted or not p.exists():
+        p.parent.mkdir(parents=True, exist_ok=True)
+        tmp = p.with_suffix(".tmp")
+        tmp.write_text(json.dumps({"db_epoch": module_epoch, "seats": seats}, indent=2))
+        os.chmod(tmp, 0o600)
+        tmp.replace(p)
+    return minted
 
 
 def main(argv: list[str] | None = None) -> int:
