@@ -101,8 +101,8 @@ ACCOUNTS: list[tuple[str, str, str, str, str]] = [
     ("6700", "Rent & rates", "PROPERTY", "PROPERTY", "expense"),
     ("6710", "Utilities", "RELEVANT", "RELEVANT", "expense"),
     ("6720", "Repairs & maintenance - plant & equipment", "RELEVANT", "RELEVANT", "expense"),
-    ("6730", "Repairs & maintenance - buildings", "PROPERTY", "PROPERTY", "expense"),
-    ("6740", "Health & safety", "HEALTH_SAFETY", "RELEVANT", "expense"),
+    ("6730", "Repairs & maintenance - buildings", "RELEVANT", "RELEVANT", "expense"),  # never Property Costs (ISS22 or SECD)
+    ("6740", "Health & safety", "HEALTH_SAFETY", "HR_FINANCE_LEGAL", "expense"),  # ISS22 HR Activities incl. health and safety matters
     ("6750", "IT, software & licences", "RELEVANT", "RELEVANT", "expense"),
     ("6760", "Insurance", "RELEVANT", "RELEVANT", "expense"),
     ("6800", "Heritage fleet operations", "HERITAGE", "HERITAGE", "expense"),
@@ -161,7 +161,9 @@ DEPT_PAYROLL_CATEGORY: dict[str, tuple[str, str]] = {
     "FINANCE": ("HR_FINANCE_LEGAL", "HR_FINANCE_LEGAL"),
     "LEGAL": ("HR_FINANCE_LEGAL", "HR_FINANCE_LEGAL"),
     "HERITAGE": ("HERITAGE", "HERITAGE"),
-    "APPLIED": ("SPLIT", "SPLIT"),
+    # 2026: D5.1.1.h.c.A apportions Consideration only for PU supply, Customer Team Support, FIA Projects and
+    # Standard Supply Components. Generic Applied Technologies client work is none of these: 100% Relevant.
+    "APPLIED": ("SPLIT", "RELEVANT"),
 }
 
 EXCLUDED_PERSONS = [  # three highest paid individuals (drivers are not counted), monthly GBP
@@ -200,7 +202,7 @@ _VENDORS = [
     ("ven-022", "Brightwater Creative Ltd", "GB", "GBP", None, "MARKETING", "BWC", 30, "40 Great Sutton Street, London EC1V 0DX"),
     ("ven-023", "Grandstand Events Ltd", "GB", "GBP", None, "MARKETING", "GSE", 30, "Silverstone Park, Towcester NN12 8GX"),
     ("ven-024", "Oxon Plant Services Ltd", "GB", "GBP", None, "RELEVANT", "OPS", 30, "Unit 12, Cherwell Business Village, Banbury OX16 2SP"),
-    ("ven-025", "Cherwell Building Maintenance Ltd", "GB", "GBP", None, "PROPERTY", "CBM", 30, "7 Tramway Road, Banbury OX16 5TD"),
+    ("ven-025", "Cherwell Building Maintenance Ltd", "GB", "GBP", None, "RELEVANT", "CBM", 30, "7 Tramway Road, Banbury OX16 5TD"),
     ("ven-026", "Wessex Energy Supply Ltd", "GB", "GBP", None, "RELEVANT", "WES", 14, "Energy House, Swindon SN1 1AB"),
     ("ven-027", "Heyford Park Estates Ltd", "GB", "GBP", None, "PROPERTY", "HPE", 14, "Heyford Park House, Upper Heyford OX25 5HA"),
     ("ven-028", "Trellis Engineering Software Inc", "US", "USD", None, "RELEVANT", "TES", 30, "100 Summer Street, Boston MA 02110"),

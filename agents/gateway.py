@@ -21,10 +21,19 @@ ledger), in USD minor units because the cap is measured in USD and FX was applie
         Dr capcat-ADJ_RELATED_PARTY_FAIR_VALUE  uplift
         Cr capadj-NOTIONAL_OFFSET               uplift
     (the uplift is not a cash cost; the offset account keeps the sub-ledger balanced);
+  * an allocated item (SCHEMA §11.1, proposed_category_code "ALLOCATED"): one journal line pair
+    per allocation, each moving that allocation's amount from the source account to its own
+    category (a cap_limit_excess allocation is RELEVANT; an ADJ_RELATED_PARTY_FAIR_VALUE allocation
+    adds its uplift pair, uplift = its cap effect - its amount);
   * kind="reversal" (REDUCERS.md: posting backs the original out in full and books the reversal's
     own corrected amount): the original entry with debits and credits swapped (from the gateway's
-    own record of what it posted, else rebuilt from the original item), plus the corrected line
-    booked under the reversal's proposed category.
+    own record of what it posted, else rebuilt from the original item, allocation by allocation
+    when it was allocated), plus the corrected line booked under the reversal's proposed category
+    or allocations.
+
+Category limits (SCHEMA §11.1): before the ERP call the gateway checks limit_ledger; a post that
+would take a limited category past its limit is not sent to the ERP (the module would deny it as
+cap_limit_exceeded), so the item stays APPROVED for the analyst's split to be redone.
 
 Idempotency: an item is posted to the ERP at most once. Before every ERP call we re-read the item
 (must still be APPROVED, period not locked) and check agents/state/gateway_posted.json; the ERP body
@@ -117,6 +126,38 @@ def classification_lines(category_code: str, gl: dict, fv: dict | None = None, a
     return [l for l in _pair(cap_account(category_code), gl["account_id"], amount) if l["debit_minor"] or l["credit_minor"]]
 
 
+ALLOCATED = R.ALLOCATED
+
+
+def allocation_lines(allocations: list[dict], gl: dict) -> list[dict]:
+    """One journal line pair per allocation (plus the uplift pair of a fair value allocation)."""
+    out: list[dict] = []
+    for a in sorted(allocations, key=lambda r: (int(r.get("line_no", 0)), int(r.get("id", 0)))):
+        out += classification_lines(a["category_code"], gl, None, amount=int(a["amount_usd_minor"]),
+                                    item={"cap_effect_usd_minor": a.get("cap_effect_usd_minor")})
+    return out
+
+
+def _booking_lines(item: dict, gl: dict, fair_value: dict | None, allocations: list[dict] | None,
+                   amount: int | None = None) -> list[dict]:
+    if item.get("proposed_category_code") == ALLOCATED:
+        if not allocations:
+            raise ValueError(f"item {item['id']} is ALLOCATED but has no allocation rows")
+        total = sum(int(a["amount_usd_minor"]) for a in allocations)
+        want = int(item.get("amount_usd_minor", gl["amount_usd_minor"]) if amount is None else amount)
+        if total != want:
+            raise UnbalancedEntry(f"allocations of item {item['id']} sum to {total}, not {want}")
+        return allocation_lines(allocations, gl)
+    return classification_lines(item["proposed_category_code"], gl, fair_value, amount=amount, item=item)
+
+
+def _describe(item: dict, allocations: list[dict] | None) -> str:
+    if item.get("proposed_category_code") == ALLOCATED and allocations:
+        return "ALLOCATED[" + ", ".join(f"{a.get('basis')}:{a.get('basis_ref')}={a['category_code']} "
+                                        f"{a['amount_usd_minor']}" for a in allocations) + "]"
+    return f"{item['proposed_category_code']} ({item.get('proposed_rulebook_entry_id')})"
+
+
 def reverse_lines(lines: list[dict]) -> list[dict]:
     return [{"account_id": l["account_id"], "debit_minor": l["credit_minor"], "credit_minor": l["debit_minor"]}
             for l in lines]
@@ -137,30 +178,32 @@ def check_balanced(lines: list[dict]) -> None:
 def build_journal_entry(item: dict, gl: dict, *, fair_value: dict | None = None,
                         original: dict | None = None, original_gl: dict | None = None,
                         original_lines: list[dict] | None = None,
-                        original_fair_value: dict | None = None) -> dict:
+                        original_fair_value: dict | None = None,
+                        allocations: list[dict] | None = None,
+                        original_allocations: list[dict] | None = None) -> dict:
     """Balanced JE body for POST /erp/journal_entries (see module docstring for the accounts).
 
     For a reversal, `gl` is the corrected line and `original_lines` (if the gateway recorded them)
-    or `original` + `original_gl` describe what was posted before."""
+    or `original` + `original_gl` (+ `original_allocations` when it was allocated) describe what was
+    posted before. `allocations` are this item's allocation rows when it is ALLOCATED."""
     if item.get("kind") == "reversal":
         if original is None:
             raise ValueError("reversal needs the original work item")
         if original_lines is None:
             og = original_gl or gl
-            original_lines = classification_lines(original["proposed_category_code"], og, original_fair_value,
-                                                  amount=int(original.get("amount_usd_minor", og["amount_usd_minor"])),
-                                                  item=original)
+            original_lines = _booking_lines(original, og, original_fair_value, original_allocations,
+                                            amount=int(original.get("amount_usd_minor", og["amount_usd_minor"])))
         lines = reverse_lines(original_lines)
-        lines += classification_lines(item["proposed_category_code"], gl, fair_value,
-                                      amount=int(item.get("amount_usd_minor", gl["amount_usd_minor"])), item=item)
+        lines += _booking_lines(item, gl, fair_value, allocations,
+                                amount=int(item.get("amount_usd_minor", gl["amount_usd_minor"])))
         memo = (f"WI-{item['id']} reversal of WI-{original['id']} (ERP {original.get('erp_entry_id')}), re-booked "
-                f"{gl['id']} -> {item['proposed_category_code']}: {item.get('reason') or ''}")
+                f"{gl['id']} -> {_describe(item, allocations)}: {item.get('reason') or ''}")
     else:
-        lines = classification_lines(item["proposed_category_code"], gl, fair_value, item=item)
-        memo = (f"WI-{item['id']} {gl['id']} -> {item['proposed_category_code']} "
-                f"({item.get('proposed_rulebook_entry_id')}): {item.get('reason') or ''}")
+        lines = _booking_lines(item, gl, fair_value, allocations)
+        memo = f"WI-{item['id']} {gl['id']} -> {_describe(item, allocations)}: {item.get('reason') or ''}"
     check_balanced(lines)
     refs = parse_refs(item.get("evidence_refs")) + [f"work_item:{item['id']}", gl.get("raw_ref") or gl["id"]]
+    refs += [f"allocation:{a['id']}" for a in allocations or [] if a.get("id") is not None]
     return {
         "work_item_id": str(item["id"]),
         "period_key": item.get("period_key") or gl["period_key"],
@@ -215,8 +258,40 @@ class Gateway:
                     return g
         return None
 
+    def _allocations(self, item: dict) -> list[dict] | None:
+        if item.get("proposed_category_code") != ALLOCATED:
+            return None
+        rows = self._sql(f"SELECT * FROM allocation WHERE work_item_id = {int(item['id'])}")
+        return sorted(rows, key=lambda r: (int(r.get("line_no", 0)), int(r.get("id", 0))))
+
+    def _limit_problem(self, item: dict) -> str | None:
+        """SCHEMA §11.1: would posting take a limited EXCLUDED category past its limit?"""
+        from . import policy as pol
+
+        period = item.get("period_key") or ""
+        allocs = self._allocations(item)
+        parts = ([(a["category_code"], int(a["amount_usd_minor"])) for a in allocs] if allocs is not None
+                 else [(item.get("proposed_category_code"), int(item.get("amount_usd_minor") or 0))])
+        totals: dict[str, int] = {}
+        for code, amt in parts:
+            totals[code] = totals.get(code, 0) + amt
+        rulebook = None
+        for code, amt in totals.items():
+            if amt <= 0 or not code:
+                continue
+            rulebook = rulebook if rulebook is not None else self._sql("SELECT * FROM rulebook_entry")
+            e = pol.rulebook_entry_in_force(rulebook, code, period)
+            if not e or e.get("treatment") != "EXCLUDED" or e.get("cap_limit_usd_minor") is None:
+                continue
+            led = self._one("limit_ledger", "key", f"{period[:4]}|{code}")
+            remaining = int(e["cap_limit_usd_minor"]) - int((led or {}).get("excluded_usd_minor") or 0)
+            if amt > remaining:
+                return f"cap_limit_exceeded: {code} {amt} > remaining {remaining}; needs a cap_limit_excess split"
+        return None
+
     def _entry_for(self, item: dict) -> dict:
         fv = self._fv_from_refs(item) if item.get("proposed_category_code") == ADJ_RP else None
+        allocations = self._allocations(item)
         if item.get("kind") == "reversal":
             orig = self._one("work_item", "id", int(item["subject_ref"]))
             if orig is None:
@@ -228,11 +303,12 @@ class Gateway:
             recorded = (self.ledger.get(str(orig["id"])) or {}).get("lines")
             ofv = self._fv_from_refs(orig) if orig.get("proposed_category_code") == ADJ_RP else None
             return build_journal_entry(item, gl, fair_value=fv, original=orig, original_gl=orig_gl,
-                                       original_lines=recorded, original_fair_value=ofv)
+                                       original_lines=recorded, original_fair_value=ofv, allocations=allocations,
+                                       original_allocations=self._allocations(orig))
         gl = self._one("gl_line", "id", item["subject_ref"])
         if gl is None:
             raise ValueError(f"item {item['id']}: gl line {item['subject_ref']} not found")
-        return build_journal_entry(item, gl, fair_value=fv)
+        return build_journal_entry(item, gl, fair_value=fv, allocations=allocations)
 
     def post_item(self, item: dict) -> dict:
         wid = str(item["id"])
@@ -244,6 +320,9 @@ class Gateway:
         rec = self.ledger.get(wid)
         reused = rec is not None
         if rec is None:
+            limit = self._limit_problem(fresh)
+            if limit:
+                return {"work_item_id": wid, "status": "skipped", "note": limit}
             body = self._entry_for(fresh)
             rec = {"erp_entry_id": self.world.post_journal_entry(body, self.key), "lines": body["lines"]}
             self.ledger[wid] = rec

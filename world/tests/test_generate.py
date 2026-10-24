@@ -31,12 +31,16 @@ FIELDS = {  # SCHEMA.md section 5, literally
     "history_2025_cap_classification": {"gl_line_id", "category_code", "rulebook_entry_id", "decided_by", "reason"},
     "history_2025_approval": {"gl_line_id", "amount_usd_minor", "escalated_to", "decision", "reason", "decided_on"},
     "rulebook_issue": {"published_on", "effective_from", "path"},
+    "history_2025_bill_line": {"bill_id", "gl_line_id", "line_no", "description", "amount_minor"},
+    "history_2025_bill_line_classification": {"bill_line_id", "gl_line_id", "category_code", "rulebook_entry_id", "amount_minor",
+                                              "decided_by", "reason"},
 }
 ID_FORMAT = {
     "account": r"acct-\d{4}", "department": r"dept-[A-Z]+", "vendor": r"ven-\d{3}", "gl_line": r"gl-\d{6}", "bill": r"bill-\d{5}",
     "bill_line": r"bl-\d{5}-\d+", "contract": r"ctr-\d{3}", "fair_value": r"fv-\d{3}", "bank_txn": r"bank-\d{6}",
-    "history_2025_gl_line": r"gl-2025-\d{5}", "history_2025_cap_classification": r"h25c-\d{5}(-nf1)?",
+    "history_2025_gl_line": r"gl-2025-\d{5}", "history_2025_cap_classification": r"h25c-\d{5}(-nf1|-\d)?",
     "history_2025_approval": r"h25a-\d{5}", "rulebook_issue": r"ISS22|SECD-ISS07",
+    "history_2025_bill_line": r"bl-2025-\d{5}-\d+", "history_2025_bill_line_classification": r"h25bc-\d{5}-\d+",
 }
 RE_EMITTED_SOURCES = {"gl_line", "fair_value"}
 
@@ -54,7 +58,7 @@ def test_same_seed_is_byte_identical(out_dir, tmp_path):
     generate.main(["--seed", "7", "--out", str(again), "--quiet"])
     files = sorted(p.name for p in out_dir.iterdir())
     assert files == sorted(p.name for p in again.iterdir())
-    assert len(files) == len(generate.SOURCES) + 2
+    assert len(files) == len(generate.SOURCES) + 3  # + answer_key.csv, truth_2026.csv, truth_2026_allocations.csv
     for name in files:
         assert (out_dir / name).read_bytes() == (again / name).read_bytes(), name
 
@@ -171,7 +175,7 @@ def test_file_order_is_visibility_order(recs):
 def test_reference_and_history_visible_from_start(recs):
     start = "2026-01-01"
     for src in ("account", "department", "vendor", "contract", "history_2025_gl_line", "history_2025_cap_classification",
-                "history_2025_approval"):
+                "history_2025_approval", "history_2025_bill_line", "history_2025_bill_line_classification"):
         assert all(r["visible_at"] <= start for r in recs[src]), src
     first_fv = {}
     for r in recs["fair_value"]:
@@ -247,7 +251,7 @@ def test_key_patterns_have_precedents(out_dir):
 
 def test_history_classifications_resolve_in_rulebook(recs):
     rb = {e["id"]: e for e in rulebook()}
-    for c in recs["history_2025_cap_classification"]:
+    for c in recs["history_2025_cap_classification"] + recs["history_2025_bill_line_classification"]:
         e = rb.get(c["rulebook_entry_id"])
         assert e is not None and e["rule_version"] == "ISS22" and e["category_code"] == c["category_code"], c
     assert not {c["category_code"] for c in recs["history_2025_cap_classification"]} & {"FUEL", "CATERING", "HEALTH_SAFETY", "BCDR"}

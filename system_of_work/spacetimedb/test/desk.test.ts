@@ -185,6 +185,8 @@ function proposePolicyArgs(over: Partial<Parameters<typeof mod.proposePolicy>[1]
     precedentCount: 214,
     effectiveFrom: '2026-01-01',
     effectiveTo: undefined,
+    parentPolicyId: undefined,
+    cornerstones: '[]',
     ...over,
   };
 }
@@ -1086,15 +1088,17 @@ describe('earned autonomy (standing approvals)', () => {
     const withAutonomy = approvedPolicy(d);
     const other = approvedPolicy(
       d,
-      { policyKey: 'grove-canteen-catering-broad', pattern: JSON.stringify({ vendor_id: 'ven-017' }) },
+      { policyKey: 'grove-staff-lunch-catering', pattern: JSON.stringify({ vendor_id: 'ven-017', memo_regex: 'staff lunch' }) },
       false
     );
-    const citesOther = proposedUnder(d, 'gl-auto-9', other.id);
+    // Tier 1: the two policies must not overlap on the line, or resolution cites the lowest id and
+    // citing the other is policy_conflict (SCHEMA section 11.2).
+    const citesOther = proposedUnder(d, 'gl-auto-9', other.id, { memo: 'Grove Catering - staff lunch' });
     const citesNone = proposedUnder(d, 'gl-auto-10', undefined);
 
     d.approveAs('autoApprover', citesOther.id);
     expect(d.item(citesOther.id).state).toBe('PROPOSED');
-    expect(d.lastAudit().reason).toContain(`policy ${other.id} (grove-canteen-catering-broad v1) autonomy is NONE`);
+    expect(d.lastAudit().reason).toContain(`policy ${other.id} (grove-staff-lunch-catering v1) autonomy is NONE`);
     expect(d.lastAudit().policyId).toBe(other.id);
 
     d.approveAs('autoApprover', citesNone.id);

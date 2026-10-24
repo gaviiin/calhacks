@@ -165,6 +165,8 @@ function proposePolicyArgs(over: Partial<Parameters<typeof mod.proposePolicy>[1]
     precedentCount: 214,
     effectiveFrom: '2026-01-01',
     effectiveTo: undefined,
+    parentPolicyId: undefined,
+    cornerstones: '[]',
     ...over,
   };
 }

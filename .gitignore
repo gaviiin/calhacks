@@ -35,3 +35,4 @@ agents/out/
 .DS_Store
 spacetime.local.json
 research/review/redteam-repro/ts/node_modules/
+replay/.cache/

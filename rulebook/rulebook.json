@@ -621,7 +621,7 @@
     "effective_to": null,
     "title": "Employee Bonus Costs (up to the limit)",
     "text": "all Employee Bonus Costs , subject to a maximum amount in any Full Year Financial Regulations Reporting Period of the lower of: i. 20% of the Total Fixed Employee Remuneration; and ii. the Excluded Bonus Maximum amount, adjusted (if applicable) for Indexation; plus the amount of any employer's social security contributions in respect of the amount of such Employee Bonus Costs excluded pursuant to this Article D5.1.1.k;",
-    "cap_limit_usd_minor": null
+    "cap_limit_usd_minor": 1200000000
   },
   {
     "id": "FIA_FEES@SECD-ISS07",

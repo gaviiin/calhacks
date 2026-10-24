@@ -1,9 +1,9 @@
 """The learnable regularities planted in the 2025 history, as executable matchers.
 
-Every matcher uses only fields a consumer can see (account_id, vendor_id, department_id, memo),
-so a pattern the Policy Learner discovers can be checked against this list. Counts are computed
-from the generated history; PATTERNS.md carries the same table for seed 7, and the test suite
-checks the two agree.
+Every matcher uses only fields a consumer can see (account_id, vendor_id, department_id, memo, and
+for bill-line patterns the bill line description), so a pattern the Policy Learner discovers can be
+checked against this list. Counts are computed from the generated history; PATTERNS.md carries the
+same tables for seed 7, and the test suite checks the two agree.
 
     uv run python -m world.patterns --out world/out          # print the tables
     uv run python -m world.patterns --out world/out --write  # rewrite the tables in PATTERNS.md
@@ -68,7 +68,8 @@ PATTERNS: list[Pattern] = [
             "RELEVANT", "RELEVANT@SECD-ISS07: offsite engineering lunch at a third-party tunnel is not catering at premises or a Competition"),
     Pattern("motorhome_catering", "vendor ven-002 (Paddock Table) + account 6410 + memo ~ Motorhome catering", all_of(vendor("ven-002"), acct("6410"), memo(r"Motorhome catering")),
             "RELEVANT", "CATERING@SECD-ISS07 (D5.1.1.z): catering at a Competition. Partner-guest catering stays MARKETING"),
-    Pattern("partner_hospitality", "account 6420", acct("6420"), "MARKETING", "MARKETING@SECD-ISS07 (D5.1.1.a)"),
+    Pattern("partner_hospitality", "account 6420", acct("6420"), "MARKETING",
+            "MARKETING@SECD-ISS07 (D5.1.1.a); the exceptions are mixed Grove Catering invoices, split by bill line (table below)"),
     Pattern("gp_air_hotel", "account 6310|6320 + memo ~ Grand Prix|pre-season test", all_of(acct("6310", "6320"), lambda g: bool(GP.search(g["memo"]))),
             "COMPETITION_TRAVEL", "COMPETITION_TRAVEL@SECD-ISS07 (D5.1.1.r); drivers stay F1_DRIVER, the Team Principal EXCLUDED_PERSONS"),
     Pattern("gp_ground_transport", "account 6330 + memo ~ Grand Prix|pre-season test", all_of(acct("6330"), lambda g: bool(GP.search(g["memo"]))),
@@ -89,7 +90,8 @@ PATTERNS: list[Pattern] = [
     Pattern("plant_maintenance", "vendor ven-024 (Oxon Plant Services), any account", vendor("ven-024"), "RELEVANT",
             "RELEVANT@SECD-ISS07 whoever raised the PO (ERP sometimes codes it HR_FINANCE_LEGAL or PROPERTY)"),
     Pattern("applied_payroll_split", "department dept-APPLIED + account 5010|5040|5050|5230", all_of(dept("APPLIED"), acct("5010", "5040", "5050", "5230")),
-            SPLIT, "split 60% RELEVANT / 40% NON_F1 by f1_activity_share 0.6 (employer NI is all SOCIAL_SECURITY in 2026)"),
+            SPLIT, "RELEVANT@SECD-ISS07, no split. Rule change: D5.1.1.h.c.A apportions pay only for PU supply, Customer Team Support, "
+                   "FIA Projects or Standard Supply Components (employer NI is SOCIAL_SECURITY)"),
     Pattern("applied_projects", "account 6810", acct("6810"), "NON_F1", "NON_F1@SECD-ISS07 (D5.1.1.h)"),
     Pattern("hr_finance_legal_payroll", "department dept-HR|FINANCE|LEGAL + account 5010|5050|5230",
             all_of(dept("HR", "FINANCE", "LEGAL"), acct("5010", "5050", "5230")), "HR_FINANCE_LEGAL", "HR_FINANCE_LEGAL@SECD-ISS07 (D5.1.1.i)"),
@@ -114,11 +116,14 @@ PATTERNS: list[Pattern] = [
     Pattern("ordinary_sick_pay", "account 5070 + memo not ~ indefinite", all_of(acct("5070"), not_(memo(r"indefinite"))), "RELEVANT", "RELEVANT@SECD-ISS07"),
     Pattern("parental_leave", "account 5080", acct("5080"), "PARENTAL_LEAVE", "PARENTAL_LEAVE@SECD-ISS07"),
     Pattern("bonus", "account 5060 + department not dept-EXEC", all_of(acct("5060"), not_(dept("EXEC"))), "BONUS",
-            "BONUS@SECD-ISS07 up to the lower of 20% of fixed remuneration and $12m; the excess is RELEVANT"),
+            "RELEVANT@SECD-ISS07. Rule change: only a Formal Bonus Scheme set solely by the final Constructors' classification and paid "
+            "after the last Competition is BONUS (up to the lower of 20% of fixed remuneration and $12m); points, podium, win, "
+            "performance and retention bonuses are Relevant"),
     Pattern("staff_entertainment", "account 6400", acct("6400"), "STAFF_ENTERTAINMENT",
             "STAFF_ENTERTAINMENT@SECD-ISS07 for all-staff events up to $1.2m; single-team dinners are RELEVANT"),
     Pattern("fuel", "account 6110", acct("6110"), "RELEVANT", "FUEL@SECD-ISS07 (D5.1.1.t). Rule change: new exclusion"),
-    Pattern("health_safety", "account 6740", acct("6740"), "RELEVANT", "HEALTH_SAFETY@SECD-ISS07 (D5.1.1.y). Rule change: new exclusion"),
+    Pattern("health_safety", "account 6740", acct("6740"), "HR_FINANCE_LEGAL",
+            "HEALTH_SAFETY@SECD-ISS07 (D5.1.1.y). Rule change: ISS22 HR Activities included health and safety matters; SECD gives them their own exclusion"),
     Pattern("bcdr", "account 6930", acct("6930"), "RELEVANT", "BCDR@SECD-ISS07 (D5.1.1.aa) up to $1.5m. Rule change: new exclusion"),
     Pattern("sporting_fines", "account 6910", acct("6910"), "RELEVANT",
             "FINES@SECD-ISS07. Rule change: D5.1.1.m covers any FIA fine (ISS22 3.1(m) only Financial Regulations penalties)"),
@@ -131,12 +136,84 @@ PATTERNS: list[Pattern] = [
             "gains on disposal: ADJ_GRANT_GROSS_UP@SECD-ISS07 (D6.1.1.b.i.A.2). Rule change: gross up, do not exclude"),
     Pattern("rdec_credit", "account 7300", acct("7300"), "RELEVANT",
             "ADJ_GRANT_GROSS_UP@SECD-ISS07 (D6.1.1.b.i.A.1). Rule change: the offset direction flips"),
-    Pattern("property", "account 6700|6730", acct("6700", "6730"), "PROPERTY", "PROPERTY@SECD-ISS07"),
+    Pattern("property", "account 6700", acct("6700"), "PROPERTY", "PROPERTY@SECD-ISS07"),
+    Pattern("building_maintenance", "account 6730", acct("6730"), "RELEVANT",
+            "RELEVANT@SECD-ISS07: maintenance is never Property Costs (ERP still codes some PROPERTY)"),
+    Pattern("buildings_insurance", "account 6760 + memo ~ Buildings insurance", all_of(acct("6760"), memo(r"Buildings insurance")), "RELEVANT",
+            "PROPERTY@SECD-ISS07. Rule change: ISS22 Property Costs were rent, lease, rates and taxes; SECD adds property insurance"),
     Pattern("heritage", "account 6800", acct("6800"), "HERITAGE", "HERITAGE@SECD-ISS07; parts raced this season are Used Inventory, not heritage"),
     Pattern("materials", "account 6010|6020|6030|6040", acct("6010", "6020", "6030", "6040"), "RELEVANT", "RELEVANT@SECD-ISS07"),
     Pattern("crash_and_spares", "account 6050", acct("6050"), "RELEVANT", "RELEVANT@SECD-ISS07: crash damage is inside the cap"),
     Pattern("finance_fx_tax", "account 7100|7110|7200", acct("7100", "7110", "7200"), "by account: FINANCE_COSTS / FX / CORP_TAX", "unchanged"),
 ]
+
+
+@dataclass(frozen=True)
+class BillPattern:
+    key: str
+    rule: str
+    rx: str  # matched against history_2025_bill_line.description
+    expected_2025: str
+    truth_2026: str
+    not_rx: str | None = None
+
+    def match(self, b: dict) -> bool:
+        d = b["description"] or ""
+        return bool(re.search(self.rx, d, re.IGNORECASE)) and not (self.not_rx and re.search(self.not_rx, d, re.IGNORECASE))
+
+
+BILL_PATTERNS: list[BillPattern] = [
+    BillPattern("bl_partner_hospitality", "description ~ Sponsor dinner|Partner dinner|Partner guest|partner guests|partner open day buffet",
+                r"Sponsor dinner|Partner dinner|Partner guest|partner guests|partner open day buffet", "MARKETING",
+                "MARKETING@SECD-ISS07 (D5.1.1.a), whatever account or vendor the invoice is on"),
+    BillPattern("bl_canteen", "description ~ canteen|night shift meal, not ~ partner", r"canteen|night shift meal", "RELEVANT",
+                "CATERING@SECD-ISS07 (D5.1.1.z). Rule change: premises catering is excluded from 2026", not_rx=r"partner"),
+    BillPattern("bl_offsite_engineering_lunch", "description ~ lunch .* Northbrook Wind Tunnel", r"lunch.*Northbrook Wind Tunnel", "RELEVANT",
+                "RELEVANT@SECD-ISS07: not catering at team premises or a Competition, even on a canteen or hospitality invoice"),
+    BillPattern("bl_motorhome_team_catering", "description ~ Motorhome catering - race team", r"Motorhome catering - race team", "RELEVANT",
+                "CATERING@SECD-ISS07 (D5.1.1.z): catering at a Competition"),
+]
+
+
+def load_bill_history(out_dir: Path) -> tuple[list[dict], dict[str, dict]]:
+    def read(src: str) -> list[dict]:
+        with (out_dir / f"{src}.jsonl").open(encoding="utf-8") as f:
+            return [json.loads(x) for x in f if x.strip()]
+
+    bls = read("history_2025_bill_line")
+    cls = {c["bill_line_id"]: c for c in read("history_2025_bill_line_classification")}
+    return bls, cls
+
+
+def bill_pattern_counts(bls: list[dict], cls: dict[str, dict]) -> list[dict]:
+    cats_by_bill: dict[str, set] = defaultdict(set)
+    for b in bls:
+        cats_by_bill[b["bill_id"]].add(cls[b["id"]]["category_code"])
+    rows = []
+    for p in BILL_PATTERNS:
+        matched = [b for b in bls if p.match(b)]
+        prec = sum(1 for b in matched if cls[b["id"]]["category_code"] == p.expected_2025)
+        rows.append({"key": p.key, "rule": p.rule, "expected_2025": p.expected_2025, "bill_lines": len(matched), "precedents": prec,
+                     "exceptions": len(matched) - prec, "on_mixed": sum(1 for b in matched if len(cats_by_bill[b["bill_id"]]) > 1),
+                     "truth_2026": p.truth_2026})
+    return rows
+
+
+def mixed_bill_counts(bls: list[dict], cls: dict[str, dict]) -> dict:
+    cats_by_bill: dict[str, set] = defaultdict(set)
+    lines_by_bill: dict[str, int] = defaultdict(int)
+    for b in bls:
+        cats_by_bill[b["bill_id"]].add(cls[b["id"]]["category_code"])
+        lines_by_bill[b["bill_id"]] += 1
+    mixed = [k for k, v in cats_by_bill.items() if len(v) > 1]
+    by_key = {p.key: p for p in BILL_PATTERNS}
+    canteen = {b["bill_id"] for b in bls if by_key["bl_canteen"].match(b)}
+    lunch = {b["bill_id"] for b in bls if by_key["bl_offsite_engineering_lunch"].match(b)}
+    return {"bills": len(cats_by_bill), "bill_lines": len(bls), "multi_line_bills": sum(1 for v in lines_by_bill.values() if v > 1),
+            "multi_category_bills": len(mixed), "multi_category_bill_lines": sum(lines_by_bill[k] for k in mixed),
+            "multi_category_MARKETING+RELEVANT": sum(1 for k in mixed if cats_by_bill[k] == {"MARKETING", "RELEVANT"}),
+            "bills_with_canteen_and_offsite_lunch_lines": len(set(canteen) & set(lunch)),
+            "of_which_single_category_RELEVANT": sum(1 for k in set(canteen) & set(lunch) if cats_by_bill[k] == {"RELEVANT"})}
 
 
 def load_history(out_dir: Path) -> tuple[list[dict], dict[str, list[dict]], list[dict]]:
@@ -199,6 +276,14 @@ def render_tables(out_dir: Path) -> str:
     esc = escalation_counts(gl, apr)
     lines += ["", "| escalation measure (history_2025_approval) | count |", "|---|---:|"]
     lines += [f"| `{k}` | {v} |" for k, v in esc.items()]
+    bls, bcls = load_bill_history(out_dir)
+    lines += ["", "| bill-line key | matcher (history_2025_bill_line.description) | 2025 treatment | bill lines | precedents | exceptions "
+              "| on multi-category bills | 2026 truth for the same description |", "|---|---|---|---:|---:|---:|---:|---|"]
+    for r in bill_pattern_counts(bls, bcls):
+        lines.append(f"| `{r['key']}` | {esc_pipe(r['rule'])} | {r['expected_2025']} | {r['bill_lines']} | {r['precedents']} | {r['exceptions']} | "
+                     f"{r['on_mixed']} | {esc_pipe(r['truth_2026'])} |")
+    lines += ["", "| 2025 bills (history_2025_bill_line) | count |", "|---|---:|"]
+    lines += [f"| `{k}` | {v} |" for k, v in mixed_bill_counts(bls, bcls).items()]
     return "\n".join(lines)
 
 
