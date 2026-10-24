@@ -4,3 +4,4 @@ httpx
 anthropic
 pytest
 python-multipart
+openai>=1.40  # Azure OpenAI second-opinion auditor (optional at runtime)
