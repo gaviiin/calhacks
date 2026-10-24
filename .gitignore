@@ -39,3 +39,6 @@ replay/.cache/
 
 # typescript incremental build info
 *.tsbuildinfo
+
+# Fetch.ai agent local storage
+agent1q*_data.json

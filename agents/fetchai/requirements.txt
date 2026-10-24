@@ -1,0 +1,5 @@
+uagents>=0.26
+uagents-core>=0.4
+httpx
+python-dotenv
+openai>=1.40   # only for ASI:One question parsing (ASI1_API_KEY)
