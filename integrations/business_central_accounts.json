@@ -1,0 +1,13 @@
+{
+  "_note": "Pit Wall account -> Business Central G/L account number. Create these accounts in your BC company (or change the numbers to existing ones). Defaults are illustrative, not a CRONUS chart.",
+  "accounts": {
+    "1000": "10100",
+    "1200": "13100",
+    "1250": "13250",
+    "1300": "13300",
+    "4000": "40100",
+    "4010": "40110",
+    "4100": "40200",
+    "7100": "71000"
+  }
+}
