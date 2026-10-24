@@ -35,12 +35,19 @@ import {
 
 // Import all reducer arg schemas
 import IngestDocumentReducer from "./ingest_document_reducer";
+import MirrorEntryReducer from "./mirror_entry_reducer";
+import MirrorItemReducer from "./mirror_item_reducer";
 import SetIngestorReducer from "./set_ingestor_reducer";
+import SetReviewStatusReducer from "./set_review_status_reducer";
+import SetWriterReducer from "./set_writer_reducer";
 
 // Import all procedure arg schemas
 
 // Import all table schema definitions
 import FiaDocumentsRow from "./fia_documents_table";
+import JeLinesRow from "./je_lines_table";
+import JournalEntriesRow from "./journal_entries_table";
+import PitWallItemsRow from "./pit_wall_items_table";
 
 /** Type-only namespace exports for generated type groups. */
 
@@ -61,12 +68,49 @@ const tablesSchema = __schema({
       { name: 'fia_documents_document_url_key', constraint: 'unique', columns: ['documentUrl'] },
     ],
   }, FiaDocumentsRow),
+  jeLines: __table({
+    name: 'je_lines',
+    indexes: [
+      { accessor: 'lineKey', name: 'je_lines_line_key_idx_btree', algorithm: 'btree', columns: [
+        'lineKey',
+      ] },
+    ],
+    constraints: [
+      { name: 'je_lines_line_key_key', constraint: 'unique', columns: ['lineKey'] },
+    ],
+  }, JeLinesRow),
+  journalEntries: __table({
+    name: 'journal_entries',
+    indexes: [
+      { accessor: 'jeId', name: 'journal_entries_je_id_idx_btree', algorithm: 'btree', columns: [
+        'jeId',
+      ] },
+    ],
+    constraints: [
+      { name: 'journal_entries_je_id_key', constraint: 'unique', columns: ['jeId'] },
+    ],
+  }, JournalEntriesRow),
+  pitWallItems: __table({
+    name: 'pit_wall_items',
+    indexes: [
+      { accessor: 'itemId', name: 'pit_wall_items_item_id_idx_btree', algorithm: 'btree', columns: [
+        'itemId',
+      ] },
+    ],
+    constraints: [
+      { name: 'pit_wall_items_item_id_key', constraint: 'unique', columns: ['itemId'] },
+    ],
+  }, PitWallItemsRow),
 });
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
   __reducerSchema("ingest_document", IngestDocumentReducer),
+  __reducerSchema("mirror_entry", MirrorEntryReducer),
+  __reducerSchema("mirror_item", MirrorItemReducer),
   __reducerSchema("set_ingestor", SetIngestorReducer),
+  __reducerSchema("set_review_status", SetReviewStatusReducer),
+  __reducerSchema("set_writer", SetWriterReducer),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */
