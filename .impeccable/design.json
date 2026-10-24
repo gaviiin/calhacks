@@ -1,0 +1,486 @@
+{
+  "schemaVersion": 2,
+  "generatedAt": "2026-10-24T00:00:00Z",
+  "title": "Design System: Pit Wall",
+  "extensions": {
+    "colorMeta": {
+      "bg": {
+        "role": "neutral",
+        "displayName": "Pit Black",
+        "canonical": "#07090c",
+        "tonalRamp": [
+          "oklch(15% 0.008 256)",
+          "oklch(26% 0.008 256)",
+          "oklch(38% 0.008 256)",
+          "oklch(50% 0.008 256)",
+          "oklch(62% 0.008 256)",
+          "oklch(74% 0.008 256)",
+          "oklch(85% 0.008 256)",
+          "oklch(95% 0.008 256)"
+        ]
+      },
+      "panel": {
+        "role": "neutral",
+        "displayName": "Garage Slate",
+        "canonical": "#0c1118",
+        "tonalRamp": [
+          "oklch(15% 0.017 257)",
+          "oklch(26% 0.017 257)",
+          "oklch(38% 0.017 257)",
+          "oklch(50% 0.017 257)",
+          "oklch(62% 0.017 257)",
+          "oklch(74% 0.017 257)",
+          "oklch(85% 0.017 257)",
+          "oklch(95% 0.017 257)"
+        ]
+      },
+      "panel-2": {
+        "role": "neutral",
+        "displayName": "Slate, one step up",
+        "canonical": "#111823",
+        "tonalRamp": [
+          "oklch(15% 0.024 259)",
+          "oklch(26% 0.024 259)",
+          "oklch(38% 0.024 259)",
+          "oklch(50% 0.024 259)",
+          "oklch(62% 0.024 259)",
+          "oklch(74% 0.024 259)",
+          "oklch(85% 0.024 259)",
+          "oklch(95% 0.024 259)"
+        ]
+      },
+      "raise": {
+        "role": "neutral",
+        "displayName": "Slate, raised",
+        "canonical": "#151d29",
+        "tonalRamp": [
+          "oklch(15% 0.026 258)",
+          "oklch(26% 0.026 258)",
+          "oklch(38% 0.026 258)",
+          "oklch(50% 0.026 258)",
+          "oklch(62% 0.026 258)",
+          "oklch(74% 0.026 258)",
+          "oklch(85% 0.026 258)",
+          "oklch(95% 0.026 258)"
+        ]
+      },
+      "line": {
+        "role": "neutral",
+        "displayName": "Hairline",
+        "canonical": "#2b323a",
+        "tonalRamp": [
+          "oklch(15% 0.017 252)",
+          "oklch(26% 0.017 252)",
+          "oklch(38% 0.017 252)",
+          "oklch(50% 0.017 252)",
+          "oklch(62% 0.017 252)",
+          "oklch(74% 0.017 252)",
+          "oklch(85% 0.017 252)",
+          "oklch(95% 0.017 252)"
+        ]
+      },
+      "line-soft": {
+        "role": "neutral",
+        "displayName": "Soft Hairline",
+        "canonical": "#1b222b",
+        "tonalRamp": [
+          "oklch(15% 0.02 255)",
+          "oklch(26% 0.02 255)",
+          "oklch(38% 0.02 255)",
+          "oklch(50% 0.02 255)",
+          "oklch(62% 0.02 255)",
+          "oklch(74% 0.02 255)",
+          "oklch(85% 0.02 255)",
+          "oklch(95% 0.02 255)"
+        ]
+      },
+      "ink": {
+        "role": "neutral",
+        "displayName": "Paddock White",
+        "canonical": "#f3f3f0",
+        "tonalRamp": [
+          "oklch(15% 0.004 106)",
+          "oklch(26% 0.004 106)",
+          "oklch(38% 0.004 106)",
+          "oklch(50% 0.004 106)",
+          "oklch(62% 0.004 106)",
+          "oklch(74% 0.004 106)",
+          "oklch(85% 0.004 106)",
+          "oklch(95% 0.004 106)"
+        ]
+      },
+      "steel": {
+        "role": "neutral",
+        "displayName": "Steel",
+        "canonical": "#aab5bc",
+        "tonalRamp": [
+          "oklch(15% 0.016 235)",
+          "oklch(26% 0.016 235)",
+          "oklch(38% 0.016 235)",
+          "oklch(50% 0.016 235)",
+          "oklch(62% 0.016 235)",
+          "oklch(74% 0.016 235)",
+          "oklch(85% 0.016 235)",
+          "oklch(95% 0.016 235)"
+        ]
+      },
+      "muted": {
+        "role": "neutral",
+        "displayName": "Muted Steel",
+        "canonical": "#8f98a1",
+        "tonalRamp": [
+          "oklch(15% 0.017 248)",
+          "oklch(26% 0.017 248)",
+          "oklch(38% 0.017 248)",
+          "oklch(50% 0.017 248)",
+          "oklch(62% 0.017 248)",
+          "oklch(74% 0.017 248)",
+          "oklch(85% 0.017 248)",
+          "oklch(95% 0.017 248)"
+        ]
+      },
+      "lime": {
+        "role": "primary",
+        "displayName": "Signature Lime",
+        "canonical": "#c9ff4b",
+        "tonalRamp": [
+          "oklch(15% 0.2 125)",
+          "oklch(26% 0.2 125)",
+          "oklch(38% 0.2 125)",
+          "oklch(50% 0.2 125)",
+          "oklch(62% 0.2 125)",
+          "oklch(74% 0.2 125)",
+          "oklch(85% 0.2 125)",
+          "oklch(95% 0.2 125)"
+        ]
+      },
+      "lime-hover": {
+        "role": "primary",
+        "displayName": "Signature Lime, pressed bright",
+        "canonical": "#d7ff74",
+        "tonalRamp": [
+          "oklch(15% 0.171 123)",
+          "oklch(26% 0.171 123)",
+          "oklch(38% 0.171 123)",
+          "oklch(50% 0.171 123)",
+          "oklch(62% 0.171 123)",
+          "oklch(74% 0.171 123)",
+          "oklch(85% 0.171 123)",
+          "oklch(95% 0.171 123)"
+        ]
+      },
+      "lime-wash": {
+        "role": "primary",
+        "displayName": "Lime Wash",
+        "canonical": "rgba(201, 255, 75, 0.1)"
+      },
+      "on-lime": {
+        "role": "neutral",
+        "displayName": "Ink on Lime",
+        "canonical": "#06080a",
+        "tonalRamp": [
+          "oklch(15% 0.006 244)",
+          "oklch(26% 0.006 244)",
+          "oklch(38% 0.006 244)",
+          "oklch(50% 0.006 244)",
+          "oklch(62% 0.006 244)",
+          "oklch(74% 0.006 244)",
+          "oklch(85% 0.006 244)",
+          "oklch(95% 0.006 244)"
+        ]
+      },
+      "hold": {
+        "role": "secondary",
+        "displayName": "Pit Lane Amber",
+        "canonical": "#ffb547",
+        "tonalRamp": [
+          "oklch(15% 0.149 73)",
+          "oklch(26% 0.149 73)",
+          "oklch(38% 0.149 73)",
+          "oklch(50% 0.149 73)",
+          "oklch(62% 0.149 73)",
+          "oklch(74% 0.149 73)",
+          "oklch(85% 0.149 73)",
+          "oklch(95% 0.149 73)"
+        ]
+      },
+      "hold-wash": {
+        "role": "secondary",
+        "displayName": "Amber Wash",
+        "canonical": "rgba(255, 181, 71, 0.1)"
+      },
+      "alert": {
+        "role": "tertiary",
+        "displayName": "Stewards' Coral",
+        "canonical": "#ff725f",
+        "tonalRamp": [
+          "oklch(15% 0.176 30)",
+          "oklch(26% 0.176 30)",
+          "oklch(38% 0.176 30)",
+          "oklch(50% 0.176 30)",
+          "oklch(62% 0.176 30)",
+          "oklch(74% 0.176 30)",
+          "oklch(85% 0.176 30)",
+          "oklch(95% 0.176 30)"
+        ]
+      },
+      "alert-wash": {
+        "role": "tertiary",
+        "displayName": "Coral Wash",
+        "canonical": "rgba(255, 114, 95, 0.1)"
+      },
+      "s1": {
+        "role": "neutral",
+        "displayName": "Series Slate",
+        "canonical": "#6d7a84",
+        "tonalRamp": [
+          "oklch(15% 0.022 241)",
+          "oklch(26% 0.022 241)",
+          "oklch(38% 0.022 241)",
+          "oklch(50% 0.022 241)",
+          "oklch(62% 0.022 241)",
+          "oklch(74% 0.022 241)",
+          "oklch(85% 0.022 241)",
+          "oklch(95% 0.022 241)"
+        ]
+      },
+      "s2": {
+        "role": "neutral",
+        "displayName": "Series White",
+        "canonical": "#f3f3f0",
+        "tonalRamp": [
+          "oklch(15% 0.004 106)",
+          "oklch(26% 0.004 106)",
+          "oklch(38% 0.004 106)",
+          "oklch(50% 0.004 106)",
+          "oklch(62% 0.004 106)",
+          "oklch(74% 0.004 106)",
+          "oklch(85% 0.004 106)",
+          "oklch(95% 0.004 106)"
+        ]
+      }
+    },
+    "typographyMeta": {
+      "display": {
+        "displayName": "Display",
+        "purpose": "h1 of a desk page; Barlow Condensed, uppercase."
+      },
+      "headline": {
+        "displayName": "Headline",
+        "purpose": "h2 panel headings; Barlow Condensed, uppercase."
+      },
+      "title": {
+        "displayName": "Title",
+        "purpose": "h3 labels inside panels and the why pane, steel, often led by a 14px icon."
+      },
+      "body": {
+        "displayName": "Body",
+        "purpose": "Running text; paragraphs cap at 64 to 72ch."
+      },
+      "control": {
+        "displayName": "Control",
+        "purpose": "Buttons, selects and nav items."
+      },
+      "label": {
+        "displayName": "Label",
+        "purpose": "Flags, inbox kinds, filters, treatment tags. Sentence case."
+      },
+      "figure": {
+        "displayName": "Figure",
+        "purpose": "Amounts, ids, policy keys, check ids and times, tabular."
+      },
+      "figure-strong": {
+        "displayName": "Figure Strong",
+        "purpose": "The headline value of a legend or desk line."
+      },
+      "axis": {
+        "displayName": "Axis",
+        "purpose": "Chart ticks, the cap track axis and the now label, muted."
+      }
+    },
+    "shadows": [
+      {
+        "name": "float",
+        "value": "0 12px 32px rgba(0, 0, 0, 0.45)",
+        "purpose": "The chart tooltip on the shift and the revenue charts. The only shadow on the dashboard."
+      }
+    ],
+    "motion": [
+      {
+        "name": "ease",
+        "value": "cubic-bezier(0.22, 1, 0.36, 1)",
+        "purpose": "The one easing curve, for state changes and the cap track wipe."
+      },
+      {
+        "name": "state-change",
+        "value": "160ms",
+        "purpose": "Colour, border and background changes on nav items, inbox rows and buttons."
+      },
+      {
+        "name": "cap-wipe",
+        "value": "900ms clip-path inset(0 100% 0 0) to inset(0 0 0 0)",
+        "purpose": "The one motion moment: the cap track bar wipes in left to right. Off under prefers-reduced-motion."
+      }
+    ],
+    "breakpoints": [
+      {
+        "name": "stack",
+        "value": "1180px"
+      },
+      {
+        "name": "phone",
+        "value": "720px"
+      }
+    ]
+  },
+  "components": [
+    {
+      "name": "Primary Button",
+      "kind": "button",
+      "refersTo": "button-primary",
+      "description": "The human's affirmative act: Approve, Approve policy, Send answer. One per decision bar.",
+      "html": "<button class=\"ds-btn-primary\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"square\" stroke-linejoin=\"miter\" aria-hidden=\"true\"><path d=\"M3 8.5l3.2 3L13 4.5\"/></svg> Approve</button>",
+      "css": ".ds-btn-primary { display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 0 15px; border-radius: 2px; font: 600 13px var(--body, 'DM Sans', system-ui, sans-serif); cursor: pointer; transition: background 160ms var(--ease, cubic-bezier(0.22, 1, 0.36, 1)), border-color 160ms var(--ease, cubic-bezier(0.22, 1, 0.36, 1)); border: 1px solid var(--lime, #c9ff4b); background: var(--lime, #c9ff4b); color: #0b0f10; } .ds-btn-primary:hover { background: #d7ff74; border-color: #d7ff74; } .ds-btn-primary:focus-visible { outline: 2px solid var(--lime, #c9ff4b); outline-offset: 2px; } .ds-btn-primary:disabled { opacity: 0.38; cursor: not-allowed; }"
+    },
+    {
+      "name": "Secondary Button",
+      "kind": "button",
+      "refersTo": "button-secondary",
+      "description": "Reject, Advance, Run the independent audit: steel hairline, ink text.",
+      "html": "<button class=\"ds-btn\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"square\" stroke-linejoin=\"miter\" aria-hidden=\"true\"><path d=\"M4 4l8 8M12 4l-8 8\"/></svg> Reject</button>",
+      "css": ".ds-btn { display: inline-flex; align-items: center; gap: 7px; min-height: 38px; padding: 0 15px; border-radius: 2px; font: 600 13px var(--body, 'DM Sans', system-ui, sans-serif); cursor: pointer; transition: background 160ms var(--ease, cubic-bezier(0.22, 1, 0.36, 1)), border-color 160ms var(--ease, cubic-bezier(0.22, 1, 0.36, 1)); border: 1px solid var(--steel, #aab5bc); background: transparent; color: var(--ink, #f3f3f0); } .ds-btn:hover { border-color: var(--ink, #f3f3f0); background: var(--raise, #151d29); } .ds-btn:focus-visible { outline: 2px solid var(--lime, #c9ff4b); outline-offset: 2px; } .ds-btn:disabled { opacity: 0.38; cursor: not-allowed; }"
+    },
+    {
+      "name": "Status Flags",
+      "kind": "chip",
+      "refersTo": "flag-approved",
+      "description": "The three lamps, each with its icon and a word: approved, waiting, refused.",
+      "html": "<div class=\"ds-flags\"><span class=\"ds-flag ds-flag--ok\"><svg width=\"13\" height=\"13\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"square\" stroke-linejoin=\"miter\" aria-hidden=\"true\"><path d=\"M3 8.5l3.2 3L13 4.5\"/></svg> Approved</span><span class=\"ds-flag ds-flag--hold\"><svg width=\"13\" height=\"13\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"square\" stroke-linejoin=\"miter\" aria-hidden=\"true\"><circle cx=\"8\" cy=\"8\" r=\"5.5\"/><path d=\"M8 5v3.4l2.2 1.4\"/></svg> Waiting for the Controller</span><span class=\"ds-flag ds-flag--alert\"><svg width=\"13\" height=\"13\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"square\" stroke-linejoin=\"miter\" aria-hidden=\"true\"><path d=\"M4 4l8 8M12 4l-8 8\"/></svg> Rejected</span></div>",
+      "css": ".ds-flags { display: flex; flex-wrap: wrap; gap: 6px; } .ds-flag { display: inline-flex; align-items: center; gap: 6px; padding: 5px 9px; border: 1px solid var(--line, #2b323a); border-radius: 2px; font: 600 12px var(--body, 'DM Sans', system-ui, sans-serif); } .ds-flag--ok { border-color: rgba(201, 255, 75, 0.45); background: var(--lime-wash, rgba(201, 255, 75, 0.1)); color: var(--lime, #c9ff4b); } .ds-flag--hold { border-color: rgba(255, 181, 71, 0.45); background: var(--hold-wash, rgba(255, 181, 71, 0.1)); color: var(--hold, #ffb547); } .ds-flag--alert { border-color: rgba(255, 114, 95, 0.45); background: var(--alert-wash, rgba(255, 114, 95, 0.1)); color: var(--alert, #ff725f); }"
+    },
+    {
+      "name": "Filter Tabs",
+      "kind": "chip",
+      "refersTo": "filter",
+      "description": "Hairline filters that act as tabs, with a muted mono count.",
+      "html": "<div class=\"ds-filters\" role=\"tablist\"><button class=\"ds-filter ds-filter--on\" role=\"tab\" aria-selected=\"true\">All <span class=\"ds-filter-n\">24</span></button><button class=\"ds-filter\" role=\"tab\" aria-selected=\"false\">Refused <span class=\"ds-filter-n\">12</span></button></div>",
+      "css": ".ds-filters { display: flex; flex-wrap: wrap; gap: 6px; } .ds-filter { display: inline-flex; align-items: center; gap: 7px; min-height: 32px; padding: 0 11px; border: 1px solid var(--line, #2b323a); border-radius: 2px; background: transparent; color: var(--steel, #aab5bc); font: 600 12.5px var(--body, 'DM Sans', system-ui, sans-serif); cursor: pointer; } .ds-filter:hover { color: var(--ink, #f3f3f0); border-color: var(--steel, #aab5bc); } .ds-filter:focus-visible { outline: 2px solid var(--lime, #c9ff4b); outline-offset: 2px; } .ds-filter--on { color: var(--ink, #f3f3f0); border-color: var(--ink, #f3f3f0); background: var(--panel-2, #111823); } .ds-filter-n { font: 400 11.5px var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace); font-variant-numeric: tabular-nums; color: var(--muted, #8f98a1); }"
+    },
+    {
+      "name": "Reason Field",
+      "kind": "input",
+      "refersTo": "input",
+      "description": "The decision bar's reason field: darker than its panel, hairline, steel on focus.",
+      "html": "<label class=\"ds-field\"><span>Reason, recorded with your decision</span><input placeholder=\"Matches policy v3\" /></label>",
+      "css": ".ds-field { display: grid; gap: 5px; font: 400 14px/1.5 var(--body, 'DM Sans', system-ui, sans-serif); } .ds-field span { color: var(--muted, #8f98a1); font-size: 12px; } .ds-field input { width: 100%; min-height: 36px; padding: 8px 10px; border: 1px solid var(--line, #2b323a); border-radius: 2px; background: var(--bg, #07090c); color: var(--ink, #f3f3f0); font: inherit; } .ds-field input:focus { border-color: var(--steel, #aab5bc); outline: none; } .ds-field input:disabled { opacity: 0.5; }"
+    },
+    {
+      "name": "Desk Navigation",
+      "kind": "nav",
+      "refersTo": "nav-item",
+      "description": "Desk tabs in the sticky shell: muted, ink when current with a 2px lime underline; amber count on Inbox.",
+      "html": "<nav class=\"ds-nav\" aria-label=\"Desks\"><a class=\"ds-nav-item ds-nav-item--on\" href=\"#\" aria-current=\"page\">Pit wall</a><a class=\"ds-nav-item\" href=\"#\">Inbox <span class=\"ds-nav-count\">7</span></a><a class=\"ds-nav-item\" href=\"#\">Cost cap</a><a class=\"ds-nav-item\" href=\"#\">Audit</a></nav>",
+      "css": ".ds-nav { display: flex; gap: 2px; border-bottom: 1px solid var(--line, #2b323a); background: var(--bg, #07090c); } .ds-nav-item { position: relative; display: inline-flex; align-items: center; gap: 7px; padding: 20px 12px 18px; color: var(--muted, #8f98a1); text-decoration: none; font: 600 13.5px var(--body, 'DM Sans', system-ui, sans-serif); white-space: nowrap; transition: color 160ms var(--ease, cubic-bezier(0.22, 1, 0.36, 1)); } .ds-nav-item:hover { color: var(--ink, #f3f3f0); } .ds-nav-item:focus-visible { outline: 2px solid var(--lime, #c9ff4b); outline-offset: 2px; } .ds-nav-item--on { color: var(--ink, #f3f3f0); } .ds-nav-item--on::after { content: ''; position: absolute; left: 12px; right: 12px; bottom: -1px; height: 2px; background: var(--lime, #c9ff4b); } .ds-nav-count { min-width: 20px; padding: 1px 6px; border-radius: 2px; background: var(--hold-wash, rgba(255, 181, 71, 0.1)); color: var(--hold, #ffb547); font: 600 11px var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace); text-align: center; }"
+    },
+    {
+      "name": "Panel",
+      "kind": "card",
+      "refersTo": "panel",
+      "description": "The flat working slab: Garage Slate on Pit Black, soft hairline, 2px corners, uppercase Barlow h2.",
+      "html": "<section class=\"ds-panel\"><h2>House policies</h2><p>97 approved by the Head of Cost Cap, drafted by the Policy Learner from 2025 books.</p></section>",
+      "css": ".ds-panel { background: var(--panel, #0c1118); border: 1px solid var(--line-soft, #1b222b); border-radius: 2px; padding: 18px 20px; color: var(--ink, #f3f3f0); font: 400 14px/1.5 var(--body, 'DM Sans', system-ui, sans-serif); } .ds-panel h2 { margin: 0 0 8px; font: 700 21px/1.1 var(--display, 'Barlow Condensed', 'Roboto Condensed', 'Arial Narrow', sans-serif); letter-spacing: 0.035em; text-transform: uppercase; } .ds-panel p { margin: 0; color: var(--steel, #aab5bc); max-width: 72ch; }"
+    },
+    {
+      "name": "Inbox Row",
+      "kind": "custom",
+      "refersTo": "inbox-row",
+      "description": "A waiting item: kind icon and label, title, proposal, mono amount, amber 'for' line. Selected raises and outlines in steel.",
+      "html": "<ul class=\"ds-inbox\"><li><button class=\"ds-row ds-row--on\"><span class=\"ds-row-kind\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"square\" stroke-linejoin=\"miter\" aria-hidden=\"true\"><rect x=\"3.5\" y=\"3.5\" width=\"9\" height=\"9\"/><path d=\"M6 1.5v2M10 1.5v2M6 12.5v2M10 12.5v2M1.5 6h2M1.5 10h2M12.5 6h2M12.5 10h2\"/></svg> Claude proposal</span><span class=\"ds-row-title\">Wind tunnel hours, Q1 block</span><span class=\"ds-row-amt\">$1.2m</span><span class=\"ds-row-sub\"><span class=\"ds-row-prop\">Aerodynamic testing</span> · January GL line 4471</span><span class=\"ds-row-needs\">for Head of Cost Cap</span></button></li><li><button class=\"ds-row\"><span class=\"ds-row-kind\"><svg width=\"14\" height=\"14\" viewBox=\"0 0 16 16\" fill=\"none\" stroke=\"currentColor\" stroke-width=\"1.6\" stroke-linecap=\"square\" stroke-linejoin=\"miter\" aria-hidden=\"true\"><path d=\"M4 2.5h6l2.5 2.5v8.5H4z\"/><path d=\"M6.2 7.5h4M6.2 10h4\"/></svg> Policy</span><span class=\"ds-row-title\">catering.trackside</span><span class=\"ds-row-amt\"></span><span class=\"ds-row-sub\"><span class=\"ds-row-prop\">Excluded costs</span> · v2</span><span class=\"ds-row-needs\">for Head of Cost Cap</span></button></li></ul>",
+      "css": ".ds-inbox { display: grid; gap: 2px; margin: 0; padding: 0; list-style: none; font: 400 14px/1.5 var(--body, 'DM Sans', system-ui, sans-serif); color: var(--ink, #f3f3f0); } .ds-row { display: grid; grid-template-columns: 136px minmax(0, 1fr) auto; grid-template-areas: 'kind title amount' 'kind sub needs'; gap: 2px 14px; width: 100%; padding: 10px 12px; border: 1px solid transparent; border-radius: 2px; background: var(--panel-2, #111823); color: inherit; font: inherit; text-align: left; cursor: pointer; transition: border-color 160ms var(--ease, cubic-bezier(0.22, 1, 0.36, 1)), background 160ms var(--ease, cubic-bezier(0.22, 1, 0.36, 1)); } .ds-row:hover { border-color: var(--line, #2b323a); } .ds-row:focus-visible { outline: 2px solid var(--lime, #c9ff4b); outline-offset: 2px; } .ds-row--on { border-color: var(--steel, #aab5bc); background: var(--raise, #151d29); } .ds-row-kind { grid-area: kind; display: flex; align-items: center; gap: 7px; align-self: start; color: var(--steel, #aab5bc); font: 600 12px var(--body, 'DM Sans', system-ui, sans-serif); } .ds-row-title { grid-area: title; font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-row-amt { grid-area: amount; font: 600 12.5px var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace); font-variant-numeric: tabular-nums; text-align: right; } .ds-row-sub { grid-area: sub; font-size: 12.5px; color: var(--muted, #8f98a1); overflow: hidden; text-overflow: ellipsis; white-space: nowrap; } .ds-row-prop { color: var(--ink, #f3f3f0); } .ds-row-needs { grid-area: needs; justify-self: end; color: var(--hold, #ffb547); font-size: 12px; white-space: nowrap; }"
+    },
+    {
+      "name": "Cap Track",
+      "kind": "custom",
+      "refersTo": "panel",
+      "description": "Relevant Costs against the cap on one bar: lime posted, steel proposed, outlined unclassified; ink cap line, coral breach line; the system's one wipe.",
+      "html": "<div class=\"ds-track\" role=\"img\" aria-label=\"Posted $48m, proposed $9m, unclassified $4m, cap $215m\"><div class=\"ds-track-bar\"><span class=\"ds-seg ds-seg--posted\" style=\"left:0;width:22%\"></span><span class=\"ds-seg ds-seg--proposed\" style=\"left:calc(22% + 2px);width:calc(4% - 2px)\"></span><span class=\"ds-seg ds-seg--open\" style=\"left:calc(26% + 2px);width:calc(2% - 2px)\"></span></div><span class=\"ds-cap\" style=\"left:83%\"><b>cap $215m</b></span><span class=\"ds-breach\" style=\"left:87%\"><b>+5% breach</b></span></div>",
+      "css": ".ds-track { position: relative; margin: 26px 0 8px; padding-bottom: 8px; } .ds-track-bar { position: relative; height: 18px; border-radius: 2px; background: var(--line-soft, #1b222b); animation: ds-wipe 900ms var(--ease, cubic-bezier(0.22, 1, 0.36, 1)) both; } @keyframes ds-wipe { from { clip-path: inset(0 100% 0 0); } to { clip-path: inset(0 0 0 0); } } @media (prefers-reduced-motion: reduce) { .ds-track-bar { animation: none; } } .ds-seg { position: absolute; top: 0; bottom: 0; } .ds-seg--posted { background: var(--lime, #c9ff4b); border-radius: 2px 0 0 2px; } .ds-seg--proposed { background: var(--steel, #aab5bc); } .ds-seg--open { box-shadow: inset 0 0 0 1px var(--muted, #8f98a1); } .ds-cap, .ds-breach { position: absolute; top: -8px; height: 34px; width: 0; } .ds-cap { border-left: 2px solid var(--ink, #f3f3f0); } .ds-breach { border-left: 1px solid var(--alert, #ff725f); } .ds-cap b, .ds-breach b { position: absolute; bottom: 100%; padding-bottom: 3px; white-space: nowrap; font: 600 11px var(--mono, 'IBM Plex Mono', ui-monospace, Menlo, monospace); color: var(--ink, #f3f3f0); } .ds-cap b { right: 4px; } .ds-breach b { left: 5px; color: var(--alert, #ff725f); font-weight: 500; }"
+    },
+    {
+      "name": "Brandmark Lockup",
+      "kind": "custom",
+      "refersTo": "brandmark",
+      "description": "The skewed lime parallelogram with PW, the PIT WALL wordmark with WALL in lime, and the lockup line.",
+      "html": "<a class=\"ds-brand\" href=\"#\"><span class=\"ds-mark\">PW</span><span><span class=\"ds-word\">PIT <span>WALL</span></span><small>MERIDIAN RACING · FINANCE DESK</small></span></a>",
+      "css": ".ds-brand { display: inline-flex; align-items: center; gap: 12px; color: var(--ink, #f3f3f0); text-decoration: none; } .ds-brand:focus-visible { outline: 2px solid var(--lime, #c9ff4b); outline-offset: 2px; } .ds-mark { display: grid; place-items: center; width: 38px; height: 26px; background: var(--lime, #c9ff4b); color: #06080a; font: 800 13px var(--display, 'Barlow Condensed', 'Roboto Condensed', 'Arial Narrow', sans-serif); letter-spacing: 0.04em; transform: skewX(-12deg); clip-path: polygon(10% 0, 100% 0, 90% 100%, 0 100%); } .ds-word { display: block; font: 800 19px/1 var(--display, 'Barlow Condensed', 'Roboto Condensed', 'Arial Narrow', sans-serif); letter-spacing: 0.08em; } .ds-word span { color: var(--lime, #c9ff4b); } .ds-brand small { display: block; margin-top: 4px; font: 600 9.5px var(--body, 'DM Sans', system-ui, sans-serif); letter-spacing: 0.16em; color: var(--muted, #8f98a1); }"
+    }
+  ],
+  "narrative": {
+    "northStar": "The Shift on One Clock",
+    "overview": "Pit Wall is a race team's finance desk read the way a pit wall reads a race: one dark ground, a few hairlines, and one bright signal that means a human made the call. Every actor (FIA feed, sync job, Claude seats, standing approvals, the two people, the ERP gateway, the red team) gets a lane on a shared time axis, so separation of duties is something you see, not something you are told. The landing page (`landing/`) is the parent world; the dashboard keeps its ground, hairlines, lime and three faces, and drops its theatre (livery glow, scene shadows, looping cues) for reading sizes and working density.\n\nThe surface is dense and calm. Panels are flat slabs one step lighter than the ground, edged with a hairline and cornered at 2px. Text is DM Sans at 14px; numbers, ids, codes and times are IBM Plex Mono with tabular figures; only page and section headings speak in Barlow Condensed capitals. Colour is almost entirely neutral, so that the three status lamps (lime approved, amber waiting, coral refused) carry their meaning by contrast with everything else. Summaries are sentences and definition lines with the figure inline, never a wall of KPI tiles. The why sits next to the number.\n\nDark only. The stylesheet declares `color-scheme: dark` and there is no light theme; do not add one.",
+    "keyCharacteristics": [
+      "Near-black ground with tonal panels and hairline edges; no elevation except the floating tooltip.",
+      "Lime is a person's signature or the button that lets them sign; amber is waiting; coral is refused. Each ships with an icon and a word.",
+      "Barlow Condensed capitals for h1 and h2 only; DM Sans for everything a person reads or clicks; Plex Mono for every figure.",
+      "2px corners throughout; the skewed lime brandmark is the only slanted shape.",
+      "One motion moment: the cap track wipes in left to right. Everything else is a 160ms state change."
+    ],
+    "rules": [
+      {
+        "name": "The Signature Rule",
+        "body": "In the work, lime means a person signed it or this is the button that lets them sign. If a lime pixel cannot be traced to a human approval or the primary action, it is wrong.",
+        "section": "colors"
+      },
+      {
+        "name": "The Three Lamps Rule",
+        "body": "Lime approved, amber waiting, coral refused, and each lamp ships with its icon (check, clock or question, cross) and a word (\"Approved\", \"Waiting for the Controller\", \"Rejected\"). A lamp colour on text without an icon is drift, not precedent.",
+        "section": "colors"
+      },
+      {
+        "name": "The Neutral Series Rule",
+        "body": "Data series are the world's greys (`s1`, `s2`, `steel`, `muted`). The three lamps never encode a series, so a coloured mark on a chart always means a status.",
+        "section": "colors"
+      },
+      {
+        "name": "The Two-Headline Rule",
+        "body": "Barlow Condensed capitals belong to h1 and h2 only. Body, labels, buttons and numbers never set in Barlow. The one sanctioned exception is the why pane's title, which carries a record's own name: it sets in Barlow at 22px in the record's own case (a memo, an invoice), and a policy key sets in Plex Mono 600 at 16px because it is a code.",
+        "section": "typography"
+      },
+      {
+        "name": "The Timing Screen Rule",
+        "body": "Every money amount, id, code, time and check result is Plex Mono with tabular figures, right-aligned in tables. A number set in DM Sans is a bug.",
+        "section": "typography"
+      },
+      {
+        "name": "The Ground Plane Rule",
+        "body": "Panels sit on the ground; they are never lifted. If something needs to feel above the page, it is a tooltip, and it is the only thing that casts a shadow.",
+        "section": "elevation"
+      },
+      {
+        "name": "The 2px Rule",
+        "body": "Corners are 2px or 1px. No pills, no circles on containers, no radius above 2px. (The cost-cap bars currently round their right end at 3px; treat that as drift.)",
+        "section": "shapes"
+      }
+    ],
+    "dos": [
+      "Do keep lime for a person's approval and the primary action (plus the brand's own marks and the focus ring), so a lime pixel always means a human signed.",
+      "Do pair every status with its icon and a word: check + \"Approved\", clock + \"Waiting for the Controller\", cross + \"Rejected\" or \"refused\".",
+      "Do show a refused attempt where it happened: a coral cross on the lane that tried, a coral outcome in the why pane, a 4% coral row in the audit table.",
+      "Do set every figure, id, code and time in IBM Plex Mono with tabular figures, right-aligned in tables.",
+      "Do build depth from the four tones (ground, panel, inset, raised) and two hairlines (`line-soft` for panel edges and row dividers, `line` for controls, table heads and the shell rule).",
+      "Do use the desk's own icon set: 16px grid, 1.6 stroke, square caps, miter joins, `currentColor`.",
+      "Do put the figure inside a sentence or a definition line (\"$X of Relevant Costs posted against a $215m cap\"), with the why next to it.",
+      "Do keep 2px corners on everything that has a corner."
+    ],
+    "donts": [
+      "Don't add a light theme; the desk is dark only.",
+      "Don't colour a data series, a hover, a connection indicator or a decoration lime, amber or coral; chart series are `s1`, `s2`, `steel` and `muted`.",
+      "Don't let a status colour stand alone on a word or a dot without its icon.",
+      "Don't set body text, labels, buttons or numbers in Barlow Condensed, and don't track small labels into spaced capitals.",
+      "Don't lift dashboard panels with shadows or glows; only the tooltip floats.",
+      "Don't round anything past 2px or make a pill.",
+      "Don't animate content in. The cap track's wipe is the one motion moment; everything else is a 160ms state change, and all of it stops under reduced motion.",
+      "Don't summarise a desk with a row of KPI tiles."
+    ]
+  }
+}
