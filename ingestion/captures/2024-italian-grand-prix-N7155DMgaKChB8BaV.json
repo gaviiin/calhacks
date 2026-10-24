@@ -1,0 +1,22 @@
+{
+  "captured_at": "2026-10-24T06:46:59Z",
+  "actor_id": "WioNWx5RP1yMnEKOh",
+  "actor_run_id": "N7155DMgaKChB8BaV",
+  "dataset_id": "D8sShR2wgvL8NwRw3",
+  "key_value_store_id": "MYOgtFuNGGDIL5GV9",
+  "run_started_at": "2026-10-24T06:46:49.377000+00:00",
+  "run_finished_at": "2026-10-24T06:46:52.739000+00:00",
+  "run_summary": {
+    "season": 2024,
+    "event_slug": "italian-grand-prix",
+    "event_name": "Italian Grand Prix",
+    "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Italian%20Grand%20Prix",
+    "listing_sha256": "7d865b23327e4e1f143f5f59be8cab1dad6f23d562746e3e2d8d0feee7a694c9",
+    "documents_on_page": 1,
+    "recalled_skipped": 1,
+    "document_filter": "decisions_and_classifications",
+    "items_pushed": 0,
+    "discovered_at": "2026-10-24T06:46:52Z"
+  },
+  "items": []
+}

@@ -1,0 +1,143 @@
+{
+  "captured_at": "2026-10-24T06:53:32Z",
+  "actor_id": "WioNWx5RP1yMnEKOh",
+  "actor_run_id": "7ChXhLm6HQlKG90Gi",
+  "dataset_id": "i4BpcMRbLDTfePfVw",
+  "key_value_store_id": "lyWkokil5EunWkM50",
+  "run_started_at": "2026-10-24T06:53:22.966000+00:00",
+  "run_finished_at": "2026-10-24T06:53:25.975000+00:00",
+  "run_summary": {
+    "season": 2023,
+    "event_slug": "miami-grand-prix",
+    "event_name": "Miami Grand Prix",
+    "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Miami%20Grand%20Prix",
+    "listing_sha256": "f3d89e92c9bfaccfb3dab9dda6dbeb90950ab865a24536951f194f07b1a00cbc",
+    "documents_on_page": 46,
+    "recalled_skipped": 0,
+    "document_filter": "decisions_and_classifications",
+    "items_pushed": 10,
+    "discovered_at": "2026-10-24T06:53:25Z"
+  },
+  "items": [
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "",
+      "title": "Final Race Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Miami%20Grand%20Prix%20-%20Final%20Race%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Miami%20Grand%20Prix",
+      "published_at": "08.05.23 00:55 CET",
+      "discovered_at": "2026-10-24T06:53:25Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "",
+      "title": "Decision - Car 11 - Drivers' Parade",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Miami%20Grand%20Prix%20-%20Decision%20-%20Car%2011%20-%20Drivers%27%20Parade.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Miami%20Grand%20Prix",
+      "published_at": "08.05.23 00:52 CET",
+      "discovered_at": "2026-10-24T06:53:25Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "",
+      "title": "Summons - Car 11 - Drivers' Parade",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Miami%20Grand%20Prix%20-%20Summons%20-%20Car%2011%20-%20Drivers%27%20Parade.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Miami%20Grand%20Prix",
+      "published_at": "07.05.23 23:29 CET",
+      "discovered_at": "2026-10-24T06:53:25Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "",
+      "title": "Provisional Race Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Miami%20Grand%20Prix%20-%20Provisional%20Race%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Miami%20Grand%20Prix",
+      "published_at": "07.05.23 23:21 CET",
+      "discovered_at": "2026-10-24T06:53:25Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 55 - Pit lane speeding",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Miami%20Grand%20Prix%20-%20Infringement%20-%20Car%2055%20-%20Pit%20lane%20speeding.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Miami%20Grand%20Prix",
+      "published_at": "07.05.23 22:20 CET",
+      "discovered_at": "2026-10-24T06:53:25Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "",
+      "title": "Final Qualifying Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Miami%20Grand%20Prix%20-%20Final%20Qualifying%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Miami%20Grand%20Prix",
+      "published_at": "07.05.23 01:30 CET",
+      "discovered_at": "2026-10-24T06:53:25Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "",
+      "title": "Decision - Car 44 - Turn 17 Incident",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Miami%20Grand%20Prix%20-%20Decision%20-%20Car%2044%20-%20Turn%2017%20Incident.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Miami%20Grand%20Prix",
+      "published_at": "07.05.23 00:29 CET",
+      "discovered_at": "2026-10-24T06:53:25Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "",
+      "title": "Decision - Car 20 - Turn 17 Incident",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Miami%20Grand%20Prix%20-%20Decision%20-%20Car%2020%20-%20Turn%2017%20Incident.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Miami%20Grand%20Prix",
+      "published_at": "07.05.23 00:28 CET",
+      "discovered_at": "2026-10-24T06:53:25Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "",
+      "title": "Summons - Car 44 - Turn 17 incident",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Miami%20Grand%20Prix%20-%20Summons%20-%20Car%2044%20-%20Turn%2017%20incident.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Miami%20Grand%20Prix",
+      "published_at": "06.05.23 23:24 CET",
+      "discovered_at": "2026-10-24T06:53:25Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "",
+      "title": "Summons - Car 20 - Turn 17 Incident",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Miami%20Grand%20Prix%20-%20Summons%20-%20Car%2020%20-%20Turn%2017%20Incident.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Miami%20Grand%20Prix",
+      "published_at": "06.05.23 23:21 CET",
+      "discovered_at": "2026-10-24T06:53:25Z"
+    }
+  ]
+}

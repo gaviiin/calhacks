@@ -1,0 +1,143 @@
+{
+  "captured_at": "2026-10-24T06:54:43Z",
+  "actor_id": "WioNWx5RP1yMnEKOh",
+  "actor_run_id": "smFMNDYN59iARyaoj",
+  "dataset_id": "uwQqvKfZS6RgLhre8",
+  "key_value_store_id": "69eaNy1mpvYWobape",
+  "run_started_at": "2026-10-24T06:54:14.668000+00:00",
+  "run_finished_at": "2026-10-24T06:54:37.016000+00:00",
+  "run_summary": {
+    "season": 2023,
+    "event_slug": "belgian-grand-prix",
+    "event_name": "Belgian Grand Prix",
+    "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Belgian%20Grand%20Prix",
+    "listing_sha256": "cc10afd05efd18b77d8a92d5714bd4fc1845dd8e15d12feb0dac47f8fff5faa4",
+    "documents_on_page": 62,
+    "recalled_skipped": 0,
+    "document_filter": "decisions_and_classifications",
+    "items_pushed": 10,
+    "discovered_at": "2026-10-24T06:54:36Z"
+  },
+  "items": [
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "",
+      "title": "Final Race Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Belgian%20Grand%20Prix%20-%20Final%20Race%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Belgian%20Grand%20Prix",
+      "published_at": "30.07.23 18:45 CET",
+      "discovered_at": "2026-10-24T06:54:36Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "",
+      "title": "Provisional Race Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Belgian%20Grand%20Prix%20-%20Provisional%20Race%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Belgian%20Grand%20Prix",
+      "published_at": "30.07.23 16:46 CET",
+      "discovered_at": "2026-10-24T06:54:36Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 27 - Changes made during Parc Ferme (PU)",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Belgian%20Grand%20Prix%20-%20Infringement%20-%20Car%2027%20-%20Changes%20made%20during%20Parc%20Ferme%20%28PU%29.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Belgian%20Grand%20Prix",
+      "published_at": "30.07.23 13:11 CET",
+      "discovered_at": "2026-10-24T06:54:36Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "",
+      "title": "Final Sprint Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Belgian%20Grand%20Prix%20-%20Final%20Sprint%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Belgian%20Grand%20Prix",
+      "published_at": "29.07.23 20:45 CET",
+      "discovered_at": "2026-10-24T06:54:36Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 14 - Change of direction",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Belgian%20Grand%20Prix%20-%20Infringement%20-%20Car%2014%20-%20Change%20of%20direction.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Belgian%20Grand%20Prix",
+      "published_at": "29.07.23 19:30 CET",
+      "discovered_at": "2026-10-24T06:54:36Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 44 - Causing a Collision",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Belgian%20Grand%20Prix%20-%20Infringement%20-%20Car%2044%20-%20Causing%20a%20Collision.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Belgian%20Grand%20Prix",
+      "published_at": "29.07.23 19:23 CET",
+      "discovered_at": "2026-10-24T06:54:36Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "",
+      "title": "Summons - Car 27 - Alleged Impeding by Car 14",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Belgian%20Grand%20Prix%20-%20Summons%20-%20Car%2027%20-%20Alleged%20Impeding%20by%20Car%2014.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Belgian%20Grand%20Prix",
+      "published_at": "29.07.23 18:42 CET",
+      "discovered_at": "2026-10-24T06:54:36Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "",
+      "title": "Summons - Car 14 - Alleged Impeding of Car 27",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Belgian%20Grand%20Prix%20-%20Summons%20-%20Car%2014%20-%20Alleged%20Impeding%20of%20Car%2027.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Belgian%20Grand%20Prix",
+      "published_at": "29.07.23 18:35 CET",
+      "discovered_at": "2026-10-24T06:54:36Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "",
+      "title": "Provisional Sprint Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Belgian%20Grand%20Prix%20-%20Provisional%20Sprint%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Belgian%20Grand%20Prix",
+      "published_at": "29.07.23 18:35 CET",
+      "discovered_at": "2026-10-24T06:54:36Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 2 - Pit Lane Speeding",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Belgian%20Grand%20Prix%20-%20Infringement%20-%20Car%202%20-%20Pit%20Lane%20Speeding.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Belgian%20Grand%20Prix",
+      "published_at": "29.07.23 18:23 CET",
+      "discovered_at": "2026-10-24T06:54:36Z"
+    }
+  ]
+}

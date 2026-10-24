@@ -1,0 +1,22 @@
+{
+  "captured_at": "2026-10-24T06:48:11Z",
+  "actor_id": "WioNWx5RP1yMnEKOh",
+  "actor_run_id": "QzGr5mIOBzY9JKRQe",
+  "dataset_id": "yCG4SwZUJdaaXzVvu",
+  "key_value_store_id": "LrhBp2UgdiXUPtncb",
+  "run_started_at": "2026-10-24T06:47:41.264000+00:00",
+  "run_finished_at": "2026-10-24T06:48:03.964000+00:00",
+  "run_summary": {
+    "season": 2024,
+    "event_slug": "abu-dhabi-grand-prix",
+    "event_name": "Abu Dhabi Grand Prix",
+    "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Abu%20Dhabi%20Grand%20Prix",
+    "listing_sha256": "2f9806ff80399aae9414a18beac4f3c19366e97675dbdaa5e47dc4edc1d45c26",
+    "documents_on_page": 0,
+    "recalled_skipped": 0,
+    "document_filter": "decisions_and_classifications",
+    "items_pushed": 0,
+    "discovered_at": "2026-10-24T06:48:03Z"
+  },
+  "items": []
+}

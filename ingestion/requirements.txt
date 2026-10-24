@@ -1,0 +1,5 @@
+# Bridge + tests. The Actor's own deps are in actor/requirements.txt (also needed by the parser tests).
+-r actor/requirements.txt
+apify-client==3.3.0
+python-dotenv==1.2.4
+pytest

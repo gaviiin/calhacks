@@ -1,0 +1,143 @@
+{
+  "captured_at": "2026-10-24T06:55:28Z",
+  "actor_id": "WioNWx5RP1yMnEKOh",
+  "actor_run_id": "sprnFGkdcEVNKkMc5",
+  "dataset_id": "E3LbZdJCgbZoNr2lq",
+  "key_value_store_id": "E7vXQYgEHBP5wHH4D",
+  "run_started_at": "2026-10-24T06:55:14.874000+00:00",
+  "run_finished_at": "2026-10-24T06:55:20.861000+00:00",
+  "run_summary": {
+    "season": 2023,
+    "event_slug": "united-states-grand-prix",
+    "event_name": "United States Grand Prix",
+    "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/United%20States%20Grand%20Prix",
+    "listing_sha256": "624b114c179e5bd73ad5cc398d0d73f71c1086e53557f3387f0bff36643bb04a",
+    "documents_on_page": 67,
+    "recalled_skipped": 0,
+    "document_filter": "decisions_and_classifications",
+    "items_pushed": 10,
+    "discovered_at": "2026-10-24T06:55:20Z"
+  },
+  "items": [
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "",
+      "title": "Final Race Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20United%20States%20Grand%20Prix%20-%20Final%20Race%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/United%20States%20Grand%20Prix",
+      "published_at": "23.10.23 02:37 CET",
+      "discovered_at": "2026-10-24T06:55:20Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 16 - Technical non-compliance (Plank)",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023_united_states_grand_prix_-_infringement_-_car_16_-_technical_non-compliance_plank_0.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/United%20States%20Grand%20Prix",
+      "published_at": "23.10.23 02:30 CET",
+      "discovered_at": "2026-10-24T06:55:20Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 44 - Technical non-compliance (Plank)",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20United%20States%20Grand%20Prix%20-%20Infringement%20-%20Car%2044%20-%20Technical%20non-compliance%20%28Plank%29.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/United%20States%20Grand%20Prix",
+      "published_at": "23.10.23 02:17 CET",
+      "discovered_at": "2026-10-24T06:55:20Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "",
+      "title": "Summons - Car 16 - Alleged technical non-compliance",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20United%20States%20Grand%20Prix%20-%20Summons%20-%20Car%2016%20-%20Alleged%20technical%20non-compliance.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/United%20States%20Grand%20Prix",
+      "published_at": "23.10.23 00:53 CET",
+      "discovered_at": "2026-10-24T06:55:20Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "",
+      "title": "Summons - Car 44 - Alleged technical non-compliance",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20United%20States%20Grand%20Prix%20-%20Summons%20-%20Car%2044%20-%20Alleged%20technical%20non-compliance.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/United%20States%20Grand%20Prix",
+      "published_at": "23.10.23 00:49 CET",
+      "discovered_at": "2026-10-24T06:55:20Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "",
+      "title": "Decision - Car 23 - Leaving the track multiple times (further)",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20United%20States%20Grand%20Prix%20-%20Decision%20-%20Car%2023%20-%20Leaving%20the%20track%20multiple%20times%20%28further%29.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/United%20States%20Grand%20Prix",
+      "published_at": "23.10.23 00:22 CET",
+      "discovered_at": "2026-10-24T06:55:20Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "",
+      "title": "Decision - Car 18 - Not entering Pit Lane",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20United%20States%20Grand%20Prix%20-%20Decision%20-%20Car%2018%20-%20Not%20entering%20Pit%20Lane.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/United%20States%20Grand%20Prix",
+      "published_at": "23.10.23 00:16 CET",
+      "discovered_at": "2026-10-24T06:55:20Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "",
+      "title": "Provisional Race Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20United%20States%20Grand%20Prix%20-%20Provisional%20Race%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/United%20States%20Grand%20Prix",
+      "published_at": "22.10.23 23:01 CET",
+      "discovered_at": "2026-10-24T06:55:20Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 23 - Leaving the track multiple times",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20United%20States%20Grand%20Prix%20-%20Infringement%20-%20Car%2023%20-%20Leaving%20the%20track%20multiple%20times.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/United%20States%20Grand%20Prix",
+      "published_at": "22.10.23 22:43 CET",
+      "discovered_at": "2026-10-24T06:55:20Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "",
+      "title": "Decision - Car 18 - Alleged leaving the track",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20United%20States%20Grand%20Prix%20-%20Decision%20-%20Car%2018%20-%20Alleged%20leaving%20the%20track.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/United%20States%20Grand%20Prix",
+      "published_at": "22.10.23 22:36 CET",
+      "discovered_at": "2026-10-24T06:55:20Z"
+    }
+  ]
+}

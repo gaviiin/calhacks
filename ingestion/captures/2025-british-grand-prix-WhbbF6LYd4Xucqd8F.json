@@ -1,0 +1,143 @@
+{
+  "captured_at": "2026-10-24T06:51:16Z",
+  "actor_id": "WioNWx5RP1yMnEKOh",
+  "actor_run_id": "WhbbF6LYd4Xucqd8F",
+  "dataset_id": "Yvdb25Owt0XrAcCWj",
+  "key_value_store_id": "bUJpROooK31CLPOVe",
+  "run_started_at": "2026-10-24T06:50:47.119000+00:00",
+  "run_finished_at": "2026-10-24T06:51:09.676000+00:00",
+  "run_summary": {
+    "season": 2025,
+    "event_slug": "british-grand-prix",
+    "event_name": "British Grand Prix",
+    "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/British%20Grand%20Prix",
+    "listing_sha256": "9f7282aaf296d75aad22e8621928ce8bfd6d186319a13107a2dff57f736fc1cb",
+    "documents_on_page": 49,
+    "recalled_skipped": 2,
+    "document_filter": "decisions_and_classifications",
+    "items_pushed": 10,
+    "discovered_at": "2026-10-24T06:51:09Z"
+  },
+  "items": [
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "british-grand-prix",
+      "event_name": "British Grand Prix",
+      "document_number": "51",
+      "title": "Doc 51 - Final Race Classification",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_british_grand_prix_-_final_race_classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/British%20Grand%20Prix",
+      "published_at": "06.07.25 20:46 CET",
+      "discovered_at": "2026-10-24T06:51:09Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "british-grand-prix",
+      "event_name": "British Grand Prix",
+      "document_number": "49",
+      "title": "Doc 49 - Decision - Car 87 - Incident with Car 31",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_british_grand_prix_-_decision_-_car_87_-_incident_with_car_31.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/British%20Grand%20Prix",
+      "published_at": "06.07.25 19:36 CET",
+      "discovered_at": "2026-10-24T06:51:09Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "british-grand-prix",
+      "event_name": "British Grand Prix",
+      "document_number": "48",
+      "title": "Doc 48 - Decision - Car 31 - Incident with Car 87",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_british_grand_prix_-_decision_-_car_31_-_incident_with_car_87.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/British%20Grand%20Prix",
+      "published_at": "06.07.25 19:36 CET",
+      "discovered_at": "2026-10-24T06:51:09Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "british-grand-prix",
+      "event_name": "British Grand Prix",
+      "document_number": "47",
+      "title": "Doc 47 - Decision - Car 6 - Alleged causing a collision",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_british_grand_prix_-_decision_-_car_6_-_alleged_causing_a_collision.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/British%20Grand%20Prix",
+      "published_at": "06.07.25 19:16 CET",
+      "discovered_at": "2026-10-24T06:51:09Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "british-grand-prix",
+      "event_name": "British Grand Prix",
+      "document_number": "46",
+      "title": "Doc 46 - Infringement - Race Deleted Lap Times",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_british_grand_prix_-_infringement_-_race_deleted_lap_times.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/British%20Grand%20Prix",
+      "published_at": "06.07.25 19:06 CET",
+      "discovered_at": "2026-10-24T06:51:09Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "british-grand-prix",
+      "event_name": "British Grand Prix",
+      "document_number": "45",
+      "title": "Doc 45 - Provisional Race Classification",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_british_grand_prix_-_provisional_race_classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/British%20Grand%20Prix",
+      "published_at": "06.07.25 18:04 CET",
+      "discovered_at": "2026-10-24T06:51:09Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "british-grand-prix",
+      "event_name": "British Grand Prix",
+      "document_number": "44",
+      "title": "Doc 44 - Summons - Car 87 - Incident with Car 31",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_british_grand_prix_-_summons_-_car_87_-_incident_with_car_31.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/British%20Grand%20Prix",
+      "published_at": "06.07.25 17:50 CET",
+      "discovered_at": "2026-10-24T06:51:09Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "british-grand-prix",
+      "event_name": "British Grand Prix",
+      "document_number": "43",
+      "title": "Doc 43 - Summons - Car 31 - Incident with Car 87",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_british_grand_prix_-_summons_-_car_31_-_incident_with_car_87.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/British%20Grand%20Prix",
+      "published_at": "06.07.25 17:50 CET",
+      "discovered_at": "2026-10-24T06:51:09Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "british-grand-prix",
+      "event_name": "British Grand Prix",
+      "document_number": "42",
+      "title": "Doc 42 - Summons - Car 12 - Alleged causing a collision by Car 12",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_british_grand_prix_-_summons_-_car_12_-_alleged_causing_a_collision_by_car_12.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/British%20Grand%20Prix",
+      "published_at": "06.07.25 17:55 CET",
+      "discovered_at": "2026-10-24T06:51:09Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "british-grand-prix",
+      "event_name": "British Grand Prix",
+      "document_number": "41",
+      "title": "Doc 41 - Summons - Car 6 - Alleged causing a collision with Car 12",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_british_grand_prix_-_summons_-_car_6_-_alleged_causing_a_collision_with_car_12.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/British%20Grand%20Prix",
+      "published_at": "06.07.25 17:49 CET",
+      "discovered_at": "2026-10-24T06:51:09Z"
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+{
+  "captured_at": "2026-10-24T06:45:47Z",
+  "actor_id": "WioNWx5RP1yMnEKOh",
+  "actor_run_id": "k1HNKoOLUc6WBKDVC",
+  "dataset_id": "LnisLcb1kfzHkSOkD",
+  "key_value_store_id": "bY2edhIZ5cnGTaoBj",
+  "run_started_at": "2026-10-24T06:45:34.859000+00:00",
+  "run_finished_at": "2026-10-24T06:45:40.539000+00:00",
+  "run_summary": {
+    "season": 2024,
+    "event_slug": "australian-grand-prix",
+    "event_name": "Australian Grand Prix",
+    "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Australian%20Grand%20Prix",
+    "listing_sha256": "b70dc962348ae8beeba8a05bd67b8f85d29c8ac3214263dc11ae442832b5537d",
+    "documents_on_page": 53,
+    "recalled_skipped": 0,
+    "document_filter": "decisions_and_classifications",
+    "items_pushed": 10,
+    "discovered_at": "2026-10-24T06:45:39Z"
+  },
+  "items": [
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "australian-grand-prix",
+      "event_name": "Australian Grand Prix",
+      "document_number": "",
+      "title": "Final Race Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Australian%20Grand%20Prix%20-%20Final%20Race%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Australian%20Grand%20Prix",
+      "published_at": "24.03.24 10:06 CET",
+      "discovered_at": "2026-10-24T06:45:39Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "australian-grand-prix",
+      "event_name": "Australian Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 14 - Potentially dangerous driving",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Australian%20Grand%20Prix%20-%20Infringement%20-%20Car%2014%20-%20Potentially%20dangerous%20driving.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Australian%20Grand%20Prix",
+      "published_at": "24.03.24 09:52 CET",
+      "discovered_at": "2026-10-24T06:45:39Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "australian-grand-prix",
+      "event_name": "Australian Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Sauber - Car 77 Pit Stop",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Australian%20Grand%20Prix%20-%20Infringement%20-%20Sauber%20-%20Car%2077%20Pit%20Stop.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Australian%20Grand%20Prix",
+      "published_at": "24.03.24 09:31 CET",
+      "discovered_at": "2026-10-24T06:45:39Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "australian-grand-prix",
+      "event_name": "Australian Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 10 - Crossing the line at Pit Exit",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Australian%20Grand%20Prix%20-%20Infringement%20-%20Car%2010%20-%20Crossing%20the%20line%20at%20Pit%20Exit_0.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Australian%20Grand%20Prix",
+      "published_at": "24.03.24 07:32 CET",
+      "discovered_at": "2026-10-24T06:45:39Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "australian-grand-prix",
+      "event_name": "Australian Grand Prix",
+      "document_number": "",
+      "title": "Provisional Race Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Australian%20Grand%20Prix%20-%20Provisional%20Race%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Australian%20Grand%20Prix",
+      "published_at": "24.03.24 06:56 CET",
+      "discovered_at": "2026-10-24T06:45:39Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "australian-grand-prix",
+      "event_name": "Australian Grand Prix",
+      "document_number": "",
+      "title": "Summons - Car 63 - Alleged incident with Car 14",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Australian%20Grand%20Prix%20-%20Summons%20-%20Car%2063%20-%20Alleged%20incident%20with%20Car%2014.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Australian%20Grand%20Prix",
+      "published_at": "24.03.24 07:02 CET",
+      "discovered_at": "2026-10-24T06:45:39Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "australian-grand-prix",
+      "event_name": "Australian Grand Prix",
+      "document_number": "",
+      "title": "Summons - Car 14 - Alleged incident with Car 63",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Australian%20Grand%20Prix%20-%20Summons%20-%20Car%2014%20-%20Alleged%20incident%20with%20Car%2063.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Australian%20Grand%20Prix",
+      "published_at": "24.03.24 06:56 CET",
+      "discovered_at": "2026-10-24T06:45:39Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "australian-grand-prix",
+      "event_name": "Australian Grand Prix",
+      "document_number": "",
+      "title": "Summons - Sauber - Car 77 Pit Stop",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Australian%20Grand%20Prix%20-%20Summons%20-%20Sauber%20-%20Car%2077%20Pit%20Stop.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Australian%20Grand%20Prix",
+      "published_at": "24.03.24 06:34 CET",
+      "discovered_at": "2026-10-24T06:45:39Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "australian-grand-prix",
+      "event_name": "Australian Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 24 - Changes made during Parc Ferme",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Australian%20Grand%20Prix%20-%20Infringement%20-%20Car%2024%20-%20Changes%20made%20during%20Parc%20Ferme.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Australian%20Grand%20Prix",
+      "published_at": "24.03.24 02:55 CET",
+      "discovered_at": "2026-10-24T06:45:39Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "australian-grand-prix",
+      "event_name": "Australian Grand Prix",
+      "document_number": "",
+      "title": "Final Qualifying Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Australian%20Grand%20Prix%20-%20Final%20Qualifying%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Australian%20Grand%20Prix",
+      "published_at": "23.03.24 10:35 CET",
+      "discovered_at": "2026-10-24T06:45:39Z"
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+{
+  "captured_at": "2026-10-24T06:55:14Z",
+  "actor_id": "WioNWx5RP1yMnEKOh",
+  "actor_run_id": "dHiaD92UyUtwsVfYU",
+  "dataset_id": "5HQfTemnr2F1YSkSr",
+  "key_value_store_id": "OtEGB5ZjEfc399IXZ",
+  "run_started_at": "2026-10-24T06:54:44.455000+00:00",
+  "run_finished_at": "2026-10-24T06:55:07.308000+00:00",
+  "run_summary": {
+    "season": 2023,
+    "event_slug": "singapore-grand-prix",
+    "event_name": "Singapore Grand Prix",
+    "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Singapore%20Grand%20Prix",
+    "listing_sha256": "73ae87c0726bf640a0b598e85d4e0205ea072653d0f29885e1742149d2f0030d",
+    "documents_on_page": 52,
+    "recalled_skipped": 0,
+    "document_filter": "decisions_and_classifications",
+    "items_pushed": 10,
+    "discovered_at": "2026-10-24T06:55:06Z"
+  },
+  "items": [
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "",
+      "title": "Final Race Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Singapore%20Grand%20Prix%20-%20Final%20Race%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Singapore%20Grand%20Prix",
+      "published_at": "17.09.23 18:15 CET",
+      "discovered_at": "2026-10-24T06:55:06Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "",
+      "title": "Decision - Car 23 - Alleged overtaking of Car 11 under VSC",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Singapore%20Grand%20Prix%20-%20Decision%20-%20Car%2023%20-%20Alleged%20overtaking%20of%20Car%2011%20under%20VSC.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Singapore%20Grand%20Prix",
+      "published_at": "17.09.23 18:15 CET",
+      "discovered_at": "2026-10-24T06:55:06Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 11 - Causing a Collision",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Singapore%20Grand%20Prix%20-%20Infringement%20-%20Car%2011%20-%20Causing%20a%20Collision.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Singapore%20Grand%20Prix",
+      "published_at": "17.09.23 18:12 CET",
+      "discovered_at": "2026-10-24T06:55:06Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "",
+      "title": "Summons - Car 11 - T13 incident with Car 23",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Singapore%20Grand%20Prix%20-%20Summons%20-%20Car%2011%20-%20T13%20incident%20with%20Car%2023.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Singapore%20Grand%20Prix",
+      "published_at": "17.09.23 16:22 CET",
+      "discovered_at": "2026-10-24T06:55:06Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "",
+      "title": "Summons - Car 23 - T13 incident with Car 11",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Singapore%20Grand%20Prix%20-%20Summons%20-%20Car%2023%20-%20T13%20incident%20with%20Car%2011.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Singapore%20Grand%20Prix",
+      "published_at": "17.09.23 16:19 CET",
+      "discovered_at": "2026-10-24T06:55:06Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "",
+      "title": "Summons - Car 11 - Alleged overtaking by Car 23 under VSC",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Singapore%20Grand%20Prix%20-%20Summons%20-%20Car%2011%20-%20Alleged%20overtaking%20by%20Car%2023%20under%20VSC.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Singapore%20Grand%20Prix",
+      "published_at": "17.09.23 16:13 CET",
+      "discovered_at": "2026-10-24T06:55:06Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "",
+      "title": "Summons - Car 23 - Alleged overtaking of Car 11 under VSC",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Singapore%20Grand%20Prix%20-%20Summons%20-%20Car%2023%20-%20Alleged%20overtaking%20of%20Car%2011%20under%20VSC.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Singapore%20Grand%20Prix",
+      "published_at": "17.09.23 16:13 CET",
+      "discovered_at": "2026-10-24T06:55:06Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "",
+      "title": "Provisional Race Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Singapore%20Grand%20Prix%20-%20Provisional%20Race%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Singapore%20Grand%20Prix",
+      "published_at": "17.09.23 16:13 CET",
+      "discovered_at": "2026-10-24T06:55:06Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 14 - Crossing the Pit Entry line",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Singapore%20Grand%20Prix%20-%20Infringement%20-%20Car%2014%20-%20Crossing%20the%20Pit%20Entry%20line.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Singapore%20Grand%20Prix",
+      "published_at": "17.09.23 15:42 CET",
+      "discovered_at": "2026-10-24T06:55:06Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 24 - Changes made during Parc Ferme (PU)",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Singapore%20Grand%20Prix%20-%20Infringement%20-%20Car%2024%20-%20Changes%20made%20during%20Parc%20Ferme%20%28PU%29.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Singapore%20Grand%20Prix",
+      "published_at": "17.09.23 11:53 CET",
+      "discovered_at": "2026-10-24T06:55:06Z"
+    }
+  ]
+}

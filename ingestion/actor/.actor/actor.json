@@ -1,0 +1,14 @@
+{
+  "actorSpecification": 1,
+  "name": "fia-document-monitor",
+  "title": "FIA Document Monitor",
+  "description": "Discovers official FIA Formula 1 decision and classification documents for one Grand Prix and outputs their metadata with source provenance.",
+  "version": "0.1",
+  "buildTag": "latest",
+  "input": "./input_schema.json",
+  "dockerfile": "../Dockerfile",
+  "readme": "../README.md",
+  "storages": {
+    "dataset": "./dataset_schema.json"
+  }
+}

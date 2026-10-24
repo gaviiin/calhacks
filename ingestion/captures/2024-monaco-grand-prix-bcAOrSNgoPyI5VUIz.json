@@ -1,0 +1,143 @@
+{
+  "captured_at": "2026-10-24T06:46:00Z",
+  "actor_id": "WioNWx5RP1yMnEKOh",
+  "actor_run_id": "bcAOrSNgoPyI5VUIz",
+  "dataset_id": "Qajwhz2zUQyaBafq1",
+  "key_value_store_id": "pN6uhF5wJfNjmfKgz",
+  "run_started_at": "2026-10-24T06:45:48.113000+00:00",
+  "run_finished_at": "2026-10-24T06:45:52.873000+00:00",
+  "run_summary": {
+    "season": 2024,
+    "event_slug": "monaco-grand-prix",
+    "event_name": "Monaco Grand Prix",
+    "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Monaco%20Grand%20Prix",
+    "listing_sha256": "44cfa2526c95d3349540710a84aab600487266b06d71957e9513397d4a251280",
+    "documents_on_page": 53,
+    "recalled_skipped": 0,
+    "document_filter": "decisions_and_classifications",
+    "items_pushed": 10,
+    "discovered_at": "2026-10-24T06:45:52Z"
+  },
+  "items": [
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "monaco-grand-prix",
+      "event_name": "Monaco Grand Prix",
+      "document_number": "",
+      "title": "Final Race Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Monaco%20Grand%20Prix%20-%20Final%20Race%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Monaco%20Grand%20Prix",
+      "published_at": "26.05.24 19:42 CET",
+      "discovered_at": "2026-10-24T06:45:52Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "monaco-grand-prix",
+      "event_name": "Monaco Grand Prix",
+      "document_number": "",
+      "title": "Provisional Race Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Monaco%20Grand%20Prix%20-%20Provisional%20Race%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Monaco%20Grand%20Prix",
+      "published_at": "26.05.24 17:46 CET",
+      "discovered_at": "2026-10-24T06:45:52Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "monaco-grand-prix",
+      "event_name": "Monaco Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 31 - Causing a collision",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Monaco%20Grand%20Prix%20-%20Infringement%20-%20Car%2031%20-%20Causing%20a%20collision.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Monaco%20Grand%20Prix",
+      "published_at": "26.05.24 16:27 CET",
+      "discovered_at": "2026-10-24T06:45:52Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "monaco-grand-prix",
+      "event_name": "Monaco Grand Prix",
+      "document_number": "",
+      "title": "Final Qualifying Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Monaco%20Grand%20Prix%20-%20Final%20Qualifying%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Monaco%20Grand%20Prix",
+      "published_at": "25.05.24 20:40 CET",
+      "discovered_at": "2026-10-24T06:45:52Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "monaco-grand-prix",
+      "event_name": "Monaco Grand Prix",
+      "document_number": "",
+      "title": "Decision - Car 27 - Failing to set a lap time in Qualifying",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Monaco%20Grand%20Prix%20-%20Decision%20-%20Car%2027%20-%20Failing%20to%20set%20a%20lap%20time%20in%20Qualifying.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Monaco%20Grand%20Prix",
+      "published_at": "25.05.24 20:32 CET",
+      "discovered_at": "2026-10-24T06:45:52Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "monaco-grand-prix",
+      "event_name": "Monaco Grand Prix",
+      "document_number": "",
+      "title": "Decision - Car 20 - Failing to set a lap time in Qualifying",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Monaco%20Grand%20Prix%20-%20Decision%20-%20Car%2020%20-%20Failing%20to%20set%20a%20lap%20time%20in%20Qualifying.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Monaco%20Grand%20Prix",
+      "published_at": "25.05.24 20:31 CET",
+      "discovered_at": "2026-10-24T06:45:52Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "monaco-grand-prix",
+      "event_name": "Monaco Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 27 - Technical non-compliance",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Monaco%20Grand%20Prix%20-%20Infringement%20-%20Car%2027%20-%20Technical%20non-compliance.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Monaco%20Grand%20Prix",
+      "published_at": "25.05.24 20:24 CET",
+      "discovered_at": "2026-10-24T06:45:52Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "monaco-grand-prix",
+      "event_name": "Monaco Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 20 - Technical non-compliance",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Monaco%20Grand%20Prix%20-%20Infringement%20-%20Car%2020%20-%20Technical%20non-compliance.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Monaco%20Grand%20Prix",
+      "published_at": "25.05.24 20:24 CET",
+      "discovered_at": "2026-10-24T06:45:52Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "monaco-grand-prix",
+      "event_name": "Monaco Grand Prix",
+      "document_number": "",
+      "title": "Decision - Car 55 - Alleged impeding of Car 23",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Monaco%20Grand%20Prix%20-%20Decision%20-%20Car%2055%20-%20Alleged%20impeding%20of%20Car%2023.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Monaco%20Grand%20Prix",
+      "published_at": "25.05.24 19:49 CET",
+      "discovered_at": "2026-10-24T06:45:52Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "monaco-grand-prix",
+      "event_name": "Monaco Grand Prix",
+      "document_number": "",
+      "title": "Decision - Car 27 - Alleged impeding of Car 31",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Monaco%20Grand%20Prix%20-%20Decision%20-%20Car%2027%20-%20Alleged%20impeding%20of%20Car%2031.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Monaco%20Grand%20Prix",
+      "published_at": "25.05.24 20:04 CET",
+      "discovered_at": "2026-10-24T06:45:52Z"
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+{
+  "captured_at": "2026-10-24T06:53:22Z",
+  "actor_id": "WioNWx5RP1yMnEKOh",
+  "actor_run_id": "wTRdRRbkK5JLtkfaz",
+  "dataset_id": "J0L19uzcwsfgePFku",
+  "key_value_store_id": "tCf1M3FkM7S4rS8LB",
+  "run_started_at": "2026-10-24T06:52:32.059000+00:00",
+  "run_finished_at": "2026-10-24T06:53:14.964000+00:00",
+  "run_summary": {
+    "season": 2023,
+    "event_slug": "australian-grand-prix",
+    "event_name": "Australian Grand Prix",
+    "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Australian%20Grand%20Prix",
+    "listing_sha256": "860d6a04e14d2d78a87c4f371c7d3d389213431a0521765c7126e06e39d7d3f1",
+    "documents_on_page": 57,
+    "recalled_skipped": 0,
+    "document_filter": "decisions_and_classifications",
+    "items_pushed": 10,
+    "discovered_at": "2026-10-24T06:53:14Z"
+  },
+  "items": [
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "australian-grand-prix",
+      "event_name": "Australian Grand Prix",
+      "document_number": "",
+      "title": "Decision - Scuderia Ferrari - Right of Review",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023_australian_grand_prix_-_decision_-_scuderia_ferrari_-_right_of_review.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Australian%20Grand%20Prix",
+      "published_at": "18.04.23 14:00 CET",
+      "discovered_at": "2026-10-24T06:53:14Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "australian-grand-prix",
+      "event_name": "Australian Grand Prix",
+      "document_number": "",
+      "title": "Summons - Scuderia Ferrari - Right of Review",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Australian%20Grand%20Prix%20-%20Summons%20-%20Scuderia%20Ferrari%20-%20Right%20of%20Review.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Australian%20Grand%20Prix",
+      "published_at": "14.04.23 14:54 CET",
+      "discovered_at": "2026-10-24T06:53:14Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "australian-grand-prix",
+      "event_name": "Australian Grand Prix",
+      "document_number": "",
+      "title": "Final Race Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Australian%20Grand%20Prix%20-%20Final%20Race%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Australian%20Grand%20Prix",
+      "published_at": "02.04.23 15:16 CET",
+      "discovered_at": "2026-10-24T06:53:14Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "australian-grand-prix",
+      "event_name": "Australian Grand Prix",
+      "document_number": "",
+      "title": "Decision - AGPC",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Australian%20Grand%20Prix%20-%20Decision%20-%20AGPC.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Australian%20Grand%20Prix",
+      "published_at": "02.04.23 15:10 CET",
+      "discovered_at": "2026-10-24T06:53:14Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "australian-grand-prix",
+      "event_name": "Australian Grand Prix",
+      "document_number": "",
+      "title": "Decision - Haas Protest",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Australian%20Grand%20Prix%20-%20Decision%20-%20Haas%20Protest.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Australian%20Grand%20Prix",
+      "published_at": "02.04.23 15:02 CET",
+      "discovered_at": "2026-10-24T06:53:14Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "australian-grand-prix",
+      "event_name": "Australian Grand Prix",
+      "document_number": "",
+      "title": "Decision - Car 31 - Incident with car 10",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Australian%20Grand%20Prix%20-%20Decision%20-%20Car%2031%20-%20Incident%20with%20car%2010.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Australian%20Grand%20Prix",
+      "published_at": "02.04.23 14:46 CET",
+      "discovered_at": "2026-10-24T06:53:14Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "australian-grand-prix",
+      "event_name": "Australian Grand Prix",
+      "document_number": "",
+      "title": "Decision - Car 10 - Incident with car 31",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Australian%20Grand%20Prix%20-%20Decision%20-%20Car%2010%20-%20Incident%20with%20car%2031.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Australian%20Grand%20Prix",
+      "published_at": "02.04.23 14:46 CET",
+      "discovered_at": "2026-10-24T06:53:14Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "australian-grand-prix",
+      "event_name": "Australian Grand Prix",
+      "document_number": "",
+      "title": "Summons - AGPC",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Australian%20Grand%20Prix%20-%20Summons%20-%20AGPC.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Australian%20Grand%20Prix",
+      "published_at": "02.04.23 12:03 CET",
+      "discovered_at": "2026-10-24T06:53:14Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "australian-grand-prix",
+      "event_name": "Australian Grand Prix",
+      "document_number": "",
+      "title": "Summons - Haas",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Australian%20Grand%20Prix%20-%20Summons%20-%20Haas.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Australian%20Grand%20Prix",
+      "published_at": "02.04.23 11:20 CET",
+      "discovered_at": "2026-10-24T06:53:14Z"
+    },
+    {
+      "source": "fia",
+      "season": 2023,
+      "event_slug": "australian-grand-prix",
+      "event_name": "Australian Grand Prix",
+      "document_number": "",
+      "title": "Offence - Car 55 - Causing a collision",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2023%20Australian%20Grand%20Prix%20-%20Offence%20-%20Car%2055%20-%20Causing%20a%20collision.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2023-2042/event/Australian%20Grand%20Prix",
+      "published_at": "02.04.23 11:11 CET",
+      "discovered_at": "2026-10-24T06:53:14Z"
+    }
+  ]
+}

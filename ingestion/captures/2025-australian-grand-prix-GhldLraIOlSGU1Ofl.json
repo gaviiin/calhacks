@@ -1,0 +1,22 @@
+{
+  "captured_at": "2026-10-24T06:50:24Z",
+  "actor_id": "WioNWx5RP1yMnEKOh",
+  "actor_run_id": "GhldLraIOlSGU1Ofl",
+  "dataset_id": "k5xMKRDCCCeOlFVL4",
+  "key_value_store_id": "RG4dR3ezT63uLbc7W",
+  "run_started_at": "2026-10-24T06:50:14.809000+00:00",
+  "run_finished_at": "2026-10-24T06:50:17.773000+00:00",
+  "run_summary": {
+    "season": 2025,
+    "event_slug": "australian-grand-prix",
+    "event_name": "Australian Grand Prix",
+    "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Australian%20Grand%20Prix",
+    "listing_sha256": "1b97832d1a018d4ffc47a2f160f833794f0fe206c3fc1bd74bc3faa34ea0b883",
+    "documents_on_page": 0,
+    "recalled_skipped": 1,
+    "document_filter": "decisions_and_classifications",
+    "items_pushed": 0,
+    "discovered_at": "2026-10-24T06:50:17Z"
+  },
+  "items": []
+}

@@ -1,0 +1,44 @@
+{
+  "title": "FIA Document Monitor input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "season": {
+      "title": "Season",
+      "type": "integer",
+      "description": "Formula 1 season year as listed on fia.com.",
+      "editor": "number",
+      "minimum": 2019,
+      "default": 2024,
+      "prefill": 2024
+    },
+    "event_slug": {
+      "title": "Event slug",
+      "type": "string",
+      "description": "Lower-case, hyphenated Grand Prix name, e.g. belgian-grand-prix or sao-paulo-grand-prix.",
+      "editor": "textfield",
+      "default": "belgian-grand-prix",
+      "prefill": "belgian-grand-prix"
+    },
+    "max_items": {
+      "title": "Max documents",
+      "type": "integer",
+      "description": "Upper bound on documents pushed (newest first). Keep small while testing.",
+      "editor": "number",
+      "minimum": 1,
+      "maximum": 100,
+      "default": 10,
+      "prefill": 10
+    },
+    "document_filter": {
+      "title": "Documents to include",
+      "type": "string",
+      "description": "Only stewards' decisions and classifications, or every document on the event page.",
+      "editor": "select",
+      "enum": ["decisions_and_classifications", "all"],
+      "enumTitles": ["Decisions and classifications", "All documents"],
+      "default": "decisions_and_classifications"
+    }
+  },
+  "required": ["season", "event_slug"]
+}

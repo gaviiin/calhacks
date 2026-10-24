@@ -1,0 +1,143 @@
+{
+  "captured_at": "2026-10-24T06:52:31Z",
+  "actor_id": "WioNWx5RP1yMnEKOh",
+  "actor_run_id": "0AzOAhpkeUrrAlGQ1",
+  "dataset_id": "c1rYzZHhOl05GcsI2",
+  "key_value_store_id": "atIM8GMBEBFo6CPEZ",
+  "run_started_at": "2026-10-24T06:52:01.339000+00:00",
+  "run_finished_at": "2026-10-24T06:52:23.769000+00:00",
+  "run_summary": {
+    "season": 2025,
+    "event_slug": "united-states-grand-prix",
+    "event_name": "United States Grand Prix",
+    "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/United%20States%20Grand%20Prix",
+    "listing_sha256": "f40f220205da911a2a6a72672795665a3e8282e0c3c8cdd9689b3c826b64f52e",
+    "documents_on_page": 58,
+    "recalled_skipped": 3,
+    "document_filter": "decisions_and_classifications",
+    "items_pushed": 10,
+    "discovered_at": "2026-10-24T06:52:23Z"
+  },
+  "items": [
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "60",
+      "title": "Doc 60 - Final Race Classification",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_united_states_grand_prix_-_final_race_classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/United%20States%20Grand%20Prix",
+      "published_at": "20.10.25 02:05 CET",
+      "discovered_at": "2026-10-24T06:52:23Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "59",
+      "title": "Doc 59 - Infringement - Oracle Red Bull Racing - Failure to follow the instructions of relevant officials (Grid incident).",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_united_states_grand_prix_-_infringement_-_oracle_red_bull_racing_-_failure_to_follow_the_instructions_of_relevant_officials_grid_incident.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/United%20States%20Grand%20Prix",
+      "published_at": "20.10.25 01:48 CET",
+      "discovered_at": "2026-10-24T06:52:23Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "58",
+      "title": "Doc 58 - Infringement - Car 55 - Causing a Collision with Car 12 in Turn 15",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_united_states_grand_prix_-_infringement_-_car_55_-_causing_a_collision_with_car_12_in_turn_15.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/United%20States%20Grand%20Prix",
+      "published_at": "20.10.25 01:02 CET",
+      "discovered_at": "2026-10-24T06:52:23Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "55",
+      "title": "Doc 55 - Summons - Red Bull - Failure to follow the instructions of an official",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_united_states_grand_prix_-_summons_-_red_bull_-_failure_to_follow_the_instructions_of_an_official.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/United%20States%20Grand%20Prix",
+      "published_at": "19.10.25 23:16 CET",
+      "discovered_at": "2026-10-24T06:52:23Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "54",
+      "title": "Doc 54 - Provisional Race Classification",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_united_states_grand_prix_-_provisional_race_classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/United%20States%20Grand%20Prix",
+      "published_at": "19.10.25 22:54 CET",
+      "discovered_at": "2026-10-24T06:52:23Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "53",
+      "title": "Doc 53 - Summons - Car 55 - Turn 15 incident between Cars 55 and 12",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_united_states_grand_prix_-_summons_-_car_55_-_turn_15_incident_between_cars_55_and_12.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/United%20States%20Grand%20Prix",
+      "published_at": "19.10.25 22:35 CET",
+      "discovered_at": "2026-10-24T06:52:23Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "52",
+      "title": "Doc 52 - Summons - Car 12 - Turn 15 incident between Cars 55 and 12",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_united_states_grand_prix_-_summons_-_car_12_-_turn_15_incident_between_cars_55_and_12.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/United%20States%20Grand%20Prix",
+      "published_at": "19.10.25 22:35 CET",
+      "discovered_at": "2026-10-24T06:52:23Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "46",
+      "title": "Doc 46 - Final Qualifying Classification",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_united_states_grand_prix_-_final_qualifying_classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/United%20States%20Grand%20Prix",
+      "published_at": "19.10.25 02:03 CET",
+      "discovered_at": "2026-10-24T06:52:23Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "44",
+      "title": "Doc 44 - Decision - Qualifying SC2-SC1 Times",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_united_states_grand_prix_-_decision_-_qualifying_sc2-sc1_times.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/United%20States%20Grand%20Prix",
+      "published_at": "19.10.25 00:46 CET",
+      "discovered_at": "2026-10-24T06:52:23Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "43",
+      "title": "Doc 43 - Infringement - Car 5 - Pit Lane Speeding",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_united_states_grand_prix_-_infringement_-_car_5_-_pit_lane_speeding.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/United%20States%20Grand%20Prix",
+      "published_at": "19.10.25 00:48 CET",
+      "discovered_at": "2026-10-24T06:52:23Z"
+    }
+  ]
+}

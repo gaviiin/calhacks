@@ -1,0 +1,143 @@
+{
+  "captured_at": "2026-10-24T06:50:46Z",
+  "actor_id": "WioNWx5RP1yMnEKOh",
+  "actor_run_id": "ScBNpVAmjQy420U72",
+  "dataset_id": "LvyvBLifMZxmpMbml",
+  "key_value_store_id": "ho4lzc6tvckmE3GbT",
+  "run_started_at": "2026-10-24T06:50:36.111000+00:00",
+  "run_finished_at": "2026-10-24T06:50:39.065000+00:00",
+  "run_summary": {
+    "season": 2025,
+    "event_slug": "monaco-grand-prix",
+    "event_name": "Monaco Grand Prix",
+    "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Monaco%20Grand%20Prix",
+    "listing_sha256": "706d21beb95c2177477e9023f12e61823a550cb70dee8f33fab73bb2ef4df2f3",
+    "documents_on_page": 56,
+    "recalled_skipped": 1,
+    "document_filter": "decisions_and_classifications",
+    "items_pushed": 10,
+    "discovered_at": "2026-10-24T06:50:38Z"
+  },
+  "items": [
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "monaco-grand-prix",
+      "event_name": "Monaco Grand Prix",
+      "document_number": "57",
+      "title": "Doc 57 - Final Race Classification",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_monaco_grand_prix_-_final_race_classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Monaco%20Grand%20Prix",
+      "published_at": "25.05.25 19:10 CET",
+      "discovered_at": "2026-10-24T06:50:38Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "monaco-grand-prix",
+      "event_name": "Monaco Grand Prix",
+      "document_number": "56",
+      "title": "Doc 56 - Infringement - Car 10 - Incident with Car 22",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_monaco_grand_prix_-_infringement_-_car_10_-_incident_with_car_22.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Monaco%20Grand%20Prix",
+      "published_at": "25.05.25 19:06 CET",
+      "discovered_at": "2026-10-24T06:50:38Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "monaco-grand-prix",
+      "event_name": "Monaco Grand Prix",
+      "document_number": "54",
+      "title": "Doc 54 - Infringement - Haas - Unsafe condition of Car 87",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_monaco_grand_prix_-_infringement_-_haas_-_unsafe_condition_of_car_87.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Monaco%20Grand%20Prix",
+      "published_at": "25.05.25 18:04 CET",
+      "discovered_at": "2026-10-24T06:50:38Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "monaco-grand-prix",
+      "event_name": "Monaco Grand Prix",
+      "document_number": "53",
+      "title": "Doc 53 - Infringement - Race Deleted Lap Times",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_monaco_grand_prix_-_infringement_-_race_deleted_lap_times.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Monaco%20Grand%20Prix",
+      "published_at": "25.05.25 17:05 CET",
+      "discovered_at": "2026-10-24T06:50:38Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "monaco-grand-prix",
+      "event_name": "Monaco Grand Prix",
+      "document_number": "52",
+      "title": "Doc 52 - Provisional Race Classification",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_monaco_grand_prix_-_provisional_race_classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Monaco%20Grand%20Prix",
+      "published_at": "25.05.25 17:00 CET",
+      "discovered_at": "2026-10-24T06:50:38Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "monaco-grand-prix",
+      "event_name": "Monaco Grand Prix",
+      "document_number": "51",
+      "title": "Doc 51 - Summons (Corrected) - Haas - Alleged unsafe condition of Car 87",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_monaco_grand_prix_-_summons_corrected_-_haas_-_alleged_unsafe_condition_of_car_87.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Monaco%20Grand%20Prix",
+      "published_at": "25.05.25 17:01 CET",
+      "discovered_at": "2026-10-24T06:50:38Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "monaco-grand-prix",
+      "event_name": "Monaco Grand Prix",
+      "document_number": "50",
+      "title": "Doc 50 - Summons - Car 22 - Incident with Car 10",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_monaco_grand_prix_-_summons_-_car_22_-_incident_with_car_10.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Monaco%20Grand%20Prix",
+      "published_at": "25.05.25 17:01 CET",
+      "discovered_at": "2026-10-24T06:50:38Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "monaco-grand-prix",
+      "event_name": "Monaco Grand Prix",
+      "document_number": "49",
+      "title": "Doc 49 - Summons - Car 10 - Incident with Car 22",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_monaco_grand_prix_-_summons_-_car_10_-_incident_with_car_22.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Monaco%20Grand%20Prix",
+      "published_at": "25.05.25 17:01 CET",
+      "discovered_at": "2026-10-24T06:50:38Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "monaco-grand-prix",
+      "event_name": "Monaco Grand Prix",
+      "document_number": "47",
+      "title": "Doc 47 - Infringement - Car 63 - Leaving the track and gaining an advantage",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_monaco_grand_prix_-_infringement_-_car_63_-_leaving_the_track_and_gaining_an_advantage.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Monaco%20Grand%20Prix",
+      "published_at": "25.05.25 17:01 CET",
+      "discovered_at": "2026-10-24T06:50:38Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "monaco-grand-prix",
+      "event_name": "Monaco Grand Prix",
+      "document_number": "40",
+      "title": "Doc 40 - Final Qualifying Classification",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_monaco_grand_prix_-_final_qualifying_classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Monaco%20Grand%20Prix",
+      "published_at": "24.05.25 19:50 CET",
+      "discovered_at": "2026-10-24T06:50:38Z"
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+{
+  "captured_at": "2026-10-24T06:50:35Z",
+  "actor_id": "WioNWx5RP1yMnEKOh",
+  "actor_run_id": "kWNpDmjNrUB9sKDbf",
+  "dataset_id": "LMZs01NLaZJbT6GJl",
+  "key_value_store_id": "1XLvs4616Uwd8XZcT",
+  "run_started_at": "2026-10-24T06:50:25.452000+00:00",
+  "run_finished_at": "2026-10-24T06:50:28.502000+00:00",
+  "run_summary": {
+    "season": 2025,
+    "event_slug": "miami-grand-prix",
+    "event_name": "Miami Grand Prix",
+    "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Miami%20Grand%20Prix",
+    "listing_sha256": "1fe3a1f0b992246dfb75e231ebca4974d6aaccc49652e2b92573141260670dff",
+    "documents_on_page": 84,
+    "recalled_skipped": 1,
+    "document_filter": "decisions_and_classifications",
+    "items_pushed": 10,
+    "discovered_at": "2026-10-24T06:50:27Z"
+  },
+  "items": [
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "85",
+      "title": "Doc 85 - Final Race Classification",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_miami_grand_prix_-_final_race_classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Miami%20Grand%20Prix",
+      "published_at": "05.05.25 03:25 CET",
+      "discovered_at": "2026-10-24T06:50:27Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "84",
+      "title": "Doc 84 - Decision - Red Bull - Protest against Car 63",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_miami_grand_prix_-_decision_-_red_bull_-_protest_against_car_63.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Miami%20Grand%20Prix",
+      "published_at": "05.05.25 03:20 CET",
+      "discovered_at": "2026-10-24T06:50:27Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "83",
+      "title": "Doc 83 - Infringement - Car 55 - Failing to slow for yellow flag",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_miami_grand_prix_-_infringement_-_car_55_-_failing_to_slow_for_yellow_flag.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Miami%20Grand%20Prix",
+      "published_at": "05.05.25 02:51 CET",
+      "discovered_at": "2026-10-24T06:50:27Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "82",
+      "title": "Doc 82 - Infringement - Car 10 - Failing to slow for yellow flag",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_miami_grand_prix_-_infringement_-_car_10_-_failing_to_slow_for_yellow_flag.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Miami%20Grand%20Prix",
+      "published_at": "05.05.25 02:41 CET",
+      "discovered_at": "2026-10-24T06:50:27Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "80",
+      "title": "Doc 80 - Summons - Car 63 - Red Bull Protest",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_miami_grand_prix_-_summons_-_car_63_-_red_bull_protest.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Miami%20Grand%20Prix",
+      "published_at": "05.05.25 01:12 CET",
+      "discovered_at": "2026-10-24T06:50:27Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "79",
+      "title": "Doc 79 - Summons - Red Bull - Protest against Car 63",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_miami_grand_prix_-_summons_-_red_bull_-_protest_against_car_63.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Miami%20Grand%20Prix",
+      "published_at": "05.05.25 01:12 CET",
+      "discovered_at": "2026-10-24T06:50:27Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "78",
+      "title": "Doc 78 - Decision - Car 55 - Alleged causing a collision",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_miami_grand_prix_-_decision_-_car_55_-_alleged_causing_a_collision.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Miami%20Grand%20Prix",
+      "published_at": "05.05.25 01:09 CET",
+      "discovered_at": "2026-10-24T06:50:27Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "77",
+      "title": "Doc 77 - Decision - Car 44 - Alleged causing a collision",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_miami_grand_prix_-_decision_-_car_44_-_alleged_causing_a_collision.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Miami%20Grand%20Prix",
+      "published_at": "05.05.25 00:58 CET",
+      "discovered_at": "2026-10-24T06:50:27Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "76",
+      "title": "Doc 76 - Infringement - Race Deleted Lap Times",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_miami_grand_prix_-_infringement_-_race_deleted_lap_times.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Miami%20Grand%20Prix",
+      "published_at": "05.05.25 00:05 CET",
+      "discovered_at": "2026-10-24T06:50:27Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "75",
+      "title": "Doc 75 - Provisional Race Classification",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_miami_grand_prix_-_provisional_race_classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Miami%20Grand%20Prix",
+      "published_at": "04.05.25 23:55 CET",
+      "discovered_at": "2026-10-24T06:50:27Z"
+    }
+  ]
+}

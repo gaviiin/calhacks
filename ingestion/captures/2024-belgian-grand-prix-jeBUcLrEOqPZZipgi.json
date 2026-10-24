@@ -1,0 +1,143 @@
+{
+  "captured_at": "2026-10-24T06:38:54Z",
+  "actor_id": "WioNWx5RP1yMnEKOh",
+  "actor_run_id": "jeBUcLrEOqPZZipgi",
+  "dataset_id": "qbBkdDZ5upegx6ZrW",
+  "key_value_store_id": "xSJap1uWnjbHnpyrb",
+  "run_started_at": "2026-10-24T06:38:02.393000+00:00",
+  "run_finished_at": "2026-10-24T06:38:47.612000+00:00",
+  "run_summary": {
+    "season": 2024,
+    "event_slug": "belgian-grand-prix",
+    "event_name": "Belgian Grand Prix",
+    "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Belgian%20Grand%20Prix",
+    "listing_sha256": "d9ee72bb09d4de93024a8bd594a4024e064d91ad95250a861975748c1bd6bc00",
+    "documents_on_page": 43,
+    "recalled_skipped": 4,
+    "document_filter": "decisions_and_classifications",
+    "items_pushed": 10,
+    "discovered_at": "2026-10-24T06:38:47Z"
+  },
+  "items": [
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "46",
+      "title": "Doc 46 - Final Race Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Belgian%20Grand%20Prix%20-%20Final%20Race%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Belgian%20Grand%20Prix",
+      "published_at": "28.07.24 19:56 CET",
+      "discovered_at": "2026-10-24T06:38:47Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "44",
+      "title": "Doc 44 - Infringement - Car 63 - Technical non-compliance (Weight)",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Belgian%20Grand%20Prix%20-%20Infringement%20-%20Car%2063%20-%20Technical%20non-compliance%20%28Weight%29.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Belgian%20Grand%20Prix",
+      "published_at": "28.07.24 18:53 CET",
+      "discovered_at": "2026-10-24T06:38:47Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "43",
+      "title": "Doc 43 - Summons - Car 63 - Technical Regulations",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Belgian%20Grand%20Prix%20-%20Summons%20-%20Car%2063%20-%20Technical%20Regulations.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Belgian%20Grand%20Prix",
+      "published_at": "28.07.24 18:23 CET",
+      "discovered_at": "2026-10-24T06:38:47Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "41",
+      "title": "Doc 41 - Provisional Race Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Belgian%20Grand%20Prix%20-%20Provisional%20Race%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Belgian%20Grand%20Prix",
+      "published_at": "28.07.24 16:40 CET",
+      "discovered_at": "2026-10-24T06:38:47Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "40",
+      "title": "Doc 40 - Infringement - Race Deleted Lap Times",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Belgian%20Grand%20Prix%20-%20Infringement%20-%20Race%20Deleted%20Lap%20Times.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Belgian%20Grand%20Prix",
+      "published_at": "28.07.24 16:35 CET",
+      "discovered_at": "2026-10-24T06:38:47Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "34",
+      "title": "Doc 34 - Final Qualifying Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Belgian%20Grand%20Prix%20-%20Final%20Qualifying%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Belgian%20Grand%20Prix",
+      "published_at": "27.07.24 19:46 CET",
+      "discovered_at": "2026-10-24T06:38:47Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "32",
+      "title": "Doc 32 - Infringement - Car 24 - Impeding of Car 1",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Belgian%20Grand%20Prix%20-%20Infringement%20-%20Car%2024%20-%20Impeding%20of%20Car%201.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Belgian%20Grand%20Prix",
+      "published_at": "27.07.24 18:25 CET",
+      "discovered_at": "2026-10-24T06:38:47Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "31",
+      "title": "Doc 31 - Provisional Qualifying Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Belgian%20Grand%20Prix%20-%20Provisional%20Qualifying%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Belgian%20Grand%20Prix",
+      "published_at": "27.07.24 17:20 CET",
+      "discovered_at": "2026-10-24T06:38:47Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "30",
+      "title": "Doc 30 - Infringement - Qualifying Deleted Lap Times",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Belgian%20Grand%20Prix%20-%20Infringement%20-%20Qualifying%20Deleted%20Lap%20Times.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Belgian%20Grand%20Prix",
+      "published_at": "27.07.24 17:11 CET",
+      "discovered_at": "2026-10-24T06:38:47Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "29",
+      "title": "Doc 29 - Summons - Car 1 - Alleged impeding by Car 24",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Belgian%20Grand%20Prix%20-%20Summons%20-%20Car%201%20-%20Alleged%20impeding%20by%20Car%2024.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Belgian%20Grand%20Prix",
+      "published_at": "27.07.24 17:16 CET",
+      "discovered_at": "2026-10-24T06:38:47Z"
+    }
+  ]
+}

@@ -1,0 +1,143 @@
+{
+  "captured_at": "2026-10-24T06:47:09Z",
+  "actor_id": "WioNWx5RP1yMnEKOh",
+  "actor_run_id": "b8gIjUoVP68jCDzQH",
+  "dataset_id": "9AlauIHaVffjUJfWK",
+  "key_value_store_id": "h01A9ZHr4C0zTnPsN",
+  "run_started_at": "2026-10-24T06:46:59.948000+00:00",
+  "run_finished_at": "2026-10-24T06:47:03.209000+00:00",
+  "run_summary": {
+    "season": 2024,
+    "event_slug": "singapore-grand-prix",
+    "event_name": "Singapore Grand Prix",
+    "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Singapore%20Grand%20Prix",
+    "listing_sha256": "9cc8de3d827266881dc6096d8b6e38e66b2963aeae7f18d49ad49e507ab95a5b",
+    "documents_on_page": 47,
+    "recalled_skipped": 2,
+    "document_filter": "decisions_and_classifications",
+    "items_pushed": 10,
+    "discovered_at": "2026-10-24T06:47:02Z"
+  },
+  "items": [
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "49",
+      "title": "Doc 49 - Final Race Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Singapore%20Grand%20Prix%20-%20Final%20Race%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Singapore%20Grand%20Prix",
+      "published_at": "22.09.24 17:36 CET",
+      "discovered_at": "2026-10-24T06:47:02Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "47",
+      "title": "Doc 47 - Provisional Race Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Singapore%20Grand%20Prix%20-%20Provisional%20Race%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Singapore%20Grand%20Prix",
+      "published_at": "22.09.24 16:06 CET",
+      "discovered_at": "2026-10-24T06:47:02Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "39",
+      "title": "Doc 39 - Final Qualifying Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Singapore%20Grand%20Prix%20-%20Final%20Qualifying%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Singapore%20Grand%20Prix",
+      "published_at": "21.09.24 18:38 CET",
+      "discovered_at": "2026-10-24T06:47:02Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "37",
+      "title": "Doc 37 - Infringement - Qualifying Deleted Lap Times (Corrected)",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Singapore%20Grand%20Prix%20-%20Infringement%20-%20Qualifying%20Deleted%20Lap%20Times%20%28Corrected%29.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Singapore%20Grand%20Prix",
+      "published_at": "21.09.24 17:57 CET",
+      "discovered_at": "2026-10-24T06:47:02Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "36",
+      "title": "Doc 36 - Infringement - Qualifying Deleted Lap Times - Yellow Flags",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Singapore%20Grand%20Prix%20-%20Infringement%20-%20Qualifying%20Deleted%20Lap%20Times%20-%20Yellow%20Flags.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Singapore%20Grand%20Prix",
+      "published_at": "21.09.24 17:54 CET",
+      "discovered_at": "2026-10-24T06:47:02Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "35",
+      "title": "Doc 35 - Infringement - Car 55 - Crossing the track",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Singapore%20Grand%20Prix%20-%20Infringement%20-%20Car%2055%20-%20Crossing%20the%20track.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Singapore%20Grand%20Prix",
+      "published_at": "21.09.24 17:48 CET",
+      "discovered_at": "2026-10-24T06:47:02Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "34",
+      "title": "Doc 34 - Infringement - Car 55 - Failure to follow Race Director's Instructions",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Singapore%20Grand%20Prix%20-%20Infringement%20-%20Car%2055%20-%20Failure%20to%20follow%20Race%20Director%27s%20Instructions.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Singapore%20Grand%20Prix",
+      "published_at": "21.09.24 17:45 CET",
+      "discovered_at": "2026-10-24T06:47:02Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "31",
+      "title": "Doc 31 - Provisional Qualifying Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Singapore%20Grand%20Prix%20-%20Provisional%20Qualifying%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Singapore%20Grand%20Prix",
+      "published_at": "21.09.24 16:36 CET",
+      "discovered_at": "2026-10-24T06:47:02Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "30",
+      "title": "Doc 30 - Summons - Car 55 - Crossing the track",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Singapore%20Grand%20Prix%20-%20Summons%20-%20Car%2055%20-%20Crossing%20the%20track.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Singapore%20Grand%20Prix",
+      "published_at": "21.09.24 16:36 CET",
+      "discovered_at": "2026-10-24T06:47:02Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "29",
+      "title": "Doc 29 - Summons - Car 55 - Failure to follow Race Director's Instruction",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Singapore%20Grand%20Prix%20-%20Summons%20-%20Car%2055%20-%20Failure%20to%20follow%20Race%20Director%27s%20Instruction.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Singapore%20Grand%20Prix",
+      "published_at": "21.09.24 16:36 CET",
+      "discovered_at": "2026-10-24T06:47:02Z"
+    }
+  ]
+}

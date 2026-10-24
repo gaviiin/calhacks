@@ -1,0 +1,143 @@
+{
+  "captured_at": "2026-10-24T06:46:12Z",
+  "actor_id": "WioNWx5RP1yMnEKOh",
+  "actor_run_id": "nwiVw9R0Gt554KgO6",
+  "dataset_id": "FWOh1XqdOh7EgmGfL",
+  "key_value_store_id": "o0TBRMK865VVz0EjW",
+  "run_started_at": "2026-10-24T06:46:01.140000+00:00",
+  "run_finished_at": "2026-10-24T06:46:04.710000+00:00",
+  "run_summary": {
+    "season": 2024,
+    "event_slug": "miami-grand-prix",
+    "event_name": "Miami Grand Prix",
+    "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Miami%20Grand%20Prix",
+    "listing_sha256": "b7e042457719d10bbaf96eb928f282abfb04533e248dac3b5257839f5b471dc8",
+    "documents_on_page": 84,
+    "recalled_skipped": 0,
+    "document_filter": "decisions_and_classifications",
+    "items_pushed": 10,
+    "discovered_at": "2026-10-24T06:46:04Z"
+  },
+  "items": [
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "",
+      "title": "Final Race Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Miami%20Grand%20Prix%20-%20Final%20Race%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Miami%20Grand%20Prix",
+      "published_at": "06.05.24 02:55 CET",
+      "discovered_at": "2026-10-24T06:46:04Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 55 - Causing a Collision",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Miami%20Grand%20Prix%20-%20Infringement%20-%20Car%2055%20-%20Causing%20a%20Collision.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Miami%20Grand%20Prix",
+      "published_at": "06.05.24 02:31 CET",
+      "discovered_at": "2026-10-24T06:46:04Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 20 - Entering pit lane under Safety Car conditions",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Miami%20Grand%20Prix%20-%20Infringement%20-%20Car%2020%20-%20Entering%20pit%20lane%20under%20Safety%20Car%20conditions.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Miami%20Grand%20Prix",
+      "published_at": "06.05.24 02:17 CET",
+      "discovered_at": "2026-10-24T06:46:04Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 18 - Leaving the track and gaining a lasting advantage",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Miami%20Grand%20Prix%20-%20Infringement%20-%20Car%2018%20-%20Leaving%20the%20track%20and%20gaining%20a%20lasting%20advantage.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Miami%20Grand%20Prix",
+      "published_at": "06.05.24 02:12 CET",
+      "discovered_at": "2026-10-24T06:46:04Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 20 - Causing a collision",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Miami%20Grand%20Prix%20-%20Infringement%20-%20Car%2020%20-%20Causing%20a%20collision.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Miami%20Grand%20Prix",
+      "published_at": "06.05.24 02:11 CET",
+      "discovered_at": "2026-10-24T06:46:04Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "",
+      "title": "Summons - Car 81 - Alleged incident with Car 55 at T17",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Miami%20Grand%20Prix%20-%20Summons%20-%20Car%2081%20-%20Alleged%20incident%20with%20Car%2055%20at%20T17.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Miami%20Grand%20Prix",
+      "published_at": "06.05.24 00:01 CET",
+      "discovered_at": "2026-10-24T06:46:04Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "",
+      "title": "Summons - Car 55 - Alleged incident with Car 81 at T17",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Miami%20Grand%20Prix%20-%20Summons%20-%20Car%2055%20-%20Alleged%20incident%20with%20Car%2081%20at%20T17.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Miami%20Grand%20Prix",
+      "published_at": "05.05.24 23:58 CET",
+      "discovered_at": "2026-10-24T06:46:04Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "",
+      "title": "Provisional Race Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Miami%20Grand%20Prix%20-%20Provisional%20Race%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Miami%20Grand%20Prix",
+      "published_at": "05.05.24 23:56 CET",
+      "discovered_at": "2026-10-24T06:46:04Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "",
+      "title": "Summons - Car 20 - Entering pit lane during Safety Car period",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Miami%20Grand%20Prix%20-%20Summons%20-%20Car%2020%20-%20Entering%20pit%20lane%20during%20Safety%20Car%20period.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Miami%20Grand%20Prix",
+      "published_at": "05.05.24 23:58 CET",
+      "discovered_at": "2026-10-24T06:46:04Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "miami-grand-prix",
+      "event_name": "Miami Grand Prix",
+      "document_number": "",
+      "title": "Infringement - Car 31 - Unsafe release",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Miami%20Grand%20Prix%20-%20Infringement%20-%20Car%2031%20-%20Unsafe%20release.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Miami%20Grand%20Prix",
+      "published_at": "05.05.24 03:37 CET",
+      "discovered_at": "2026-10-24T06:46:04Z"
+    }
+  ]
+}

@@ -1,0 +1,11 @@
+{
+  "_fixture": "TEST FIXTURE: deliberately invalid items. Every one must be rejected and reported by ingest.py.",
+  "items": [
+    {"source": "fia", "season": 2024, "event_slug": "belgian-grand-prix", "title": "   ", "document_url": "https://www.fia.com/sites/default/files/decision-document/blank-title.pdf", "source_page_url": "https://www.fia.com/documents"},
+    {"source": "fia", "season": 2024, "event_slug": "belgian-grand-prix", "title": "Plain HTTP link", "document_url": "http://www.fia.com/sites/default/files/decision-document/plain-http.pdf", "source_page_url": "https://www.fia.com/documents"},
+    {"source": "fia", "season": 2024, "event_slug": "belgian-grand-prix", "title": "Not an FIA host", "document_url": "https://fia.com.example.net/decision.pdf", "source_page_url": "https://www.fia.com/documents"},
+    {"source": "fia", "event_slug": "belgian-grand-prix", "title": "Missing season", "document_url": "https://www.fia.com/sites/default/files/decision-document/no-season.pdf", "source_page_url": "https://www.fia.com/documents"},
+    {"source": "fia", "season": 2024, "title": "Missing event", "document_url": "https://www.fia.com/sites/default/files/decision-document/no-event.pdf", "source_page_url": "https://www.fia.com/documents"},
+    {"source": "fia", "season": 2024, "event_slug": "belgian-grand-prix", "title": "Blank URL", "document_url": "", "source_page_url": "https://www.fia.com/documents"}
+  ]
+}

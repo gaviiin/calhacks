@@ -1,0 +1,23 @@
+{
+  "actorSpecification": 1,
+  "fields": {},
+  "views": {
+    "overview": {
+      "title": "Documents",
+      "transformation": {
+        "fields": ["season", "event_name", "document_number", "title", "published_at", "document_url"]
+      },
+      "display": {
+        "component": "table",
+        "properties": {
+          "season": { "label": "Season", "format": "number" },
+          "event_name": { "label": "Event", "format": "text" },
+          "document_number": { "label": "Doc #", "format": "text" },
+          "title": { "label": "Title", "format": "text" },
+          "published_at": { "label": "Published (as shown by FIA)", "format": "text" },
+          "document_url": { "label": "Official document", "format": "link" }
+        }
+      }
+    }
+  }
+}

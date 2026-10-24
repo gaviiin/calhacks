@@ -1,0 +1,143 @@
+{
+  "captured_at": "2026-10-24T06:47:40Z",
+  "actor_id": "WioNWx5RP1yMnEKOh",
+  "actor_run_id": "gAfgUmclFwv0EXLo5",
+  "dataset_id": "yd02NbOBo9ugie3jf",
+  "key_value_store_id": "LdTdxjeaZVfidD1fz",
+  "run_started_at": "2026-10-24T06:47:10.737000+00:00",
+  "run_finished_at": "2026-10-24T06:47:33.409000+00:00",
+  "run_summary": {
+    "season": 2024,
+    "event_slug": "united-states-grand-prix",
+    "event_name": "United States Grand Prix",
+    "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/United%20States%20Grand%20Prix",
+    "listing_sha256": "b71e97875ccd1174347c613d503cbefb595de61eaa6ead23d47ef7255788fb03",
+    "documents_on_page": 71,
+    "recalled_skipped": 2,
+    "document_filter": "decisions_and_classifications",
+    "items_pushed": 10,
+    "discovered_at": "2026-10-24T06:47:32Z"
+  },
+  "items": [
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "85",
+      "title": "DOC 85 - Decision - USRM - Right of Review",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/usa_doc_85_-_decision_-_usrm_-_right_of_review.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/United%20States%20Grand%20Prix",
+      "published_at": "12.11.24 07:15 CET",
+      "discovered_at": "2026-10-24T06:47:32Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "84",
+      "title": "DOC 84 - Decision - COTA - Right of Review",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/usa_doc_84_-_decision_-_cota_-_right_of_review.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/United%20States%20Grand%20Prix",
+      "published_at": "12.11.24 07:15 CET",
+      "discovered_at": "2026-10-24T06:47:32Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "78",
+      "title": "Doc 78 - Decision - McLaren - Right of Review",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/doc_78_-_2024_united_states_grand_prix_-_decision_-_mclaren_-_right_of_review.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/United%20States%20Grand%20Prix",
+      "published_at": "24.10.24 17:15 CET",
+      "discovered_at": "2026-10-24T06:47:32Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "77",
+      "title": "Doc 77 - Summons - Red Bull - McLaren Right of Review Hearing",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/doc_77_-_2024_united_states_grand_prix_-_summons_-_red_bull_-_mclaren_right_of_review_hearing.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/United%20States%20Grand%20Prix",
+      "published_at": "24.10.24 17:15 CET",
+      "discovered_at": "2026-10-24T06:47:32Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "76",
+      "title": "Doc 76 - Summons - McLaren - Right of Review Hearing",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/doc_76_-_2024_united_states_grand_prix_-_summons_-_mclaren_-_right_of_review_hearing.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/United%20States%20Grand%20Prix",
+      "published_at": "24.10.24 17:15 CET",
+      "discovered_at": "2026-10-24T06:47:32Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "75",
+      "title": "Doc 75 - Infringement - Organiser and Promoter - Track Invasion",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20United%20States%20Grand%20Prix%20-%20Infringement%20-%20Organiser%20and%20Promoter%20-%20Track%20Invasion.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/United%20States%20Grand%20Prix",
+      "published_at": "21.10.24 03:10 CET",
+      "discovered_at": "2026-10-24T06:47:32Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "73",
+      "title": "Doc 73 - Final Race Classification",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20United%20States%20Grand%20Prix%20-%20Final%20Race%20Classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/United%20States%20Grand%20Prix",
+      "published_at": "21.10.24 01:36 CET",
+      "discovered_at": "2026-10-24T06:47:32Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "71",
+      "title": "Doc 71 - Infringement - Race Deleted Lap Times",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20United%20States%20Grand%20Prix%20-%20Infringement%20-%20Race%20Deleted%20Lap%20Times.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/United%20States%20Grand%20Prix",
+      "published_at": "21.10.24 00:00 CET",
+      "discovered_at": "2026-10-24T06:47:32Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "70",
+      "title": "Doc 70 - Summons - Organiser and Promoter - Track Invasion",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20United%20States%20Grand%20Prix%20-%20Summons%20-%20Organiser%20and%20Promoter%20-%20Track%20Invasion.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/United%20States%20Grand%20Prix",
+      "published_at": "20.10.24 23:52 CET",
+      "discovered_at": "2026-10-24T06:47:32Z"
+    },
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "united-states-grand-prix",
+      "event_name": "United States Grand Prix",
+      "document_number": "69",
+      "title": "Doc 69 - Infringement - Car 4 - Leaving the track and gaining an advantage",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20United%20States%20Grand%20Prix%20-%20Infringement%20-%20Car%204%20-%20Leaving%20the%20track%20and%20gaining%20an%20advantage.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/United%20States%20Grand%20Prix",
+      "published_at": "20.10.24 23:44 CET",
+      "discovered_at": "2026-10-24T06:47:32Z"
+    }
+  ]
+}

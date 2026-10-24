@@ -1,0 +1,143 @@
+{
+  "captured_at": "2026-10-24T06:52:00Z",
+  "actor_id": "WioNWx5RP1yMnEKOh",
+  "actor_run_id": "cZYnf5SRgwpRsXlch",
+  "dataset_id": "JDmoqY0TfRdGJyyOL",
+  "key_value_store_id": "8qet56GV20vike4Q5",
+  "run_started_at": "2026-10-24T06:51:48.062000+00:00",
+  "run_finished_at": "2026-10-24T06:51:52.934000+00:00",
+  "run_summary": {
+    "season": 2025,
+    "event_slug": "singapore-grand-prix",
+    "event_name": "Singapore Grand Prix",
+    "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Singapore%20Grand%20Prix",
+    "listing_sha256": "c0cb6aca06884a1e2f603bf8f09c96d0c6a04389ef5877c2473750c74928c812",
+    "documents_on_page": 61,
+    "recalled_skipped": 2,
+    "document_filter": "decisions_and_classifications",
+    "items_pushed": 10,
+    "discovered_at": "2026-10-24T06:51:52Z"
+  },
+  "items": [
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "62",
+      "title": "Doc 62 - Final Race Classification",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_singapore_grand_prix_-_final_race_classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Singapore%20Grand%20Prix",
+      "published_at": "05.10.25 18:35 CET",
+      "discovered_at": "2026-10-24T06:51:52Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "60",
+      "title": "Doc 60 - Infringement - Car 44 - Leaving the track without a justifiable reason multiple times",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_singapore_grand_prix_-_infringement_-_car_44_-_leaving_the_track_without_a_justifiable_reason_multiple_times.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Singapore%20Grand%20Prix",
+      "published_at": "05.10.25 17:08 CET",
+      "discovered_at": "2026-10-24T06:51:52Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "59",
+      "title": "Doc 59 - Infringement - Race Deleted Lap Times",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_singapore_grand_prix_-_infringement_-_race_deleted_lap_times.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Singapore%20Grand%20Prix",
+      "published_at": "05.10.25 17:01 CET",
+      "discovered_at": "2026-10-24T06:51:52Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "58",
+      "title": "Doc 58 - Summons - Car 44 - Track Limits",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_singapore_grand_prix_-_summons_-_car_44_-_track_limits.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Singapore%20Grand%20Prix",
+      "published_at": "05.10.25 16:18 CET",
+      "discovered_at": "2026-10-24T06:51:52Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "57",
+      "title": "Doc 57 - Provisional Race Classification",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_singapore_grand_prix_-_provisional_race_classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Singapore%20Grand%20Prix",
+      "published_at": "05.10.25 16:05 CET",
+      "discovered_at": "2026-10-24T06:51:52Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "56",
+      "title": "Doc 56 - Infringement - Car 23 - Use of pit exit lane during reconnaissance lap",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_singapore_grand_prix_-_infringement_-_car_23_-_use_of_pit_exit_lane_during_reconnaissance_lap.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Singapore%20Grand%20Prix",
+      "published_at": "05.10.25 15:53 CET",
+      "discovered_at": "2026-10-24T06:51:52Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "52",
+      "title": "Doc 52 - Infringement - Car 23 - Changes made during Parc Ferme",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_singapore_grand_prix_-_infringement_-_car_23_-_changes_made_during_parc_ferme.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Singapore%20Grand%20Prix",
+      "published_at": "05.10.25 12:14 CET",
+      "discovered_at": "2026-10-24T06:51:52Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "51",
+      "title": "Doc 51 - Infringement - Car 10 - Changes made during Parc Ferme",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_singapore_grand_prix_-_infringement_-_car_10_-_changes_made_during_parc_ferme.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Singapore%20Grand%20Prix",
+      "published_at": "05.10.25 12:13 CET",
+      "discovered_at": "2026-10-24T06:51:52Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "46",
+      "title": "Doc 46 - Final Qualifying Classification",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_singapore_grand_prix_-_final_qualifying_classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Singapore%20Grand%20Prix",
+      "published_at": "04.10.25 19:13 CET",
+      "discovered_at": "2026-10-24T06:51:52Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "singapore-grand-prix",
+      "event_name": "Singapore Grand Prix",
+      "document_number": "45",
+      "title": "Doc 45 - Decision - Car 55 - Failing to set a lap time within 107%",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_singapore_grand_prix_-_decision_-_car_55_-_failing_to_set_a_lap_time_within_107.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Singapore%20Grand%20Prix",
+      "published_at": "04.10.25 18:43 CET",
+      "discovered_at": "2026-10-24T06:51:52Z"
+    }
+  ]
+}

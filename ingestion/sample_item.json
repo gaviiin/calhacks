@@ -1,0 +1,17 @@
+{
+  "_fixture": "TEST FIXTURE: hand-written, not produced by an Apify run. Field values were copied from the official FIA listing for test purposes. `ingest.py fixture` stores it with ingest_mode=test_fixture and no actor_run_id, and only into the test database.",
+  "items": [
+    {
+      "source": "fia",
+      "season": 2024,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "44",
+      "title": "Doc 44 - Infringement - Car 63 - Technical non-compliance (Weight)",
+      "document_url": "https://www.fia.com/sites/default/files/decision-document/2024 Belgian Grand Prix - Infringement - Car 63 - Technical non-compliance (Weight).pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2024-2043/event/Belgian%20Grand%20Prix",
+      "published_at": "28.07.24 18:53 CET",
+      "discovered_at": "2026-10-24T06:12:30Z"
+    }
+  ]
+}

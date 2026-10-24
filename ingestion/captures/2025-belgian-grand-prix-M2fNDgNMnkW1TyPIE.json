@@ -1,0 +1,143 @@
+{
+  "captured_at": "2026-10-24T06:51:47Z",
+  "actor_id": "WioNWx5RP1yMnEKOh",
+  "actor_run_id": "M2fNDgNMnkW1TyPIE",
+  "dataset_id": "nEqBft7qYmqE1UtJz",
+  "key_value_store_id": "8OQsMlTfTwqOleFnR",
+  "run_started_at": "2026-10-24T06:51:17.090000+00:00",
+  "run_finished_at": "2026-10-24T06:51:39.707000+00:00",
+  "run_summary": {
+    "season": 2025,
+    "event_slug": "belgian-grand-prix",
+    "event_name": "Belgian Grand Prix",
+    "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Belgian%20Grand%20Prix",
+    "listing_sha256": "9285952f6772fda4464352cbda4dcbc0d41909cd8be2a07ae394c07d892483ad",
+    "documents_on_page": 66,
+    "recalled_skipped": 1,
+    "document_filter": "decisions_and_classifications",
+    "items_pushed": 10,
+    "discovered_at": "2026-10-24T06:51:39Z"
+  },
+  "items": [
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "68",
+      "title": "Doc 68 - Final Race Classification",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_belgian_grand_prix_-_final_race_classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Belgian%20Grand%20Prix",
+      "published_at": "27.07.25 20:19 CET",
+      "discovered_at": "2026-10-24T06:51:39Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "65",
+      "title": "Doc 65 - Infringement - Race Deleted Lap Times",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_belgian_grand_prix_-_infringement_-_race_deleted_lap_times.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Belgian%20Grand%20Prix",
+      "published_at": "27.07.25 18:08 CET",
+      "discovered_at": "2026-10-24T06:51:39Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "64",
+      "title": "Doc 64 - Provisional Race Classification",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_belgian_grand_prix_-_provisional_race_classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Belgian%20Grand%20Prix",
+      "published_at": "27.07.25 18:00 CET",
+      "discovered_at": "2026-10-24T06:51:39Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "60",
+      "title": "Doc 60 - Infringement - Car 55 - Changes made during Parc Ferme",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_belgian_grand_prix_-_infringement_-_car_55_-_changes_made_during_parc_ferme.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Belgian%20Grand%20Prix",
+      "published_at": "27.07.25 13:00 CET",
+      "discovered_at": "2026-10-24T06:51:39Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "58",
+      "title": "Doc 58 - Infringement - Car 44 - PU elements",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_belgian_grand_prix_-_infringement_-_car_44_-_pu_elements.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Belgian%20Grand%20Prix",
+      "published_at": "27.07.25 12:49 CET",
+      "discovered_at": "2026-10-24T06:51:39Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "57",
+      "title": "Doc 57 - Infringement - Car 12 - PU elements",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_belgian_grand_prix_-_infringement_-_car_12_-_pu_elements.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Belgian%20Grand%20Prix",
+      "published_at": "27.07.25 12:52 CET",
+      "discovered_at": "2026-10-24T06:51:39Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "56",
+      "title": "Doc 56 - Infringement - Car 14 - PU elements",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_belgian_grand_prix_-_infringement_-_car_14_-_pu_elements.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Belgian%20Grand%20Prix",
+      "published_at": "27.07.25 12:39 CET",
+      "discovered_at": "2026-10-24T06:51:39Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "51",
+      "title": "Doc 51 - Final Qualifying Classification",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_belgian_grand_prix_-_final_qualifying_classification.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Belgian%20Grand%20Prix",
+      "published_at": "26.07.25 19:37 CET",
+      "discovered_at": "2026-10-24T06:51:39Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "49",
+      "title": "Doc 49 - Infringement - Car 27 - Pit Lane incident",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_belgian_grand_prix_-_infringement_-_car_27_-_pit_lane_incident.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Belgian%20Grand%20Prix",
+      "published_at": "26.07.25 18:51 CET",
+      "discovered_at": "2026-10-24T06:51:39Z"
+    },
+    {
+      "source": "fia",
+      "season": 2025,
+      "event_slug": "belgian-grand-prix",
+      "event_name": "Belgian Grand Prix",
+      "document_number": "48",
+      "title": "Doc 48 - Decision - Qualifying SC2-SC1 Times",
+      "document_url": "https://www.fia.com/system/files/decision-document/2025_belgian_grand_prix_-_decision_-_qualifying_sc2-sc1_times.pdf",
+      "source_page_url": "https://www.fia.com/documents/championships/fia-formula-one-world-championship-14/season/season-2025-2071/event/Belgian%20Grand%20Prix",
+      "published_at": "26.07.25 18:39 CET",
+      "discovered_at": "2026-10-24T06:51:39Z"
+    }
+  ]
+}
