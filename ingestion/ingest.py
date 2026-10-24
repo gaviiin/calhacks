@@ -4,7 +4,7 @@
     python ingestion/ingest.py run-id <APIFY_RUN_ID>
     python ingestion/ingest.py replay ingestion/captures/<capture>.json
     python ingestion/ingest.py fixture ingestion/sample_item.json
-    python ingestion/ingest.py extract ingestion/captures/<capture>.json
+    python ingestion/ingest.py extract ingestion/captures/<capture>.json   (writes ingestion/captures/decisions/)
 
 `run` starts the Actor and saves its dataset under ingestion/captures/ so the
 same evidence can be replayed if the FIA site or Apify is unreachable.
@@ -36,6 +36,8 @@ from dotenv import load_dotenv
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CAPTURES_DIR = REPO_ROOT / "ingestion" / "captures"
+# Decision-reader output lives apart from listing captures, which finance/fia_bridge.py reads as listings.
+DECISION_CAPTURES_DIR = CAPTURES_DIR / "decisions"
 FIA_ORIGIN = "https://www.fia.com"
 OFFICIAL_HOSTS = {"www.fia.com"}
 EVENT_SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
@@ -322,8 +324,8 @@ def start_decision_actor(items: list[dict], max_items: int, document_number: str
 def save_decision_capture(batch: Batch) -> Path:
     first = batch.items[0] if batch.items else {}
     name = f"decision-{first.get('season', 'unknown')}-{first.get('event_slug', 'unknown')}-{batch.actor_run_id}.json"
-    CAPTURES_DIR.mkdir(parents=True, exist_ok=True)
-    path = CAPTURES_DIR / name
+    DECISION_CAPTURES_DIR.mkdir(parents=True, exist_ok=True)
+    path = DECISION_CAPTURES_DIR / name
     path.write_text(
         json.dumps({"captured_at": utc_now(), **batch.provenance, "items": batch.items}, indent=2) + "\n"
     )
