@@ -116,7 +116,7 @@ def main(seasons: list[int]) -> None:
         for rnd in data["rounds"]:
             for session in ("race", "sprint"):
                 for r in rnd[session]:
-                    if r["constructor_id"] == team and r["position_text"] == "D":
+                    if r["constructor_id"] == team and (r["position_text"] == "D" or r["status"].lower().startswith("disqualified")):
                         print(f"  DSQ candidate: {season} R{rnd['round']} {rnd['slug']} {session} car {r['number']} {r['driver_id']}")
 
 

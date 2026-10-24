@@ -37,6 +37,10 @@ class Row:
 
 def _row(raw: dict) -> Row:
     text = str(raw.get("position_text", ""))
+    status = str(raw.get("status", ""))
+    # Jolpica-F1 reports some disqualifications as a numbered last place with status "Disqualified".
+    if status.lower().startswith("disqualified") or text in DSQ_TEXTS:
+        text = "D"
     pos = int(text) if text.isdigit() else None
     return Row(
         number=int(raw["number"]),

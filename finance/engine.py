@@ -257,6 +257,8 @@ class Engine:
             return {"type": "billing", "request_id": r["request_id"], "status": current["status"], "reason": current["reason_code"]}
 
         def decide(status: str, reason: str, je_id: str | None = None) -> dict:
+            if current and current["status"] == status and current["reason_code"] == reason:
+                return {"type": "billing", "request_id": r["request_id"], "status": status, "reason": reason, "unchanged": True}
             ledger.set_billing(r, status, reason, je_id)
             ledger.record_decision(Decision(
                 question=f"Billing request {r['request_id']}: invoice {r['sponsor_id']} clause {r['clause_id']} for car {r['car']}, "
@@ -315,7 +317,9 @@ class Engine:
         for b in ledger.billings("hold"):
             r = b["payload"]
             if (season is None or r["season"] == season) and (rnd is None or r["round"] == rnd):
-                out.append(self.review(r, ledger))
+                res = self.review(r, ledger)
+                if not res.get("unchanged"):
+                    out.append(res)
         for b in ledger.billings("pending_approval"):
             je = ledger.entry(b["je_id"])
             if je["status"] == "posted":
