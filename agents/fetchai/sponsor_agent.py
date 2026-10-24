@@ -42,8 +42,8 @@ from uagents_core.contrib.protocols.payment import (  # noqa: E402
 
 from verify import check_invoice  # noqa: E402
 
-load_dotenv()
 HERE = Path(__file__).resolve().parent
+load_dotenv(HERE / ".env")
 SPONSORS = [s.strip() for s in os.environ.get("SPONSOR_IDS", "halcyon,volta,arcadia,northwind,ridgeline").split(",") if s.strip()]
 
 agent = Agent(
