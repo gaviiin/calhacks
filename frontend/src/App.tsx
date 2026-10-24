@@ -2,6 +2,7 @@ import { useEffect, useRef, useState } from 'react';
 import { useSpacetimeDB, useTable } from 'spacetimedb/react';
 import { tables } from './module_bindings';
 import type { FiaDecisionFacts, FiaDocuments } from './module_bindings/types';
+import MondayMorning from './MondayMorning';
 
 const HIGHLIGHT_MS = 8000;
 
@@ -142,6 +143,9 @@ export default function App({ host, database }: { host: string; database: string
         </div>
       </header>
 
+      <MondayMorning />
+
+      <h2 className="section-title">Official documents</h2>
       <section className="stats" aria-label="Summary">
         <div className="stat">
           <span className="stat-value">{docs.length}</span>
