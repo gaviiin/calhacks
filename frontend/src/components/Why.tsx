@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { AgentStep, AuditLog, Policy, WorkItem } from '../cost_cap_bindings/types';
 import { abs, needsHead, proposedCapEffect, useCostCap } from '../lib/costcap';
-import { categoryName, clock, parseJson, refusalText, tidyMemo, usd, usdShort } from '../lib/format';
+import { categoryName, clock, parseJson, refusalText, revenueReason, tidyMemo, usd, usdShort } from '../lib/format';
 import { useRevenue, type Parked, type Why as EntryWhyData } from '../lib/revenue';
 import { useSeat } from '../lib/seat';
 import { useSeatConnection } from '../lib/seatConnection';
@@ -549,7 +549,7 @@ function EntryWhy({ entry }: { entry: Parked }) {
         <p className="why-sub mono">
           {usd(entry.total_cents, { cents: true })} · {entry.kind.replace(/_/g, ' ')} · {entry.je_id} · revenue desk
         </p>
-        <p className="why-material">{entry.reason}</p>
+        <p className="why-material">{revenueReason(entry.reason)}</p>
       </header>
       {why ? (
         <>
@@ -557,7 +557,7 @@ function EntryWhy({ entry }: { entry: Parked }) {
             <h3>
               <IconAgent size={14} /> Why the revenue desk booked it this way
             </h3>
-            <p className="why-reason">{why.text}</p>
+            <p className="why-reason">{revenueReason(why.text)}</p>
           </section>
           <section className="why-sec">
             <h3>Journal lines</h3>
@@ -577,7 +577,11 @@ function EntryWhy({ entry }: { entry: Parked }) {
                 </li>
               ))}
             </ul>
-            {failed.length > 0 && <p className="tone-alert">{failed.map((c) => `${c.check_id}: ${c.reason}`).join(' · ')}</p>}
+            {failed.length > 0 && (
+              <p className="muted">
+                {failed.map((c) => `${c.check_id} holds it for a person: ${revenueReason(c.reason ?? c.result)}`).join(' · ')}
+              </p>
+            )}
           </section>
           <section className="why-sec">
             <h3>Evidence</h3>

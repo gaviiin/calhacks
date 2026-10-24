@@ -112,7 +112,7 @@ export function Overview({ inbox, status, toAudit }: { inbox: InboxItem[]; statu
   const cc = useCostCap();
   const [selected, setSelected] = useState<string | null>(null);
   const top = inbox.slice(0, 8);
-  const key = selected ?? top[0]?.key ?? null;
+  const key = selected ?? top.find((i) => i.desk === 'cost')?.key ?? top[0]?.key ?? null;
   return (
     <div className="overview">
       <CapTrack />

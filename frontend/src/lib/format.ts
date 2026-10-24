@@ -141,5 +141,17 @@ export function tidyMemo(memo: string): string {
   return memo
     .replace(/\s->\s/g, ' → ')
     .replace(/\$([\d,]{9,})\.\d{2}/g, (_m, d: string) => usdShort(Number(d.replace(/,/g, '')) * 100))
-    .replace(/\b([a-z]+) (?=([A-Z][a-z]+))/g, (m, id: string, next: string) => (id === next.toLowerCase() ? '' : m));
+    .replace(/\b([a-z]+) (?=([A-Z][a-z]+))/g, (m, id: string, next: string) => (id === next.toLowerCase() ? '' : m))
+    .replace(/\(([a-z]+)\)/g, (_m, name: string) => `(${name[0].toUpperCase()}${name.slice(1)})`);
+}
+
+/** The revenue desk's parking reasons ("$1,875,000 prize_estimate_change is material (≥ $250,000); needs
+ * controller and cfo") in the desk's own words. */
+export function revenueReason(reason: string): string {
+  return tidyMemo(reason)
+    .replace(/\b([a-z]+(?:_[a-z]+)+)\b/g, (w) => w.replace(/_/g, ' '))
+    .replace(/controller and cfo approval/gi, "the Controller's and the CFO's approval")
+    .replace(/needs controller and cfo/g, 'needs the Controller and the CFO')
+    .replace(/needs controller\b/g, 'needs the Controller')
+    .replace(/needs cfo\b/g, 'needs the CFO');
 }
