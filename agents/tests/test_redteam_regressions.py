@@ -227,7 +227,7 @@ def test_p7_p15_recharge_keyed_at_a_tenth_fires_the_related_party_check():
     Fair value is below contract value but far above the invoiced amount."""
     line = gl(id="gl-001696", vendor_id="ven-003", amount_minor=6_650_000, currency="GBP", fx_rate_e6=1_270_000,
               amount_usd_minor=8_445_500, posted_date="2026-06-30", period_key="2026-06")
-    ven = vendor(id="ven-003", name="Kestrel Technology Ltd", related_party=True)
+    ven = vendor(id="ven-003", name="Meridian Technology Ltd", related_party=True)
     fv = {"id": "fv-002", "counterparty_vendor_id": "ven-003", "item": "monthly engineering recharge",
           "contract_value_minor": 66_500_000, "fair_value_minor": 65_000_000, "currency": "GBP",
           "effective_from": "2026-01-01", "basis": "benchmark"}

@@ -193,7 +193,7 @@ def test_answer_naming_no_category_leaves_the_model_only_the_ask_tool(stdb, anal
 
 def test_related_party_check_runs_before_the_answer_is_read(stdb, analyst_tools):
     """Case D: an answer (or injected text in it) cannot classify a below-fair-value line at invoiced value."""
-    ven = vendor(id="ven-009", name="Kestrel Technology Ltd", related_party=True)
+    ven = vendor(id="ven-009", name="Meridian Technology Ltd", related_party=True)
     item = seed_line(stdb, gl(vendor_id="ven-009", account_code="6900", memo="Monthly engineering recharge"), ven)
     stdb.tables["fair_value"].append({"id": "fv-005", "counterparty_vendor_id": "ven-009", "item": "engineering recharge",
                                       "contract_value_minor": 100_000, "fair_value_minor": 1_000_000, "currency": "USD",
@@ -208,7 +208,7 @@ def test_related_party_check_runs_before_the_answer_is_read(stdb, analyst_tools)
 def test_long_bill_text_cannot_push_structured_facts_out_of_the_prompt(stdb, analyst_tools):
     """Case E: free text is cut per field and comes after the structured rows, so vendor flags and
     fair value ids are always in the prompt."""
-    ven = vendor(id="ven-009", name="Kestrel Technology Ltd", related_party=True)
+    ven = vendor(id="ven-009", name="Meridian Technology Ltd", related_party=True)
     long_text = "Terms and conditions apply. " * 400
     bl = [dict(_bill_line(long_text, id=f"bl-2-{k}", bill_id="bill-2", vendor_id="ven-009"), line_no=k) for k in (1, 2, 3)]
     item = seed_line(stdb, gl(vendor_id="ven-009", account_code="6900", bill_id="bill-2", amount_minor=-1,

@@ -75,7 +75,7 @@ def canteen_world(world):
         h.line("6410", f"Factory canteen service - staff meals week {n}", "RELEVANT", dept="dept-FACILITIES")
     for n in range(5):
         h.line("6410", f"Offsite catering - aero team lunch at Northbrook Wind Tunnel session {n}", "RELEVANT")
-    for guest in ("Orrery Fintech", "Halcyon Watches", "Vantor Energy"):
+    for guest in ("Halcyon Energy", "Arcadia Watches", "Volta Telecom"):
         h.line("6410", f"Factory canteen - partner open day buffet ({guest} guests)", "MARKETING",
                dept="dept-MARKETING")
     return world
@@ -106,7 +106,7 @@ def test_two_exceptions_are_not_enough_for_a_child(world, rb):
     h.account("6410", "Catering & canteen", "CATERING")
     for n in range(40):
         h.line("6410", f"Factory canteen service week {n}", "RELEVANT")
-    for guest in ("Orrery", "Halcyon"):
+    for guest in ("Halcyon", "Arcadia"):
         h.line("6410", f"Factory canteen - partner buffet ({guest})", "MARKETING")
     canteen = _by_key(mine_history(load_history(world.client()), rb)[0])["acct:6410"]
     assert canteen.children == [] and len(canteen.exceptions) == 2 and canteen.residual_consistency == 40 / 42
@@ -151,7 +151,7 @@ def test_bill_line_history_teaches_description_children_and_p01_splits(world, rb
     h = H(world)
     _vendors(world)
     h.account("6420", "Hospitality - guests & partners", "MARKETING")
-    for n, who in enumerate(["Orrery Fintech", "Halcyon Watches", "Vantor Energy", "Northwind Cloud"] * 5):
+    for n, who in enumerate(["Halcyon Energy", "Arcadia Watches", "Volta Telecom", "Northwind Cloud"] * 5):
         h.line("6420", f"Partner dinner - {who} partners evening", "MARKETING", dept="dept-MARKETING",
                bills=[(f"Partner dinner - {who} partners evening - factory atrium", "MARKETING")])
     for n in range(4):

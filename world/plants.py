@@ -92,11 +92,11 @@ def plant_all(st) -> None:  # noqa: C901 - a flat list of plants reads best
     # ---- P01: the demo hospitality invoice (PLAN.md demo beat 1) --------------------------------
     demo_lines = [
         ("Factory canteen - new-car build shift meals, 2-4 Jan 2026 (build team, 3 days)", 1_438_000),
-        ("Sponsor dinner - Orrery Fintech partners season preview, factory atrium, 2 Jan 2026", 985_000),
+        ("Sponsor dinner - Halcyon Energy partners season preview, factory atrium, 2 Jan 2026", 985_000),
         ("Engineering offsite lunch - aero team at Northbrook Wind Tunnel session, 2 Jan 2026", 720_000),
     ]
     p01 = line(posted=date(2026, 1, 2), acct="6420", dept="MARKETING", vendor=C.V_CANTEEN, amount=sum(a for _, a in demo_lines), ccy="GBP",
-               memo="Hospitality - Orrery season preview & build week catering (requester: Marketing)", c26="MARKETING", erp="MARKETING",
+               memo="Hospitality - Halcyon season preview & build week catering (requester: Marketing)", c26="MARKETING", erp="MARKETING",
                plant="P01", prio=0, visible=date(2026, 1, 2), bill_lines=demo_lines, bill_date=date(2026, 1, 2),
                bill_cats=[G.T_CANTEEN, G.T_MARKETING, G.T_TUNNEL])
     A("P01", p01, "catering_as_marketing", "reclassify", "",
@@ -226,7 +226,7 @@ def plant_all(st) -> None:  # noqa: C901 - a flat list of plants reads best
     p.amount, p.erp, p.plant, p.c26 = 6_650_000, "RELEVANT", "P15", "ADJ_RELATED_PARTY_FAIR_VALUE"
     p.fv = ("fv-002", 65_000_000)
     A("P15", p, "related_party_recharge_clerical_error", "reclassify", "ADJ_RELATED_PARTY_FAIR_VALUE",
-      "Kestrel Technology recharge invoiced GBP 66,500.00 instead of GBP 665,000.00: below fair value (fv-002, GBP 650,000 after the 2026-07-01 update); include at fair value.")
+      "Meridian Technology recharge invoiced GBP 66,500.00 instead of GBP 665,000.00: below fair value (fv-002, GBP 650,000 after the 2026-07-01 update); include at fair value.")
 
     # ---- Red Bull 12: travel not related to Competitions ----------------------------------------------
     p = line(posted=date(2026, 4, 22), acct="6310", dept="VD", vendor="ven-037", amount=284_000, ccy="GBP",

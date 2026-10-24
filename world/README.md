@@ -1,6 +1,6 @@
 # world/: the systems of record
 
-This directory holds the mock ERP, AP, bank feed, contracts and 2025 cost cap submission for **Kestrel Grand Prix**, a fictional UK constructor based at Upper Heyford. It is scaled to roughly Williams FY2025: about GBP 101m payroll, about 1,150 staff, 24 rounds. There are two entities. `TECHNOLOGY` (Kestrel Technology Ltd, the parent) employs the staff and recharges `RACING` (the F1 Team) monthly as a related party. The contract is SCHEMA.md section 5.
+This directory holds the mock ERP, AP, bank feed, contracts and 2025 cost cap submission for **Meridian Racing**, a fictional UK constructor based at Upper Heyford. It is scaled to roughly Williams FY2025: about GBP 101m payroll, about 1,150 staff, 24 rounds. There are two entities. `TECHNOLOGY` (Meridian Technology Ltd, the parent) employs the staff and recharges `RACING` (the F1 Team) monthly as a related party. The contract is SCHEMA.md section 5.
 
 ## Generate
 

@@ -9,7 +9,8 @@ matrix, so a controller approval above materiality is denied and logged like any
                                  --reject KEY=REASON (repeatable), which are rejected with REASON
   items                          list PROPOSED work items
   items --approve-all            approve them: the controller below materiality, the Head of Cost
-                                 Cap at or above it (SCHEMA §2)
+                                 Cap at or above it (SCHEMA §2); --source deterministic and
+                                 --below-materiality narrow the batch, leaving the rest to review
 
 Usage:
   uv run python -m agents.review policies --approve-all --reject "acct:6110=lubricants are not FIA fuel"
@@ -66,11 +67,14 @@ def review_policies(stdb: StdbClient, approve_all: bool, rejects: dict[str, str]
     return 0
 
 
-def review_items(stdb: StdbClient, approve_all: bool) -> int:
+def review_items(stdb: StdbClient, approve_all: bool, source: str | None = None,
+                 below_materiality: bool = False) -> int:
     controller = identities.get("controller")
     head = identities.get("head_of_cost_cap")
     materiality = int(_setting(stdb, controller.token, "materiality_usd_minor") or 0)
-    rows = proposed_items(stdb, controller.token)
+    rows = [it for it in proposed_items(stdb, controller.token)
+            if (source is None or it.get("proposal_source") == source)
+            and not (below_materiality and materiality and abs(int(it["amount_usd_minor"])) >= materiality)]
     by_role = {"controller": 0, "head_of_cost_cap": 0}
     for it in rows:
         amount = int(it["amount_usd_minor"])
@@ -97,6 +101,8 @@ def main(argv: list[str] | None = None) -> int:
     ap.add_argument("--approve-all", action="store_true")
     ap.add_argument("--reject", action="append", default=[], metavar="KEY=REASON",
                     help="policies only: reject this policy_key with REASON instead of approving it")
+    ap.add_argument("--source", help="items only: only proposals from this source (deterministic | llm | human_text)")
+    ap.add_argument("--below-materiality", action="store_true", help="items only: leave material items for review")
     args = ap.parse_args(argv)
     stdb = StdbClient()
     if args.what == "policies":
@@ -104,7 +110,7 @@ def main(argv: list[str] | None = None) -> int:
         return review_policies(stdb, args.approve_all, rejects)
     if args.reject:
         ap.error("--reject applies to policies only")
-    return review_items(stdb, args.approve_all)
+    return review_items(stdb, args.approve_all, args.source, args.below_materiality)
 
 
 if __name__ == "__main__":

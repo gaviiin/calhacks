@@ -5,6 +5,7 @@
     python ingestion/ingest.py replay ingestion/captures/<capture>.json
     python ingestion/ingest.py fixture ingestion/sample_item.json
     python ingestion/ingest.py extract ingestion/captures/<capture>.json   (writes ingestion/captures/decisions/)
+    python ingestion/ingest.py replay-decisions ingestion/captures/decisions/<capture>.json
 
 `run` starts the Actor and saves its dataset under ingestion/captures/ so the
 same evidence can be replayed if the FIA site or Apify is unreachable.
@@ -468,6 +469,8 @@ def main(argv: list[str] | None = None) -> int:
     extract_p.add_argument("capture", type=Path)
     extract_p.add_argument("--max-items", type=int, default=10)
     extract_p.add_argument("--document-number", default="", help="only this FIA document number")
+    sub.add_parser("replay-decisions", help="re-store decision extracts from a capture saved by `extract`") \
+        .add_argument("capture", type=Path)
     args = parser.parse_args(argv)
 
     main_db = os.environ.get("SPACETIME_DB", "pit-wall")
@@ -508,6 +511,11 @@ def main(argv: list[str] | None = None) -> int:
             for skip in summary.get("skipped") or []:
                 print(f"  SKIPPED   {skip.get('reason')}")
             print(f"{len(batch.items)} decision items -> SpacetimeDB '{database}'")
+            result = extract_batch(batch, db)
+            return 1 if result["rejected"] else 0
+        elif args.command == "replay-decisions":
+            batch = load_capture(args.capture)
+            print(f"REPLAY of decision reader run {batch.actor_run_id}: {len(batch.items)} items -> SpacetimeDB '{database}'")
             result = extract_batch(batch, db)
             return 1 if result["rejected"] else 0
         else:

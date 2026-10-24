@@ -70,7 +70,7 @@ print("  guard errors:", [r for _, r, e in fake.results if e], "| state:", s.ite
 
 print("== D. related party below fair value, after a human answer: requires_category is never set")
 s, t = desk()
-ven = vendor(id="ven-009", name="Kestrel Technology Ltd", related_party=True)
+ven = vendor(id="ven-009", name="Meridian Technology Ltd", related_party=True)
 it = seed_line(s, gl(vendor_id="ven-009", account_code="6900", memo="Monthly engineering recharge"), ven)
 s.tables["fair_value"].append({"id": "fv-005", "counterparty_vendor_id": "ven-009", "item": "engineering recharge",
                                "contract_value_minor": 100_000, "fair_value_minor": 1_000_000, "currency": "USD",

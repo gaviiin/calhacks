@@ -164,7 +164,7 @@ make redteam
 
 ### Third end-to-end run, January 2026, offline, after Tier 1 (Oct 24)
 
-Tier 1 added allocations, category limits and policies as Ripple-Down Rules. The simulated company also gained 2025 bill-line history and had four misreadings of the regulations corrected in its truth file (bonuses, mixed staff, building maintenance, Health and Safety under Issue 22). Those corrections alone move about $16m into the cap: Kestrel's January-November Relevant Costs are now $209.5m against a $215m cap, so the full year is on track to breach.
+Tier 1 added allocations, category limits and policies as Ripple-Down Rules. The simulated company also gained 2025 bill-line history and had four misreadings of the regulations corrected in its truth file (bonuses, mixed staff, building maintenance, Health and Safety under Issue 22). Those corrections alone move about $16m into the cap: Meridian's January-November Relevant Costs are now $209.5m against a $215m cap, so the full year is on track to breach.
 
 | Measure | Result |
 |---|---|

@@ -63,7 +63,7 @@ def test_bootstrap_end_to_end_and_idempotent(tmp_path, rulebook):
     assert {r["key"]: r["value"] for r in stdb.tables["setting"] if r["key"] != "db_epoch"} == {
         "materiality_usd_minor": "25000000", "cap_usd_minor": "21500000000", "cap_year": "2026"}
     # invites created by admin, claimed by each actor with its own token
-    invites = stdb.reducer_calls(R.CREATE_ROLE_INVITE)
+    invites = [c for c in stdb.reducer_calls(R.CREATE_ROLE_INVITE) if not c[2][2].startswith("seat-")]
     claims = stdb.reducer_calls(R.CLAIM_ROLE)
     assert len(invites) == len(claims) == len(config.ACTOR_ROLES) - 1  # everyone but admin claims a role
     assert all(c[0] == ids["admin"]["token"] for c in invites)
@@ -74,7 +74,7 @@ def test_bootstrap_end_to_end_and_idempotent(tmp_path, rulebook):
 
     n = len(stdb.calls)
     res2 = bootstrap(stdb, identities_path=ids_path, rulebook_path=rb_path, log=lambda *_: None)
-    assert res2 == {"created": [], "claimed": [], "rulebook_loaded": 0, "settings_written": []}
+    assert res2 == {"created": [], "claimed": [], "rulebook_loaded": 0, "settings_written": [], "seats_minted": {}}
     assert len(stdb.calls) == n
 
 

@@ -11,6 +11,10 @@
      reads it back; identities.json records it on every actor entry. When the module already has an
      epoch and identities.json carries the same one, the role step is a no-op. An identities.json from
      another epoch is refused (the module was bootstrapped with other identities: republish or restore).
+  7. dashboard seats: admin mints SEATS_PER_ROLE one-time invite codes for each human role and writes
+     them to agents/state/seat_codes.json (mode 600). A person takes a seat in the dashboard by claiming
+     one with the browser's own identity, so their approvals are checked by the same roles matrix and
+     land in the audit log under that identity. The module stores only the codes' hashes.
 
 Idempotent: existing identities are reused, actors that already hold their role are skipped,
 rulebook entries already present are skipped (unless --reload-rulebook), settings are only written
@@ -25,6 +29,7 @@ from __future__ import annotations
 
 import argparse
 import json
+import os
 import secrets
 import sys
 from pathlib import Path
@@ -32,6 +37,9 @@ from pathlib import Path
 from . import config, epoch, identities
 from . import reducers as R
 from .stdb import StdbClient
+
+
+SEATS_PER_ROLE = 3  # one per browser that may take the seat; a claimed code is burnt
 
 
 class BootstrapError(RuntimeError):
@@ -52,7 +60,7 @@ def settings() -> dict[str, str]:
 
 
 def bootstrap(stdb: StdbClient, *, identities_path: Path | None = None, rulebook_path: Path | None = None,
-              reload_rulebook: bool = False, log=print) -> dict:
+              reload_rulebook: bool = False, seat_codes_path: Path | None = None, log=print) -> dict:
     ids = identities.load(identities_path)
     file_epoch = identities.epoch(ids) if ids else None
     created = []
@@ -143,7 +151,33 @@ def bootstrap(stdb: StdbClient, *, identities_path: Path | None = None, rulebook
             stdb.call(admin["token"], R.SET_SETTING, R.set_setting(k, v))
             written.append(k)
     log(f"settings: {', '.join(written) if written else 'unchanged'}")
-    return {"created": created, "claimed": claimed, "rulebook_loaded": loaded, "settings_written": written}
+    if seat_codes_path is None and identities_path is not None:
+        seat_codes_path = Path(identities_path).with_name("seat_codes.json")  # tests: keep it beside them
+    seats = mint_seats(stdb, admin["token"], module_epoch, seat_codes_path)
+    log(f"dashboard seats: {seats or 'unchanged'} ({seat_codes_path or config.SEAT_CODES_PATH})")
+    return {"created": created, "claimed": claimed, "rulebook_loaded": loaded, "settings_written": written,
+            "seats_minted": seats}
+
+
+def mint_seats(stdb: StdbClient, admin_token: str, module_epoch: str | None, path: Path | None = None) -> dict:
+    """One-time invite codes for the people who use the dashboard. Kept while the file carries the module's
+    epoch (republishing wipes agents/state/ and the invites with it); returns what was minted."""
+    p = Path(path or config.SEAT_CODES_PATH)
+    if p.exists() and json.loads(p.read_text()).get("db_epoch") == module_epoch:
+        return {}
+    seats: dict[str, list[dict]] = {}
+    for role, label in config.DASHBOARD_SEATS.items():
+        seats[role] = []
+        for _ in range(SEATS_PER_ROLE):
+            code = f"seat-{role.removeprefix('human_').replace('_', '-')}-{secrets.token_hex(8)}"
+            stdb.call(admin_token, R.CREATE_ROLE_INVITE, R.create_role_invite(role, label, code))
+            seats[role].append({"code": code, "label": label})
+    p.parent.mkdir(parents=True, exist_ok=True)
+    tmp = p.with_suffix(".tmp")
+    tmp.write_text(json.dumps({"db_epoch": module_epoch, "seats": seats}, indent=2))
+    os.chmod(tmp, 0o600)
+    tmp.replace(p)
+    return {role: len(codes) for role, codes in seats.items()}
 
 
 def main(argv: list[str] | None = None) -> int:

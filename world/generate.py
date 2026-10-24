@@ -37,7 +37,7 @@ SIM_START = date(2026, 1, 1)
 STREAM_END = date(2026, 11, 30)
 HISTORY_END = date(2025, 12, 31)
 V25, V26 = "ISS22", "SECD-ISS07"
-PARTNERS = ["Orrery Fintech", "Halcyon Watches", "Northwind Cloud", "Vantor Energy"]
+PARTNERS = ["Halcyon Energy", "Arcadia Watches", "Northwind Cloud", "Volta Telecom"]
 MONTHS = ["Jan", "Feb", "Mar", "Apr", "May", "Jun", "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"]
 
 
@@ -699,9 +699,9 @@ class YearGen:
                      why="team catering at the track is not Marketing; under ISS22 it is inside the cap")
             if nm in partner_rounds:
                 self.add(posted=bday_on_or_after(dt + timedelta(days=rng.randint(2, 7))), acct="6420", dept="MARKETING", vendor="ven-002",
-                         amount=money(rng, 42_000, 92_000), ccy="GBP", memo=f"Paddock Club hospitality - Orrery partner guests - {nm}",
+                         amount=money(rng, 42_000, 92_000), ccy="GBP", memo=f"Paddock Club hospitality - Halcyon partner guests - {nm}",
                          entity="RACING", c25="MARKETING", c26="MARKETING", tag="partner_hospitality",
-                         reason="Partner hospitality under the Orrery title partnership: Marketing Activities.")
+                         reason="Partner hospitality under the Halcyon title partnership: Marketing Activities.")
             if ev["kind"] == "race" and ev["round"] % 4 == 1:
                 self.add(posted=bday_on_or_after(dt - timedelta(days=rng.randint(20, 30))), acct="6420", dept="MARKETING", vendor="ven-043",
                          amount=int(rng.randint(20, 40) * rng.uniform(5_200, 6_400) * 100), ccy="USD",
@@ -737,7 +737,7 @@ class YearGen:
             ("6310", "ven-037", "Flights - Indianapolis - telemetry supplier visit Delta Telemetry", "RACEOPS", "RELEVANT", (2_600, 5_400)),
             ("6310", "ven-037", "Flights - Detroit - SAE vehicle dynamics conference", "VD", "RELEVANT", (1_900, 4_200)),
             ("6320", "ven-039", "Hotel - Coventry - battery supplier technical review (Applied Technologies)", "APPLIED", "NON_F1", (300, 700)),
-            ("6310", "ven-037", "Rail - London - partner meeting Orrery Fintech", "MARKETING", "MARKETING", (120, 380)),
+            ("6310", "ven-037", "Rail - London - partner meeting Halcyon Energy", "MARKETING", "MARKETING", (120, 380)),
             ("6320", "ven-039", "Hotel - London - partner activation planning workshop", "MARKETING", "MARKETING", (700, 1_500)),
             ("6310", "ven-037", "Rail - Manchester - university recruitment fair", "HR", "HR_FINANCE_LEGAL", (150, 420)),
         ]
@@ -881,7 +881,7 @@ class YearGen:
         rng = self.rng("marketing")
         campaigns = ["season launch film", "social content series", "livery reveal event", "partner co-branded campaign", "fan zone activation",
                      "driver content day"]
-        events_ = ["Goodwood Festival of Speed partner stand", "Orrery hospitality roadshow", "London show car activation", "trade show stand"]
+        events_ = ["Goodwood Festival of Speed partner stand", "Halcyon hospitality roadshow", "London show car activation", "trade show stand"]
         for m in self.months:
             days = month_bdays(self.year, m, factory=False)
             self.add(posted=bday_on_or_after(date(self.year, m, 2)), acct="6500", dept="MARKETING", vendor="ven-022",
@@ -905,7 +905,7 @@ class YearGen:
 
     def gen_professional(self):
         rng = self.rng("legal")
-        matters = ["commercial contracts - supplier terms", "employment matters", "Financial Regulations advisory", "sponsorship agreement drafting - Orrery",
+        matters = ["commercial contracts - supplier terms", "employment matters", "Financial Regulations advisory", "sponsorship agreement drafting - Halcyon",
                    "IP - trademark portfolio", "property lease review", "data protection compliance", "driver contract negotiation"]
         for m in self.months:
             days = month_bdays(self.year, m, factory=False)
@@ -1693,7 +1693,7 @@ def summary(result: dict) -> str:
 
 
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="Generate the Kestrel Grand Prix systems of record.")
+    ap = argparse.ArgumentParser(description="Generate the Meridian Racing systems of record.")
     ap.add_argument("--seed", type=int, default=7)
     ap.add_argument("--out", type=Path, default=Path("world/out"))
     ap.add_argument("--quiet", action="store_true")

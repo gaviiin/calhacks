@@ -14,7 +14,7 @@ from .conftest import gl, policy, seed_line, vendor
 
 IBAN = "GB50HBUK74786417620252"
 P01_LINES = [("Factory canteen - new-car build shift meals, 2-4 Jan 2026 (build team, 3 days)", 1_438_000),
-             ("Sponsor dinner - Orrery Fintech partners season preview, factory atrium, 2 Jan 2026", 985_000),
+             ("Sponsor dinner - Halcyon Energy partners season preview, factory atrium, 2 Jan 2026", 985_000),
              ("Engineering offsite lunch - aero team at Northbrook Wind Tunnel session, 2 Jan 2026", 720_000)]
 
 
@@ -22,7 +22,7 @@ def _p01(stdb):
     """gl-000001 exactly as the world emits it: GBP 31,430.00 at 1.345 = $42,273.35."""
     line = gl(id="gl-000001", account_code="6420", department_id="dept-MARKETING", bill_id="bill-00001",
               amount_minor=3_143_000, currency="GBP", fx_rate_e6=1_345_000, amount_usd_minor=4_227_335,
-              memo="Hospitality - Orrery season preview & build week catering (requester: Marketing)")
+              memo="Hospitality - Halcyon season preview & build week catering (requester: Marketing)")
     bills = [{"id": f"bl-00001-{n}", "raw_ref": f"bill_line:bl-00001-{n}:1", "bill_id": "bill-00001",
               "gl_line_id": "gl-000001", "line_no": n, "description": d, "amount_minor": a, "bill_text": "INVOICE",
               "vendor_id": "ven-001", "bank_iban_on_bill": IBAN} for n, (d, a) in enumerate(P01_LINES, start=1)]

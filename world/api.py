@@ -104,7 +104,7 @@ def create_app(out_dir: Path | str | None = None) -> FastAPI:
         app.state.world = State(WorldData(path))
         yield
 
-    app = FastAPI(title="Kestrel Grand Prix systems of record", version="1.0", lifespan=lifespan)
+    app = FastAPI(title="Meridian Racing systems of record", version="1.0", lifespan=lifespan)
 
     def st(request: Request) -> State:
         return request.app.state.world

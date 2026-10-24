@@ -77,7 +77,7 @@ PATTERNS: list[Pattern] = [
     Pattern("non_gp_travel", "account 6310|6320|6330 + memo not ~ Grand Prix|pre-season test", all_of(acct("6310", "6320", "6330"), lambda g: not GP.search(g["memo"])),
             "RELEVANT", "RELEVANT@SECD-ISS07: travel not connected with a Competition or Testing stays in the cap"),
     Pattern("freight", "account 6300", acct("6300"), "RELEVANT", "RELEVANT@SECD-ISS07: freight is inside the cap, only personnel travel is excluded"),
-    Pattern("related_party_recharge", "vendor ven-003 (Kestrel Technology, related_party=true)", vendor("ven-003"),
+    Pattern("related_party_recharge", "vendor ven-003 (Meridian Technology, related_party=true)", vendor("ven-003"),
             "RELEVANT", "value at max(contract, fair value) against the fair_value schedule (ADJ_RELATED_PARTY_FAIR_VALUE@SECD-ISS07, D6.1.1.a)"),
     Pattern("pu_trackside", "account 6105 (PU services outside the supply perimeter)", acct("6105"),
             "RELEVANT", "RELEVANT@SECD-ISS07 at max(contract, fair value); compare to fv-003 / fv-005"),
