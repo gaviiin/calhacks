@@ -1,0 +1,7 @@
+{
+  "_note": "Meridian Racing is fictional. Its on-track results mirror one real constructor's results; contracts and finances are synthetic.",
+  "company": "Meridian Racing",
+  "mirrors_constructor_id": "mercedes",
+  "train_season": 2023,
+  "test_season": 2024
+}

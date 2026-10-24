@@ -324,7 +324,7 @@ def main(argv: list[str] | None = None) -> int:
     run_p = sub.add_parser("run", help="start the Apify Actor, capture its dataset, ingest it")
     run_p.add_argument("--season", type=int, default=2024)
     run_p.add_argument("--event-slug", default="belgian-grand-prix")
-    run_p.add_argument("--max-items", type=int, default=10)
+    run_p.add_argument("--max-items", type=int, default=100)
     sub.add_parser("run-id", help="ingest an already-finished Apify run").add_argument("run_id")
     sub.add_parser("replay", help="re-ingest a capture saved by `run`").add_argument("capture", type=Path)
     sub.add_parser("fixture", help="ingest a hand-written test fixture into the test DB").add_argument("path", type=Path)

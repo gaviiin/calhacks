@@ -35,7 +35,66 @@ const config = table(
   }
 );
 
-const spacetimedb = schema({ fiaDocuments, config });
+// ---------------------------------------------------------------- ledger read model
+// Public mirror of the books the Python kernel posts (finance/). Only the kernel's
+// identity can write here, and the reducer re-checks that every entry balances.
+// The browser subscribes to these tables, so transactions stream in live.
+const journalEntries = table(
+  { name: 'journal_entries', public: true },
+  {
+    jeId: t.string().primaryKey(),
+    runId: t.string(),
+    kind: t.string(),
+    status: t.string(), // posted | parked | refused | rejected
+    memo: t.string(),
+    sponsorId: t.string(),
+    totalCents: t.i64(),
+    effectiveDate: t.string(),
+    recordedAt: t.string(),
+    postedAt: t.string(),
+    preparer: t.string(),
+    needs: t.string(), // comma-separated roles still required
+    reason: t.string(),
+    reversesJeId: t.string(),
+    policyIds: t.string(),
+    answer: t.string(),
+    lineCount: t.u32(),
+  }
+);
+
+const jeLines = table(
+  { name: 'je_lines', public: true },
+  {
+    lineKey: t.string().primaryKey(), // `${jeId}:${lineNo}`
+    jeId: t.string(),
+    lineNo: t.u32(),
+    account: t.string(),
+    debitCents: t.i64(),
+    creditCents: t.i64(),
+    origCurrency: t.string(),
+    origAmountCents: t.i64(),
+    fxRate: t.string(),
+    sponsorId: t.string(),
+  }
+);
+
+const pitWallItems = table(
+  { name: 'pit_wall_items', public: true },
+  {
+    // memos (expected / at-risk / avoided bonuses, alerts), questions to people, billing decisions
+    itemId: t.string().primaryKey(),
+    runId: t.string(),
+    itemType: t.string(),
+    status: t.string(),
+    payloadJson: t.string(),
+    updatedAt: t.string(),
+  }
+);
+
+// Private: which identities may write the mirror (role 'kernel') or mark FIA documents reviewed (role 'router').
+const writers = table({ name: 'writers' }, { who: t.identity().primaryKey(), role: t.string() });
+
+const spacetimedb = schema({ fiaDocuments, config, journalEntries, jeLines, pitWallItems, writers });
 export default spacetimedb;
 
 const FiaDocumentInput = t.object('FiaDocumentInput', {
@@ -123,5 +182,86 @@ export const setIngestor = spacetimedb.reducer(
       throw new SenderError('unauthorized: only the module owner can change the ingestor');
     }
     ctx.db.config.id.update({ ...cfg, ingestor });
+  }
+);
+
+// ---------------------------------------------------------------- ledger mirror reducers
+
+function requireRole(ctx: any, role: string) {
+  const cfg = ctx.db.config.id.find(CONFIG_ID);
+  if (cfg && ctx.sender.equals(cfg.owner)) return; // the publisher may always write
+  const w = ctx.db.writers.who.find(ctx.sender);
+  if (!w || w.role !== role) throw new SenderError(`unauthorized: caller lacks role ${role}`);
+}
+
+export const setWriter = spacetimedb.reducer(
+  { who: t.identity(), role: t.string() },
+  (ctx, { who, role }) => {
+    const cfg = ctx.db.config.id.find(CONFIG_ID);
+    if (!cfg || !ctx.sender.equals(cfg.owner)) throw new SenderError('unauthorized: only the module owner can grant roles');
+    if (!['kernel', 'router'].includes(role)) throw new SenderError('unknown role');
+    if (ctx.db.writers.who.find(who)) ctx.db.writers.who.update({ who, role });
+    else ctx.db.writers.insert({ who, role });
+  }
+);
+
+const EntryInput = t.object('EntryInput', {
+  jeId: t.string(), runId: t.string(), kind: t.string(), status: t.string(), memo: t.string(), sponsorId: t.string(),
+  totalCents: t.i64(), effectiveDate: t.string(), recordedAt: t.string(), postedAt: t.string(), preparer: t.string(),
+  needs: t.string(), reason: t.string(), reversesJeId: t.string(), policyIds: t.string(), answer: t.string(),
+});
+const LineInput = t.object('LineInput', {
+  account: t.string(), debitCents: t.i64(), creditCents: t.i64(), origCurrency: t.string(),
+  origAmountCents: t.i64(), fxRate: t.string(), sponsorId: t.string(),
+});
+const STATUSES = ['posted', 'parked', 'refused', 'rejected'];
+
+export const mirrorEntry = spacetimedb.reducer(
+  { entry: EntryInput, lines: t.array(LineInput) },
+  (ctx, { entry, lines }) => {
+    requireRole(ctx, 'kernel');
+    if (!STATUSES.includes(entry.status)) throw new SenderError('invalid entry: unknown status');
+    let dr = 0n;
+    let cr = 0n;
+    for (const l of lines) {
+      if (l.debitCents < 0n || l.creditCents < 0n) throw new SenderError('invalid entry: negative amount');
+      dr += l.debitCents;
+      cr += l.creditCents;
+    }
+    // Defense in depth: even with the kernel's identity, an unbalanced entry never lands.
+    if (lines.length < 2 || dr !== cr) throw new SenderError(`invalid entry: debits ${dr} != credits ${cr}`);
+    const existing = ctx.db.journalEntries.jeId.find(entry.jeId);
+    if (existing) {
+      if (existing.lineCount !== lines.length) throw new SenderError('invalid update: lines are immutable');
+      if (existing.status === 'posted' && entry.status !== 'posted') throw new SenderError('invalid update: posted entries are final');
+      ctx.db.journalEntries.jeId.update({ ...entry, lineCount: existing.lineCount });
+      return;
+    }
+    ctx.db.journalEntries.insert({ ...entry, lineCount: lines.length });
+    lines.forEach((l, i) => ctx.db.jeLines.insert({ ...l, lineKey: `${entry.jeId}:${i}`, jeId: entry.jeId, lineNo: i }));
+  }
+);
+
+export const mirrorItem = spacetimedb.reducer(
+  { itemId: t.string(), runId: t.string(), itemType: t.string(), status: t.string(), payloadJson: t.string(), updatedAt: t.string() },
+  (ctx, row) => {
+    requireRole(ctx, 'kernel');
+    if (row.payloadJson.length > 8192) throw new SenderError('payload too large');
+    if (ctx.db.pitWallItems.itemId.find(row.itemId)) ctx.db.pitWallItems.itemId.update(row);
+    else ctx.db.pitWallItems.insert(row);
+  }
+);
+
+const REVIEW_STATUSES = ['unreviewed', 'routed', 'linked_to_entry', 'no_financial_impact', 'reviewed'];
+
+// Fixes the evidence feed's permanent "Needs review": the router marks what it did with each document.
+export const setReviewStatus = spacetimedb.reducer(
+  { docKey: t.string(), reviewStatus: t.string() },
+  (ctx, { docKey, reviewStatus }) => {
+    requireRole(ctx, 'router');
+    if (!REVIEW_STATUSES.includes(reviewStatus)) throw new SenderError('unknown review status');
+    const doc = ctx.db.fiaDocuments.docKey.find(docKey);
+    if (!doc) throw new SenderError('no such document');
+    ctx.db.fiaDocuments.docKey.update({ ...doc, reviewStatus });
   }
 );

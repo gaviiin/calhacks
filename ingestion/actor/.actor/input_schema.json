@@ -23,12 +23,12 @@
     "max_items": {
       "title": "Max documents",
       "type": "integer",
-      "description": "Upper bound on documents pushed (newest first). Keep small while testing.",
+      "description": "Upper bound on documents pushed (newest first). Use 100 for real runs; busy weekends have 60+ documents.",
       "editor": "number",
       "minimum": 1,
       "maximum": 100,
-      "default": 10,
-      "prefill": 10
+      "default": 100,
+      "prefill": 100
     },
     "document_filter": {
       "title": "Documents to include",
