@@ -1,0 +1,138 @@
+{
+  "_doc": "Shared conformance cases for policy pattern matching (SCHEMA.md §10). memo and memo_regex are NFKC-normalised, memo is stripped, matching is case-insensitive with ASCII-only character classes and no u flag. Both agents/tests and system_of_work tests load this file.",
+  "match_cases": [
+    {
+      "memo_regex": "\\bimola\\b",
+      "memo": "Hotel - İmola",
+      "expected": false,
+      "why": "Turkish dotted capital I is not ASCII i"
+    },
+    {
+      "memo_regex": "\\bimola\\b",
+      "memo": "Hotel - Imola - race week",
+      "expected": true,
+      "why": "plain ASCII, case-insensitive"
+    },
+    {
+      "memo_regex": "canteen$",
+      "memo": "Grove canteen\n",
+      "expected": true,
+      "why": "trailing whitespace is stripped before matching"
+    },
+    {
+      "memo_regex": "canteen$",
+      "memo": "Grove canteen\nextra",
+      "expected": false,
+      "why": "$ anchors the end of the whole memo only"
+    },
+    {
+      "memo_regex": "\\d+",
+      "memo": "Invoice ٣٤",
+      "expected": false,
+      "why": "Arabic-Indic digits are not \\d under ASCII semantics"
+    },
+    {
+      "memo_regex": "\\d+",
+      "memo": "Invoice 34",
+      "expected": true,
+      "why": "ASCII digits"
+    },
+    {
+      "memo_regex": "\\bcatering\\b",
+      "memo": "écatering",
+      "expected": true,
+      "why": "under ASCII semantics é is not a word character, so a word boundary exists before 'catering' on both sides"
+    },
+    {
+      "memo_regex": "kelvin",
+      "memo": "KELVIN probe",
+      "expected": true,
+      "why": "ASCII case fold"
+    },
+    {
+      "memo_regex": "kelvin",
+      "memo": "KELVIN probe",
+      "expected": true,
+      "why": "NFKC normalises the Kelvin sign U+212A to ASCII K before matching, so it matches on both sides"
+    },
+    {
+      "memo_regex": "\\s",
+      "memo": "a\u001cb",
+      "expected": false,
+      "why": "\\x1c is not whitespace under ASCII semantics"
+    },
+    {
+      "memo_regex": "^.$",
+      "memo": "😀",
+      "expected": false,
+      "why": "an emoji is two code units in JS and one char in Python; both sides must agree: treat as no match by requiring BMP-safe semantics (memo length check uses code points, matching rejects astral chars)"
+    },
+    {
+      "memo_regex": "grand prix|GP\\b",
+      "memo": "Hotel - Monaco Grand Prix",
+      "expected": true,
+      "why": "alternation"
+    },
+    {
+      "memo_regex": "wind tunnel",
+      "memo": "Lunch at the wind  tunnel session",
+      "expected": false,
+      "why": "double space does not match single space; no whitespace collapsing"
+    },
+    {
+      "memo_regex": "ｃanteen",
+      "memo": "canteen",
+      "expected": true,
+      "why": "fullwidth c in the REGEX is NFKC-normalised too"
+    },
+    {
+      "memo_regex": "canteen",
+      "memo": "ｃanteen",
+      "expected": true,
+      "why": "fullwidth c in the memo is NFKC-normalised to c"
+    }
+  ],
+  "rejected_regexes": [
+    {
+      "memo_regex": "(?i)(\\w+\\s?)+$",
+      "reason": "nested quantifier"
+    },
+    {
+      "memo_regex": "(a+)+",
+      "reason": "nested quantifier"
+    },
+    {
+      "memo_regex": "xxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxxx",
+      "reason": "longer than 200 characters"
+    },
+    {
+      "memo_regex": "(?i)canteen",
+      "reason": "inline flags are not allowed; case-insensitivity is always on"
+    },
+    {
+      "memo_regex": "(?<=a)b",
+      "reason": "lookbehind is not allowed"
+    }
+  ],
+  "pattern_acceptance": [
+    {
+      "pattern": {
+        "vendor_id": "ven-001"
+      },
+      "accepted": true
+    },
+    {
+      "pattern": {},
+      "accepted": false,
+      "reason": "no keys"
+    },
+    {
+      "pattern": {
+        "memo_regex": null,
+        "vendor_id": null
+      },
+      "accepted": false,
+      "reason": "all keys null"
+    }
+  ]
+}

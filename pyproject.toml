@@ -1,0 +1,22 @@
+[project]
+name = "cost-cap-desk"
+version = "0.1.0"
+description = "Cost Cap Desk: an autonomous cost cap analyst for a Formula 1 constructor (Cal Hacks 13.0)"
+requires-python = ">=3.13"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "httpx>=0.27",
+  "pydantic>=2.8",
+  "anthropic>=0.60",
+  "python-dateutil>=2.9",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "pytest-asyncio>=0.24"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["world/tests", "agents/tests", "rulebook/tests"]

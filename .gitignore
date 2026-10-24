@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+.pytest_cache/
+node_modules/
+dist/
+system_of_work/spacetimedb/target/
+system_of_work/spacetimedb/dist/
+world/out/*.jsonl
+world/out/answer_key.csv
+agents/identities.json
+.env
+.DS_Store
+spacetime.local.json
+agents/state/
+agents/out/
+research/review/redteam-repro/ts/node_modules/
