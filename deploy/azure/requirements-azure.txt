@@ -1,0 +1,5 @@
+# Azure extras: Azure OpenAI auditor, Entra ID managed identity, Application Insights.
+openai>=1.40
+azure-identity>=1.17
+azure-monitor-opentelemetry>=1.6
+opentelemetry-instrumentation-fastapi>=0.48b0

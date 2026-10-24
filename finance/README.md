@@ -19,7 +19,7 @@ uv pip install --python .venv/bin/python -r finance/requirements.txt
 python scripts/fetch_results.py 2023 2024     # needs internet once; caches world/results/*.json
 #   -> confirm the printed DSQ candidates match world/result_changes.json, set verified: true
 python -m finance.eval generate 2023 2024     # billing requests (world/requests) + hidden answer keys (keys/)
-python -m pytest -q finance/tests             # 18 tests on a synthetic fixture season
+python -m pytest -q finance/tests             # 33 tests on a synthetic fixture season
 ```
 
 ## Run
@@ -55,6 +55,26 @@ Channels: **Slack** (bot token: buttons + reply-in-thread answers; or webhook: t
 Safety: `PITWALL_NOTIFY=dry` (default) renders everything into the outbox and sends nothing. Every message is sent once per person per channel. Slack requests are signature-checked with a 5-minute replay window. Email and Teams links are HMAC-signed, expire after 72 hours, open a confirmation page and only act on POST. Whatever the link says, the ledger still enforces K11 (no agent approves, no one gives two approvals).
 
 Slack setup: create the app from `integrations/slack_manifest.yml`, expose port 8000 with a tunnel, fill the Slack variables in `.env`.
+
+## Independent auditor, impact and Microsoft integrations (`finance/audit`, `finance/erp`, `finance/microsoft`)
+```
+POST /api/runs/{id}/audit                  A1-A7 audit, read-only; Azure OpenAI second opinion when configured
+POST /api/runs/{id}/audit/drill            four direct-database attacks on a copy; which ones the auditor catches
+POST /api/runs/{id}/audit/share            audit summary to controller and CFO (Teams card, Outlook, Slack)
+GET  /api/runs/{id}/audit/findings.csv     workpaper for Excel
+GET  /api/runs/{id}/impact                 straight-through rate, dollars protected, speed, effort, cost
+POST /api/runs/{id}/erp/business-central/export {"mode": "dry" | "live", "post": false}
+GET  /api/microsoft/status
+```
+Every posted entry is sealed into a hash chain in `seals.db` (separate from the books), with chain heads anchored to an append-only file or Azure Confidential Ledger. Email can go through Outlook via Microsoft Graph (`EMAIL_TRANSPORT=graph`). Azure deployment: `deploy/azure/`. Track write-up: `docs/microsoft/`.
+
+## Outside agents (`finance/agent_api.py`, `agents/fetchai/`)
+```
+GET  /api/runs/{id}/summary                         revenue, receivables, waiting items, latest audit
+GET  /api/runs/{id}/invoices?status=open|all        bonus invoices with the evidence a payer needs
+POST /api/runs/{id}/invoices/{request_id}/payment   {"event": "committed" | "rejected" | "completed", ...}
+```
+A completed payment is a `cash_received` event through the router, engine and kernel, booked exactly once. Start runs with `"cash": false` so agents, not the simulator, settle invoices. The Fetch.ai agents (ASI:One chat plus the Payment Protocol) are in `agents/fetchai/`.
 
 ## Red-team sandbox (for an external attacker agent)
 ```

@@ -35,3 +35,6 @@ agents/out/
 .DS_Store
 spacetime.local.json
 research/review/redteam-repro/ts/node_modules/
+
+# Fetch.ai agent local storage
+agent1q*_data.json
