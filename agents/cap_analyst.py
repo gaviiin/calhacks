@@ -703,6 +703,15 @@ class CapAnalyst:
             named = categories_named(human_text, self.codes())
             code = next(iter(named)) if len(named) == 1 else None
             self._consider(human_path, text=human_text[:500], categories_named=sorted(named), category_named=code)
+            # A rule a person approved or taught (often in the same click) decides the line the way they
+            # said: cite it, so the line is approved under that rule and nobody is asked again.
+            if code and len(bill_lines) < 2:
+                res = pol.resolve(self.tools.search_policies(in_force_on=period), gl, vendor, period, bill_lines=bill_lines)
+                if res.policy is not None and res.category_code == code:
+                    self._consider("rule_agrees_with_person", policy=pol.policy_ref(res.policy), category_code=code)
+                    d, _, _ = self._from_policies(item, data, period, base)
+                    if d is not None:
+                        return d
             entry = self._entry(code, period) if code else None
             if code and entry:
                 cap, problem = self._cap_effect(entry, gl, human_text=human_text)

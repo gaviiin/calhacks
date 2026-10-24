@@ -13,7 +13,7 @@ What changed for callers on Oct 24, in one place. Details are in the sections be
 - **Reopen:** a re-sync that changes `amount_usd_minor`, `amount_minor`, `currency`, `account_code`, `vendor_id`, `department_id`, `memo`, `posted_date` or `period_key` on a PROPOSED, NEEDS_INFO or APPROVED item moves it back to NEW and clears the proposal, question, answer and decision.
 - **Re-validation:** `approve` (every role) and `post` re-run the propose checks against the current rows (`rulebook_invalid`, `policy_invalid`, `cap_effect_invalid`). The identity that answered the item's last question may not approve or reject it (`separation_of_duties`).
 - **Policy autonomy has a fourth state `SUSPENDED`:** approving version n+1 of a `policy_key` sets it on every lower APPROVED version that was GRANTED, and reopens the PROPOSED/APPROVED items citing those versions (where the new version is in force for the item's period). The head may `grantAutonomy` again (SUSPENDED → GRANTED) or `revokeAutonomy` (SUSPENDED → REVOKED).
-- **`auto_approver`** is additionally denied when `proposal_source != "deterministic"`, when the cited policy is SUSPENDED or superseded, and whenever re-validation fails.
+- **`auto_approver`** approves only what an approved rule decided (see [Earned autonomy](#earned-autonomy-standing-approvals)); it is denied for `llm` proposals, when a cited policy is SUSPENDED, REVOKED or superseded, and whenever re-validation fails. Materiality does not bind it.
 - **`lockPeriod`** is denied `period_not_ready` while any work item in the period is not POSTED (the reason gives the count and the first ten ids).
 - **Patterns:** `memo_regex` and the memo are NFKC-normalised, the memo is stripped and cut to 500 code points, matching is always case-insensitive with ASCII `\d \w \b` (no `u` flag). `(?i)` and other inline flags, lookbehind, named groups, nested quantifiers, more than 200 characters and non-BMP characters are refused (530 at `proposePolicy`; `policy_invalid: … unparsable pattern` for an older stored policy). A pattern with no non-null key is refused. The shared cases are `rulebook/pattern_conformance.json`.
 
@@ -119,7 +119,7 @@ def ts_micros(v): return v[0]  # [micros] -> micros
 | `proposeAllocations` | `workItemId: u64, allocations: Allocation[], reason: string, evidenceRefs: string, proposalSource: string` with `Allocation = {basis: string, basisRef: string, categoryCode: string, rulebookEntryId: string, policyId: u64?, amountUsdMinor: i64, capEffectUsdMinor: i64?}` | ai_cap_analyst | `NEW|REJECTED → PROPOSED` with `proposed_category_code = proposed_rulebook_entry_id = "ALLOCATED"`, `proposed_policy_id`/`cap_effect_usd_minor` null; replaces the item's `allocation` rows (`line_no` 1..n in argument order). 530 for an unknown `basis` (not `bill_line`, `share`, `cap_limit`, `cap_limit_excess`), an empty `basisRef`/`categoryCode`/`rulebookEntryId`/`reason`, or a bad `proposalSource`; every other failure is a denial, see [Allocations](#allocations-and-category-limits). A whole-line `propose` deletes an item's earlier allocation rows |
 | `ask` | `workItemId: u64, question: string` | ai_cap_analyst | `NEW|PROPOSED → NEEDS_INFO`. Sets `question`, clears `answer` |
 | `answer` | `workItemId: u64, answer: string` | human_controller (below materiality), human_head_of_cost_cap | `NEEDS_INFO → NEW`. Sets `answer` and `answered_by = caller`; writes a precedent. The answerer may not later approve or reject the item |
-| `approve` | `workItemId: u64, reason: string` | human_controller (below materiality), human_head_of_cost_cap, auto_approver (only under a standing approval, see [Earned autonomy](#earned-autonomy-standing-approvals)); never the proposer or the answerer | `PROPOSED → APPROVED`. **Re-validates the stored proposal** against the current rows (same `rulebook_invalid` / `policy_invalid` / `cap_effect_invalid` checks as propose). Sets `decided_by/decided_reason`; writes a precedent |
+| `approve` | `workItemId: u64, reason: string` | human_controller (below materiality), human_head_of_cost_cap, auto_approver (what an approved rule decided, any amount, see [Earned autonomy](#earned-autonomy-standing-approvals)); never the proposer or the answerer | `PROPOSED → APPROVED`. **Re-validates the stored proposal** against the current rows (same `rulebook_invalid` / `policy_invalid` / `cap_effect_invalid` checks as propose). Sets `decided_by/decided_reason`; writes a precedent |
 | `reject` | `workItemId: u64, reason: string` | same as approve (no re-validation) | `PROPOSED → REJECTED`. Same fields; writes a precedent |
 | `post` | `workItemId: u64, erpEntryId: string` | gateway | `APPROVED → POSTED`. **Re-validates the stored proposal** like approve (allocated items: every allocation), then re-checks category limits (`cap_limit_exceeded`; also checked at propose and approve). Records `erp_entry_id`, `posted_treatment` and `posted_cap_effect_usd_minor` (the line amount, or `cap_effect_usd_minor` for an ADJUSTMENT; for an allocated item `"ALLOCATED"` and the sum of its allocations' effects, with each `allocation` row recording its own `posted_treatment`/`posted_cap_effect_usd_minor`); updates `cap_position` and `limit_ledger`; for a reversal, subtracts what the reversed item booked (per allocation if it was allocated) once and sets its `superseded = true`. See [Sync semantics](#sync-semantics) |
 | `proposePolicy` | `policyKey: string, version: u32, categoryCode: string, rulebookEntryId: string, pattern: string, rationale: string, evidenceRefs: string, precedentCount: u32, effectiveFrom: string, effectiveTo: string?, parentPolicyId: u64?, cornerstones: string` | ai_policy_learner | inserts `policy{state: PROPOSED, proposed_by: caller, parent_policy_id, cornerstones, flip_report}`. **`version: 0` means "next version for this policy_key"** (the `propose_policy` tool in SCHEMA section 7 has no version, so send 0). An explicit version that already exists is a 530. `parentPolicyId` makes the policy an exception (child) of that policy; unknown id is a 530. `cornerstones` is a JSON array string of `{"ref": "<gl_line id or history ref>", "category_code": "..."}` (`""` is read as `[]`; anything else malformed is a 530). Denied `cornerstone_mismatch` / `conflicting_cornerstone`, see [Policies as Ripple-Down Rules](#policies-as-ripple-down-rules). Computes and stores the flip report |
@@ -127,9 +127,10 @@ def ts_micros(v): return v[0]  # [micros] -> micros
 | `rejectPolicy` | `policyId: u64, reason: string` | human_head_of_cost_cap | `PROPOSED → REJECTED` |
 | `grantAutonomy` | `policyId: u64, evidence: string, reason: string` | human_head_of_cost_cap | autonomy `NONE|REVOKED|SUSPENDED → GRANTED`. The policy must be `APPROVED`, or the call is denied. `evidence` is the sandbox record as a JSON string and must be a non-empty JSON object or array (else 530). Sets `autonomy_by/autonomy_evidence/autonomy_reason/autonomy_at` |
 | `revokeAutonomy` | `policyId: u64, reason: string` | human_head_of_cost_cap | autonomy `GRANTED|SUSPENDED → REVOKED`. Sets `autonomy_by/autonomy_reason/autonomy_at` to the revoke and keeps `autonomy_evidence` from the grant. Takes effect for the next approve attempt |
+| `teachPolicy` | `workItemId: u64, categoryCode: string, rulebookEntryId: string, pattern: string, reason: string` | human_controller (pattern bounded inside ±materiality), human_head_of_cost_cap | policy `ABSENT → APPROVED` with `autonomy = GRANTED`; see [Teaching](#teaching) |
 | `recordStep` | `runId: string, step: u32, kind: string, name: string, input: string, outputDigest: string, outputExcerpt: string, workItemId: u64?, model: string?` | any identity that holds a role (red_team included) | appends one `agent_step` row. Never denied, writes **no** audit row. See [Agent steps](#agent-steps-recordstep) |
 
-Required non-empty strings (530 if empty): `proposeAllocations.reason` and each allocation's `basisRef/categoryCode/rulebookEntryId`, `propose.categoryCode/rulebookEntryId/reason` (and `propose.proposalSource` must be one of `deterministic, llm, human_text`), `ask.question`, `answer.answer`, `reject.reason`, `rejectPolicy.reason`, `grantAutonomy.reason`, `revokeAutonomy.reason`, `recordStep.runId`, `post.erpEntryId`, `proposePolicy.policyKey/categoryCode/rulebookEntryId/rationale`, every upsert `id`, `createRoleInvite.code`. `approve.reason` may be empty.
+Required non-empty strings (530 if empty): `proposeAllocations.reason` and each allocation's `basisRef/categoryCode/rulebookEntryId`, `propose.categoryCode/rulebookEntryId/reason` (and `propose.proposalSource` must be one of `deterministic, llm, human_text`), `ask.question`, `answer.answer`, `reject.reason`, `rejectPolicy.reason`, `grantAutonomy.reason`, `revokeAutonomy.reason`, `teachPolicy.categoryCode/rulebookEntryId/reason`, `recordStep.runId`, `post.erpEntryId`, `proposePolicy.policyKey/categoryCode/rulebookEntryId/rationale`, every upsert `id`, `createRoleInvite.code`. `approve.reason` may be empty.
 
 ## What `transition()` checks
 
@@ -140,8 +141,9 @@ Every reducer except `bootstrapAdmin` goes through `transition()` in `spacetimed
 | `role_not_permitted` | the roles matrix (`ROLES` in `spacetimedb/src/rules.ts`) doesn't grant this role this action on this resource. An identity without a role is role `none` and may only `claim_role` |
 | `invalid_transition` | `(from_state, action)` is not an edge of the state machine (`TRANSITIONS` in `rules.ts`) |
 | `separation_of_duties` | approve/reject a work item the caller proposed **or answered the last question on** (`answered_by`); approve a policy the caller proposed |
-| `materiality` | `approve`, `reject` or `answer` by anyone but `human_head_of_cost_cap` when **`|amount_usd_minor|`** `>= materiality_usd_minor` (a large credit is as material as a large charge). **If `materiality_usd_minor` is unset or not an integer, every item counts as material** (fails closed), so the controller and auto_approver can approve nothing |
-| `standing_approval` | `approve` by `auto_approver`: the item's `proposal_source` must be `deterministic`, and its `proposed_policy_id` must name a policy that exists, is `APPROVED`, is in force for the whole period, and has `autonomy = "GRANTED"` (`SUSPENDED` and `REVOKED` fail here; a superseded version fails `policy_invalid` below). Materiality and SoD apply through the rows above |
+| `materiality` | `approve`, `reject` or `answer` by a person other than `human_head_of_cost_cap` when **`|amount_usd_minor|`** `>= materiality_usd_minor` (a large credit is as material as a large charge). **If `materiality_usd_minor` is unset or not an integer, every item counts as material** (fails closed), so the controller can decide nothing. Not applied to the auto_approver |
+| `standing_approval` | `approve` by `auto_approver` when no approved rule backs the proposal: an `llm` proposal; a citation (whole line or allocation) without a policy, or with one that isn't `APPROVED`, in force or `GRANTED`; a `human_text` proposal with no `answered_by` |
+| `teach_too_broad`, `teach_beyond_authority` | `teachPolicy` with a pattern that doesn't pin the account plus a vendor, department or memo, or (controller) isn't bounded inside ±materiality |
 | `autonomy_invalid` | `grantAutonomy` on a policy whose `state` isn't `APPROVED` |
 | `period_locked` | `propose`, `approve`, `post` on an item whose `period_key` is locked |
 | `rulebook_invalid` | propose (and each allocation, prefixed `allocation <n>: `), **approve and post** (the stored proposal is re-checked against the current rows): `rulebookEntryId` must exist, its `category_code` must equal `categoryCode`, and it must be in force for the whole period (`effective_from <= first day` and `effective_to` null or `>= last day`). proposePolicy: entry exists, same category, in force on the policy's `effectiveFrom` |
@@ -190,7 +192,7 @@ SCHEMA.md section 11.1. One GL line split across categories; the line stays the 
 - `cap_limit_excess`: category `RELEVANT`, `basisRef` = the limited category; the rest above the limit. At most one per category; its within-limit sibling is the `cap_limit` allocation, or `bill_line` allocation(s) in that category.
 - **Limit:** the EXCLUDED amount the proposal books in a limited category (its `cap_limit` and `bill_line` allocations there, or the whole line) must not exceed `limit − limit_ledger[<year>|<category>]`, else `cap_limit_exceeded: remaining <amount> …`. This is checked at propose/proposeAllocations, approve and post.
 
-`approve` and `post` re-run all of it against the stored rows. The `auto_approver` cannot approve an allocated item (it cites no single policy: `standing_approval: … cites no policy`).
+`approve` and `post` re-run all of it against the stored rows. The `auto_approver` approves an allocated item only when every `bill_line` allocation cites an approved, GRANTED policy.
 
 ### Posting, limits, reversals
 
@@ -274,27 +276,33 @@ In diffs, u64/i64 values are JSON numbers, identities are hex strings without `0
 
 ## Earned autonomy (standing approvals)
 
-The Head of Cost Cap never approves "the agent". They approve a policy, then may grant that policy autonomy on the strength of its sandbox record (`grantAutonomy`). The `auto_approver` role may then `approve`, and do nothing else, but only items whose proposal cites that policy:
+People decide only what no rule covers. Approving a policy gives it standing approval (`autonomy = "GRANTED"`, `autonomy_by` = the approver, reason `standing approval comes with approval`); a taught policy is born with it. The `auto_approver` role may then `approve`, and do nothing else, at any amount, when:
 
-1. `proposed_policy_id` names a policy that is `APPROVED`, in force for the item's whole period, not superseded by a higher APPROVED version in force for the period, and has `autonomy = "GRANTED"` (not `NONE`, `REVOKED` or `SUSPENDED`);
-2. `proposal_source = "deterministic"` (an `llm` or `human_text` proposal always needs a human);
-3. the re-validation at approve passes (rulebook entry in force, pattern still matches the line as corrected, cap effect consistent);
-4. `|amount_usd_minor| < materiality_usd_minor` (unset materiality: nothing qualifies);
-5. the auto_approver didn't propose the item (it can't propose anyway);
-6. the period isn't locked (as for any approve).
+1. the proposal is `deterministic` and every citation is a policy that is `APPROVED`, in force for the item's whole period, not superseded, and `GRANTED` (not `REVOKED` or `SUSPENDED`): the whole line's `proposed_policy_id`, or for an allocated item each `bill_line` allocation's `policy_id` (`cap_limit_excess` splits are computed by rule and pass; a `share` split without a policy fails); or
+2. the proposal is `human_text` and the item has `answered_by` (a person's answer on this very line);
+3. the re-validation at approve passes (rulebook entry in force, pattern still matches, cap effect consistent);
+4. the auto_approver didn't propose the item, and the period isn't locked.
 
-`autonomy` states: `NONE` → `GRANTED` (grant) → `REVOKED` (revoke) → `GRANTED` (grant again); and `GRANTED` → `SUSPENDED` when a higher version of the same `policy_key` is approved. `SUSPENDED` → `GRANTED` (grant, with fresh evidence) or → `REVOKED` (revoke). Items the superseded version was cited on are reopened at the same time (audit `reopen`, reason `policy superseded`) so the analyst re-proposes them under the current version.
+Materiality does not bind the auto_approver: it picks which person decides when a person is needed. An `llm` proposal (a line no rule covered) always needs a person.
 
-Each auto-approval's audit row carries `policy_id` and `policy_version`, and its `evidence` is JSON that names the human who granted autonomy:
+`autonomy` states: `NONE` → `GRANTED` (approval, or grant) → `REVOKED` (revoke) → `GRANTED` (grant again); and `GRANTED` → `SUSPENDED` when a higher version of the same `policy_key` is approved. Items the superseded version was cited on are reopened at the same time (audit `reopen`, reason `policy superseded`).
+
+Each auto-approval's audit row carries `policy_id` and `policy_version`, and its `evidence` names who stands behind it:
 
 ```json
 {"standing_approval":{"policy_id":1,"policy_key":"grove-canteen-catering","policy_version":1,"autonomy":"GRANTED",
   "autonomy_granted_by":"c2006885…9350","autonomy_granted_at":"2026-10-24T08:00:15.596504Z"},
+ "allocations":[],
+ "answered_by":null,
  "proposal_source":"deterministic",
  "evidence_refs":"[\"gl-000123\"]"}
 ```
 
-Denied auto_approver attempts carry the same shape, with `autonomy_granted_by: null` when the policy isn't GRANTED. `revokeAutonomy` applies from the next approve attempt. Items already approved stay approved; later ones need a human. Autonomy can be granted again after a revoke (with fresh evidence). Granting twice in a row, or revoking twice, is an `invalid_transition` denial.
+`allocations` lists each split's policy the same way; `answered_by` names the person whose answer a `human_text` proposal was built from. Denied auto_approver attempts carry the same shape.
+
+### Teaching
+
+`teachPolicy(workItemId, categoryCode, rulebookEntryId, pattern, reason)`, by `human_controller` or `human_head_of_cost_cap`: inserts a policy `taught:<account>|<vendor or department or memo>` (next version for the key), `state = APPROVED`, `autonomy = GRANTED`, `proposed_by = decided_by = caller`, one cornerstone (the work item's gl line), `effective_from` = the item's period start, `parent_policy_id` = the item's cited policy when the taught category differs (a correction becomes an exception). Denied (audit `teach_policy`, allowed=false) when the pattern doesn't pin `account_code` plus one of `vendor_id`, `department_id`, `memo_regex`, `description_regex` (`teach_too_broad`), when a controller's pattern isn't bounded inside ±materiality by `min/max_amount_usd_minor` (`teach_beyond_authority`), or when the RDR draft checks fail. On success the same effects as approving apply (superseding older versions, exceptions reopening items citing ancestors), and queued `llm` proposals and `NEEDS_INFO` items the rule now covers go back to NEW (audit `reopen`, reason `rule now covers it: pol-<id>`).
 
 ## Agent steps (`recordStep`)
 

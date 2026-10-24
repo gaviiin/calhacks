@@ -76,7 +76,7 @@ review-policies:  ## the Head of Cost Cap approves the proposed policies (REJECT
 	uv run python -m agents.review policies --approve-all $(if $(REJECT),--reject "$(REJECT)",)
 
 analyst:          ## Cap Analyst over the NEW queue once (Claude decides what no policy covers)
-	$(ENV) uv run python -m agents.cap_analyst --once --limit 500 $(AGENT_MODE)
+	$(ENV) uv run python -m agents.cap_analyst --once --limit 500 --include-rejected $(AGENT_MODE)
 
 standing:         ## approve what an approved rule decided, at any amount; only new scenarios wait for a person
 	uv run python -m agents.auto_approver --once

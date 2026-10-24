@@ -51,10 +51,10 @@ The agents never post on their own authority. Every proposal carries its regulat
 
 ## Product Principles
 
-1. Agents propose; code re-checks; humans approve what matters.
+1. Code and agents do the accounting; a person sees a line only when no approved rule covers it, and one decision teaches the rule.
 2. Show the why next to the number, without a click when possible.
 3. A denied attempt is shown, not hidden.
-4. Spend human attention only where the agents could not settle it.
+4. Materiality picks which person decides, never whether one is needed; every decision is logged for review after the fact.
 
 ## Accessibility & Inclusion
 

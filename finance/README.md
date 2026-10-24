@@ -25,7 +25,7 @@ python -m pytest -q finance/tests             # 33 tests on a synthetic fixture 
 ## Run
 
 ```bash
-python -m finance.sim 2023 --fresh            # training season: controller rulings become approved rules
+python -m finance.sim 2023 --fresh            # training season: each controller ruling becomes the rule for its clause
 python -m finance.sim 2024                    # test season: scorecard printed at the end
 python -m finance.demo --round 14 --pace 120  # Act 1: replay the real Spa 2024 weekend, narrated
 uvicorn finance.api:app --reload --port 8000  # API for the frontend
@@ -45,8 +45,8 @@ GET  /api/runs/{id}/scorecard | /saboteur | /tape | /queue | /timeline | /sponso
 
 | Who | Gets | Can do |
 | --- | --- | --- |
-| Controller (Dana) | parked entries, questions, at-risk alerts, credit-note drafts | approve / reject, answer, send or discard a sponsor email |
-| CFO (Priya) | entries ≥ $1M (SMS too) | approve / reject |
+| Controller (Dana) | parked judgment entries (estimates, reversals, exceptions, agent-prepared, at any amount), questions, at-risk alerts, credit-note drafts | approve / reject, answer (one ruling becomes the clause's rule), send or discard a sponsor email |
+| CFO (Priya) | parked judgment entries of $1M or more, after the controller (SMS too) | approve / reject |
 | Commercial (Luis) | billing requests held, rejected, corrected or credited | read why |
 | Sponsors | credit notes, **only after the controller approves the draft** | |
 

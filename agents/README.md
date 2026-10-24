@@ -125,6 +125,13 @@ once per item: re-reads state and period lock first, records `{erp_entry_id, lin
 `agents/state/gateway_posted.json` before calling `post`, and sends `work_item_id` as the ERP
 idempotency key.
 
+**auto_approver.py.** The standing-approval job (identity `auto_approver`, `make standing`). For every
+PROPOSED item it asks the module to approve what a rule backs: a deterministic proposal citing approved
+policies (each bill-line allocation's, for a split invoice), or a proposal built from a person's answer
+on that line. The module re-checks each one, at any amount, and logs the policy and the person behind
+it; everything else (Claude's drafts for lines no rule covered, reversals, related-party adjustments)
+waits for a person, who may teach a rule from their decision (`teachPolicy`).
+
 **redteam.py.** Analyst approves own proposal, analyst / red_team post, red_team proposes and
 approves, controller approves above materiality, every non-head actor locks a period, analyst and
 learner approve a policy. Each must leave state unchanged and add an `allowed=false` audit row for

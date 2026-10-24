@@ -7,13 +7,24 @@ The finance desk of a Formula 1 constructor, built for the Hyphenate track at Ca
 
 Both report to the same people (Dana Okafor, Controller; Priya Raman, CFO; Morgan Hale, Head of Cost Cap) and share one evidence feed and one dashboard. The team is Meridian Racing, a fictional constructor whose on-track results are Mercedes' real 2023 and 2024 results.
 
-**Seats line:** fills the revenue accountant seat, the cost cap analyst seat and the policy desk beside it; reports to a human Controller, CFO and Head of Cost Cap who approve every policy and everything material.
+**Seats line:** fills the revenue accountant seat, the cost cap analyst seat and the policy desk beside it; does the accounting itself and brings people only what it cannot settle, then remembers what they decide.
+
+## How work flows
+
+Code and agents do the accounting. A person sees a line only when no rule a person approved covers it: a new scenario, an estimate, a reversal, an exception to a contract. They decide it once and tick **Remember**, and from then on the desk decides lines like it itself. Every decision, by an agent, by code or by a person, is in the audit log with who decided it and under which rule.
+
+| | Decided without a person | Brought to a person | How one decision is remembered |
+|---|---|---|---|
+| Cost cap desk | every line an approved policy decides, at any amount (the standing-approval job, `make standing`) | lines no policy covers (Claude drafts the answer), duplicate, bank-detail and lookalike flags, reversals | the person's decision becomes a narrow rule (account plus vendor, department or memo), approved by them in the same click, and queued lines it covers go back to the analyst |
+| Revenue desk | everything code books from the contract and the final result, at any amount | estimates, reversals after a stewards' decision, exceptions to a contract or a billing request, anything an agent prepared | one controller ruling on a contract clause becomes the rule for every later case |
+
+Materiality no longer decides whether a person is needed, only which one: a material line no rule covers goes to the Head of Cost Cap, or the Controller and the CFO on the revenue side. The Head of Cost Cap can take any policy's standing approval back from the dashboard, and its lines go back to people.
 
 Three things make it hireable rather than a demo:
 
 - **Hireable on day one.** Before its first shift the cost cap desk reads last year's ledger and cost cap submission, drafts the house policies it finds with precedent counts, and asks the Head of Cost Cap to approve them. The revenue desk trains on the 2023 season: the Controller's rulings on ambiguous contract clauses become rules.
-- **Self-improving.** Corrections, answers and rule changes become versioned policy proposals that a person approves. It never asks the same question twice.
-- **Accountable.** Agents only propose. Every transition is an append-only audit row with actor, reason, evidence and policy version, written in the same transaction as the change; denied attempts are logged too. Every revenue entry is re-performed from its sources before it can post, and an independent auditor with read-only access gives an opinion on the books.
+- **Self-improving.** One decision is enough: a person's answer or correction becomes a rule the moment they tick Remember, and the desk never asks the same question twice. Patterns across many corrections still become broader policies through the Policy Learner.
+- **Accountable.** Agents only propose; approvals come from a person or from a rule a person approved, and the audit row names which. Every transition is an append-only audit row with actor, reason, evidence and policy version, written in the same transaction as the change; denied attempts are logged too. Every revenue entry is re-performed from its sources before it can post, and an independent auditor with read-only access gives an opinion on the books.
 
 ```
  real FIA documents ──► Apify actor ──► ingestion/ ──► SpacetimeDB pit-wall ────────────────┐
@@ -70,7 +81,7 @@ The evidence feed: publish the `pit-wall` module and replay the 24 saved Apify c
 make evidence-publish evidence-replay
 ```
 
-The cost cap desk, January 2026 end to end: publish a fresh module, bootstrap identities, roles and the rulebook, sync, onboard from 2025 history, have the Head of Cost Cap approve the drafted policies, run the analyst, have the Controller approve the routine proposals, post, probe, score. About 40 minutes online, most of it the analyst's Claude calls; material and Claude-decided proposals are left for a person in the dashboard.
+The cost cap desk, January 2026 end to end: publish a fresh module, bootstrap identities, roles and the rulebook, sync, onboard from 2025 history, have the Head of Cost Cap approve the drafted policies, run the analyst, let the standing-approval job approve what those policies decided, post, probe, score. About 40 minutes online, most of it the analyst's Claude calls; the new scenarios Claude drafted are left for a person in the dashboard.
 
 ```bash
 make world rulebook cost-cap-run

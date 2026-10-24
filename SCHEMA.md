@@ -30,17 +30,19 @@ Each actor is a distinct SpacetimeDB identity (token from `POST /v1/identity`). 
 | `sync` | sync job | upsert golden rows (which auto-creates work items) |
 | `ai_cap_analyst` | agent | `propose`, `ask` on work items |
 | `ai_policy_learner` | agent | `propose_policy` |
-| `human_controller` | person or persona | `approve`, `reject`, `answer` on work items **below** materiality |
-| `human_head_of_cost_cap` | person or persona | `approve`, `reject`, `answer` on any work item; `approve_policy`, `reject_policy`; `lock_period` |
+| `human_controller` | person or persona | `approve`, `reject`, `answer` on work items **below** materiality; `teach_policy` within materiality |
+| `human_head_of_cost_cap` | person or persona | `approve`, `reject`, `answer` on any work item; `approve_policy`, `reject_policy`, `teach_policy`, `grant_autonomy`, `revoke_autonomy`; `lock_period` |
 | `gateway` | gateway job | `post` |
-| `auto_approver` | standing-approval job | `approve` only, and only under a standing approval (below) |
+| `auto_approver` | standing-approval job | `approve` only, and only what an approved rule decided (below) |
 | `red_team` | harness | nothing (every call it makes must be denied and logged) |
 
 Every role with a known identity may also call `recordStep` (section 6b); recording is never denied.
 
-Separation of duties, enforced in the reducer: `approve`/`reject` is denied when `work_item.proposed_by == ctx.sender`. Materiality: an item with `|amount_usd_minor| >= settings.materiality_usd_minor` can only be approved by `human_head_of_cost_cap`. Nobody can `post` except `gateway`; nothing posts unless state is `APPROVED`.
+Separation of duties, enforced in the reducer: `approve`/`reject` is denied when `work_item.proposed_by == ctx.sender`. Materiality: when a person decides, an item with `|amount_usd_minor| >= settings.materiality_usd_minor` can only be decided by `human_head_of_cost_cap`; materiality picks which person, it is not a reason to need one. Nobody can `post` except `gateway`; nothing posts unless state is `APPROVED`.
 
-**Earned autonomy (standing approvals).** A human never approves "the agent"; the Head of Cost Cap approves a *policy* and may later grant that policy autonomy on the strength of its sandbox record (`grantAutonomy`, with the sandbox run as evidence). The `auto_approver` may approve a work item only when all hold: the item's `proposed_policy_id` points at a policy that is APPROVED, in force for the item's period and has `autonomy = "GRANTED"`; `|amount_usd_minor|` is below materiality; the proposer is not the auto_approver. Its audit row records the policy id and version and the identity that granted autonomy, so every autonomous decision traces to a named human's standing approval. `revokeAutonomy` (Head of Cost Cap) turns it off immediately; items already approved stay approved, and later ones go back to human review.
+**People decide only what no rule covers (Oct 24).** Approving a policy gives it standing approval (`autonomy = "GRANTED"`, by the approver). The `auto_approver` approves, at any amount, a deterministic proposal whose every citation (the whole line, or each bill-line allocation; a `cap_limit_excess` split is computed by rule beside its sibling) is a policy that is APPROVED, in force and still GRANTED, or a `human_text` proposal built from a person's answer on that line (`answered_by` set). A Claude proposal is a line no rule covered: a person decides it, once. Its audit row records each policy, its version and the person whose approval or teaching gave it standing approval, or who answered. `revokeAutonomy` (Head of Cost Cap) sends that policy's later lines back to people; `grantAutonomy` gives it back.
+
+**Teaching (`teachPolicy`).** A person who decides a line can ask the desk to remember it: the rule is born APPROVED with standing approval, authored and approved by that person in one transition (audit `teach_policy`), pattern pinned to the account plus the vendor, department or memo (one example earns a narrow rule). A correction of a policy's decision becomes an exception under that policy. A controller may teach only within ±materiality (`min/max_amount_usd_minor`). Queued Claude proposals and open questions the rule now covers go back to NEW (audit `reopen`, `rule now covers it: pol-<id>`), so nobody is asked the same thing twice.
 
 **Denials are committed, not thrown.** A reducer that denies an action writes an `audit_log` row with `allowed=false` and returns normally without changing state (a thrown error would roll back the audit row). Callers confirm success by reading the item's state afterwards. Invalid arguments (unknown id, malformed input) do throw.
 
@@ -61,7 +63,7 @@ PROPOSED ──ask──┘
 | NEW | ask | NEEDS_INFO | ai_cap_analyst |
 | PROPOSED | ask | NEEDS_INFO | ai_cap_analyst |
 | NEEDS_INFO | answer | NEW | human_controller, human_head_of_cost_cap |
-| PROPOSED | approve | APPROVED | human_controller (below materiality), human_head_of_cost_cap, auto_approver (standing approval only) |
+| PROPOSED | approve | APPROVED | human_controller (below materiality), human_head_of_cost_cap, auto_approver (what an approved rule decided, any amount) |
 | PROPOSED | reject | REJECTED | same |
 | REJECTED | propose | PROPOSED | ai_cap_analyst |
 | APPROVED | post | POSTED | gateway |
@@ -181,8 +183,9 @@ All tables `public: true` for the dashboard. Timestamps are `t.timestamp()`; mon
 | `reject` | `{workItemId, reason}` | human_* (SoD) |
 | `post` | `{workItemId, erpEntryId}` | gateway |
 | `proposePolicy` | policy fields minus state/ids | ai_policy_learner |
-| `approvePolicy`, `rejectPolicy` | `{policyId, reason}` | human_head_of_cost_cap |
-| `grantAutonomy` | `{policyId, evidence, reason}` | human_head_of_cost_cap; policy must be APPROVED; `evidence` is the sandbox record JSON |
+| `approvePolicy`, `rejectPolicy` | `{policyId, reason}` | human_head_of_cost_cap; approval grants standing approval |
+| `teachPolicy` | `{workItemId, categoryCode, rulebookEntryId, pattern, reason}` | human_controller (within materiality), human_head_of_cost_cap; born APPROVED with standing approval |
+| `grantAutonomy` | `{policyId, evidence, reason}` | human_head_of_cost_cap; policy must be APPROVED; gives standing approval back after a revoke |
 | `revokeAutonomy` | `{policyId, reason}` | human_head_of_cost_cap |
 | `recordStep` | `{runId, step, kind, name, input, outputDigest, outputExcerpt, workItemId?, model?}` | any role except `none`; never denied; not a state change |
 
