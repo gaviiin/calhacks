@@ -60,6 +60,7 @@ class NewRun(BaseModel):
     stop_before_round: int | None = None
     auto_people: bool = True
     fresh_rules: bool = False
+    cash: bool = True  # False: sponsors' remittances are not simulated (agents pay invoices instead, e.g. Fetch.ai demo)
 
 
 @app.post("/api/runs")
@@ -68,7 +69,7 @@ def create_run(body: NewRun):
         raise HTTPException(400, f"no cached results for {body.season}; run scripts/fetch_results.py {body.season}")
     if body.fresh_rules:
         STORE.reset()
-    run = new_run(body.season, world=WORLD, store=STORE, auto_people=body.auto_people)
+    run = new_run(body.season, world=WORLD, store=STORE, auto_people=body.auto_people, cash=body.cash)
     notifier = getattr(run.ledger, "notifier", None)
     if notifier is None and os.environ.get("PITWALL_NOTIFY", "dry") != "off":
         from .notify.dispatcher import Notifier
@@ -486,3 +487,8 @@ from .microsoft_api import build_router as build_microsoft_router  # noqa: E402
 
 telemetry.configure(app)
 app.include_router(build_microsoft_router(get_run, STORE))
+
+# --------------------------------------------------------------------------- outside agents (Fetch.ai Agentverse / ASI:One)
+from .agent_api import build_router as build_agent_router  # noqa: E402
+
+app.include_router(build_agent_router(get_run))

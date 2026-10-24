@@ -68,6 +68,14 @@ GET  /api/microsoft/status
 ```
 Every posted entry is sealed into a hash chain in `seals.db` (separate from the books), with chain heads anchored to an append-only file or Azure Confidential Ledger. Email can go through Outlook via Microsoft Graph (`EMAIL_TRANSPORT=graph`). Azure deployment: `deploy/azure/`. Track write-up: `docs/microsoft/`.
 
+## Outside agents (`finance/agent_api.py`, `agents/fetchai/`)
+```
+GET  /api/runs/{id}/summary                         revenue, receivables, waiting items, latest audit
+GET  /api/runs/{id}/invoices?status=open|all        bonus invoices with the evidence a payer needs
+POST /api/runs/{id}/invoices/{request_id}/payment   {"event": "committed" | "rejected" | "completed", ...}
+```
+A completed payment is a `cash_received` event through the router, engine and kernel, booked exactly once. Start runs with `"cash": false` so agents, not the simulator, settle invoices. The Fetch.ai agents (ASI:One chat plus the Payment Protocol) are in `agents/fetchai/`.
+
 ## Red-team sandbox (for an external attacker agent)
 ```
 POST /api/runs/{id}/redteam {"attacker": "name"}      -> session_id (a copy of the books)
