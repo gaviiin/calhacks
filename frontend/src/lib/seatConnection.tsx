@@ -22,18 +22,25 @@ export function SeatConnectionProvider({ children }: { children: ReactNode }) {
     setState({ conn: null, identityHex: null });
     if (!person.costCapRole) return;
     let open = true;
-    const conn = CostCapConnection.builder()
-      .withUri(HOST)
-      .withDatabaseName(COST_CAP_DB)
-      .withToken(readToken(COST_CAP_DB, seat))
-      .onConnect((c, identity, token) => {
-        saveToken(COST_CAP_DB, seat, token);
-        if (open) setState({ conn: c, identityHex: identity.toHexString() });
-      })
-      .build();
+    let conn: CostCapConnection | null = null;
+    // Built a tick later: React's development double-run cancels the first pass before it fires, so a
+    // seat never mints a second identity and overwrites the token of the one that holds the role.
+    const timer = window.setTimeout(() => {
+      conn = CostCapConnection.builder()
+        .withUri(HOST)
+        .withDatabaseName(COST_CAP_DB)
+        .withToken(readToken(COST_CAP_DB, seat))
+        .onConnect((c, identity, token) => {
+          if (!open) return;
+          saveToken(COST_CAP_DB, seat, token);
+          setState({ conn: c, identityHex: identity.toHexString() });
+        })
+        .build();
+    }, 0);
     return () => {
       open = false;
-      conn.disconnect();
+      window.clearTimeout(timer);
+      conn?.disconnect();
     };
   }, [seat, person.costCapRole]);
 

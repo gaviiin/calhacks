@@ -23,6 +23,8 @@ import type {
 
 export interface CostCapData {
   ready: boolean;
+  /** the role and role_invite tables have arrived (a seat is judged only then) */
+  seatsReady: boolean;
   workItems: readonly WorkItem[];
   itemById: Map<bigint, WorkItem>;
   itemBySubject: Map<string, WorkItem>;
@@ -72,8 +74,8 @@ export function CostCapDataProvider({ children }: { children: ReactNode }) {
   const [allocRows] = useTable(tables.allocation);
   const [capPositions] = useTable(tables.capPosition);
   const [settingRows] = useTable(tables.setting);
-  const [roles] = useTable(tables.role);
-  const [invites] = useTable(tables.roleInvite);
+  const [roles, rolesReady] = useTable(tables.role);
+  const [invites, invitesReady] = useTable(tables.roleInvite);
   const [decisions] = useTable(tables.agentStep.where((r) => r.kind.eq('decision')));
   const [modelCalls] = useTable(tables.agentStep.where((r) => r.kind.eq('model_call')));
   const [precedents] = useTable(tables.precedent);
@@ -83,6 +85,7 @@ export function CostCapDataProvider({ children }: { children: ReactNode }) {
     const byId = <T extends { id: bigint }>(rows: readonly T[]) => new Map(rows.map((r) => [r.id, r]));
     return {
       ready: wiReady,
+      seatsReady: rolesReady && invitesReady,
       workItems,
       itemById: byId(workItems),
       itemBySubject: new Map(workItems.map((w) => [w.subjectRef, w])),
@@ -107,7 +110,7 @@ export function CostCapDataProvider({ children }: { children: ReactNode }) {
       cap: BigInt(settings.get('cap_usd_minor') ?? '21500000000'),
     };
   }, [
-    wiReady, workItems, policies, audit, rulebookRows, glRows, billRows, vendorRows, allocRows,
+    wiReady, rolesReady, invitesReady, workItems, policies, audit, rulebookRows, glRows, billRows, vendorRows, allocRows,
     capPositions, settingRows, roles, invites, decisions, modelCalls, precedents,
   ]);
 

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from 'react';
 import type { AgentStep, AuditLog, Policy, WorkItem } from '../cost_cap_bindings/types';
 import { abs, needsHead, proposedCapEffect, useCostCap } from '../lib/costcap';
-import { categoryName, clock, parseJson, usd, usdShort } from '../lib/format';
+import { categoryName, clock, parseJson, refusalText, tidyMemo, usd, usdShort } from '../lib/format';
 import { useRevenue, type Parked, type Why as EntryWhyData } from '../lib/revenue';
 import { useSeat } from '../lib/seat';
 import { useSeatConnection } from '../lib/seatConnection';
@@ -147,7 +147,7 @@ function Trail({ rows }: { rows: AuditLog[] }) {
             <span className="trail-who">{ROLE_LABEL[a.actorRole] ?? a.actorRole}</span>
             <span className="trail-what">
               {a.action.replace(/_/g, ' ')} {a.allowed ? `${a.fromState} → ${a.toState}` : 'refused'}
-              {!a.allowed && <em>{a.reason}</em>}
+              {!a.allowed && <em title={a.reason}>{refusalText(a.reason)}</em>}
             </span>
           </li>
         ))}
@@ -256,8 +256,7 @@ function WorkItemWhy({ item, status }: { item: WorkItem; status: SeatStatus }) {
             </>
           )}
         </h3>
-        <p className="why-reason">{item.reason}</p>
-        {policy && <PolicyCard policy={policy} />}
+        {policy ? <PolicyCard policy={policy} /> : <p className="why-reason">{item.reason.replace(/\s*\[MATERIAL[^\]]*\]\s*$/, '')}</p>}
       </section>
 
       <Considered step={decision} />
@@ -338,9 +337,13 @@ function Outcome({ row }: { row: AuditLog | null }) {
       <IconApproved size={14} /> {row.action.replace(/_/g, ' ')}: {row.fromState} → {row.toState}. Recorded in the audit log under your seat.
     </p>
   ) : (
-    <p className="outcome outcome--alert">
-      <IconDenied size={14} /> Refused by the module and logged: {row.reason}
-    </p>
+    <div className="outcome outcome--alert">
+      <IconDenied size={14} />
+      <p>
+        Refused by the module and logged. {refusalText(row.reason)}
+        <code className="outcome-code">{row.reason}</code>
+      </p>
+    </div>
   );
 }
 
@@ -523,7 +526,7 @@ function EntryWhy({ entry }: { entry: Parked }) {
     return () => {
       live = false;
     };
-  }, [entry.je_id, rev]);
+  }, [entry.je_id, rev.why]);
   const approver = person.revenue;
   const canAct = approver && entry.needs.includes(approver.role);
   const act = async (decision: 'approve' | 'reject') => {
@@ -542,7 +545,7 @@ function EntryWhy({ entry }: { entry: Parked }) {
         <span className="flag flag--hold">
           <IconWaiting size={13} /> Parked for {entry.needs.map((n) => (n === 'cfo' ? 'CFO' : 'Controller')).join(' and ')}
         </span>
-        <h2>{entry.memo}</h2>
+        <h2>{tidyMemo(entry.memo)}</h2>
         <p className="why-sub mono">
           {usd(entry.total_cents, { cents: true })} · {entry.kind.replace(/_/g, ' ')} · {entry.je_id} · revenue desk
         </p>

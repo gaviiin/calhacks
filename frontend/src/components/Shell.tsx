@@ -32,25 +32,30 @@ export function useSeatStatus(): SeatStatus {
     const want = person.costCapRole;
     if (!want) return setStatus('readonly');
     const conn = seat.conn;
-    if (!conn || !seat.identityHex || !cc.ready) return setStatus('connecting');
+    if (!conn || !seat.identityHex || !cc.seatsReady) return setStatus('connecting');
     const held = cc.roles.find((r) => r.identity.toHexString() === seat.identityHex);
     if (held?.role === want) return setStatus('seated');
-    const attempt = `${seat.identityHex}:${want}:${cc.invites.length}`;
+    const attempt = `${seat.identityHex}:${want}:${cc.invites.length}:${cc.roles.length}`;
     if (tried.current === attempt) return;
     tried.current = attempt;
     setStatus('claiming');
+    let live = true; // a newer render (the role row arriving) supersedes this attempt
     void (async () => {
       const codes = (await fetchSeatCodes())?.seats[want] ?? [];
       const unused = new Set(cc.invites.filter((i) => !i.used && i.role === want).map((i) => i.code));
       for (const { code } of codes) {
+        if (!live) return;
         if (unused.has(await sha256Hex(code))) {
           await conn.reducers.claimRole({ code }).catch(() => undefined);
           return; // the role row arrives through the subscription and flips us to seated
         }
       }
-      setStatus('no-code');
+      if (live) setStatus('no-code');
     })();
-  }, [person.costCapRole, seat, cc.ready, cc.roles, cc.invites]);
+    return () => {
+      live = false;
+    };
+  }, [person.costCapRole, seat, cc.seatsReady, cc.roles, cc.invites]);
 
   return status;
 }

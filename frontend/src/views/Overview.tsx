@@ -1,21 +1,20 @@
 import { useEffect, useState } from 'react';
 import { CapTrack } from '../components/CapTrack';
-import { IconApproved, IconArrow, IconDenied, IconShield } from '../components/icons';
+import { IconArrow } from '../components/icons';
 import { InboxRow } from '../components/InboxList';
-import type { InboxItem } from '../components/inboxModel';
+import { resolveEntry, type InboxItem } from '../components/inboxModel';
+import type { SeatStatus } from '../components/Shell';
 import { Spine } from '../components/Spine';
+import { WhyPane } from '../components/Why';
 import { useCostCap } from '../lib/costcap';
-import { pct, usdShort } from '../lib/format';
+import { usdShort } from '../lib/format';
 import { useRevenue } from '../lib/revenue';
 
 interface Scorecard {
   decided: number;
   matched: number;
-  asked: number;
   accuracy: number | null;
   wrong_side_usd_minor: number;
-  proposed_usd_minor: number;
-  by_source: Record<string, { decided: number; matched: number }>;
 }
 
 function useScorecard(): Scorecard | null {
@@ -37,113 +36,88 @@ function useScorecard(): Scorecard | null {
   return s;
 }
 
-function CostDesk() {
+/** One line of figures per desk: what the agents did, what people decided, how it scores. */
+function DeskLines() {
   const cc = useCostCap();
+  const rev = useRevenue();
   const card = useScorecard();
   const items = cc.workItems.filter((w) => w.kind === 'classification');
-  const by = (pred: (s: string) => boolean) => items.filter((w) => pred(w.state)).length;
-  const llm = items.filter((w) => w.proposalSource === 'llm').length;
-  const code = items.filter((w) => w.proposalSource === 'deterministic').length;
+  const count = (f: (s: string) => boolean) => items.filter((w) => f(w.state)).length;
   const refused = cc.audit.filter((a) => !a.allowed).length;
-  const redteam = cc.audit.filter((a) => a.actorRole === 'red_team');
-  return (
-    <section className="desk" aria-labelledby="desk-cost">
-      <h2 id="desk-cost">Cost cap desk</h2>
-      <p className="desk-line muted">January 2026 · {items.length} ledger lines · {cc.policies.filter((p) => p.state === 'APPROVED').length} approved house policies</p>
-      <dl className="figures">
-        <div>
-          <dt>Decided by code under a policy</dt>
-          <dd>{code}</dd>
-        </div>
-        <div>
-          <dt>Decided by Claude, no policy covered it</dt>
-          <dd>{llm}</dd>
-        </div>
-        <div>
-          <dt>Asked a person instead of guessing</dt>
-          <dd>{by((s) => s === 'NEEDS_INFO')}</dd>
-        </div>
-        <div>
-          <dt>Posted to the ERP</dt>
-          <dd>{by((s) => s === 'POSTED')}</dd>
-        </div>
-      </dl>
-      <ul className="proofs">
-        <li>
-          <IconShield size={14} /> {refused} attempts refused and logged, {redteam.filter((a) => !a.allowed).length} of {redteam.length} from the red team
-        </li>
-        {card && card.accuracy !== null && (
-          <li>
-            <IconApproved size={14} /> Scored against the answer key the agents never see: {card.matched} of {card.decided} right ({pct(card.accuracy)}),{' '}
-            {usdShort(card.wrong_side_usd_minor)} on the wrong side of the cap
-          </li>
-        )}
-      </ul>
-    </section>
-  );
-}
-
-function RevenueDesk() {
-  const rev = useRevenue();
-  if (!rev.online || !rev.run || !rev.scorecard) {
-    return (
-      <section className="desk">
-        <h2>Revenue desk</h2>
-        <p className="muted">
-          {rev.online ? 'No season is running.' : 'The revenue API is not reachable on :8000 (make revenue-api).'} Open the Revenue tab to replay 2024.
-        </p>
-      </section>
-    );
-  }
   const s = rev.scorecard;
-  const done = rev.timeline.filter((r) => r.final).length;
+  const finalRounds = rev.timeline.filter((r) => r.final).length;
   return (
-    <section className="desk" aria-labelledby="desk-rev">
-      <h2 id="desk-rev">Revenue desk</h2>
-      <p className="desk-line muted">
-        2024 season replayed from real results · {done} of {rev.timeline.length} rounds final · {s.entries.posted ?? 0} entries posted
-      </p>
-      <dl className="figures">
-        <div>
-          <dt>Sponsor bonuses booked right</dt>
+    <section className="desklines" aria-label="Both desks at a glance">
+      <dl className="deskline">
+        <dt>Cost cap desk · January 2026</dt>
+        <dd>
+          <b>{items.filter((w) => w.proposalSource === 'deterministic').length}</b> decided by code under a policy
+        </dd>
+        <dd>
+          <b>{items.filter((w) => w.proposalSource === 'llm').length}</b> by Claude
+        </dd>
+        <dd>
+          <b>{count((x) => x === 'NEEDS_INFO')}</b> asked a person
+        </dd>
+        <dd>
+          <b>{count((x) => x === 'POSTED')}</b> posted
+        </dd>
+        <dd>
+          <b>{refused}</b> refused and logged
+        </dd>
+        {card?.accuracy != null && (
           <dd>
-            {s.bonuses.correct}/{s.bonuses.truth}
+            <b>
+              {card.matched}/{card.decided}
+            </b>{' '}
+            right against the answer key the agents never see
           </dd>
-        </div>
-        <div>
-          <dt>Kept off invoices (results overturned)</dt>
-          <dd>{usdShort(s.dollars_protected_cents)}</dd>
-        </div>
-        <div>
-          <dt>Decisions handled by code, by Claude</dt>
-          <dd>
-            {s.router.code} · {s.router.agent}
-          </dd>
-        </div>
-        <div>
-          <dt>Parked for the Controller or CFO</dt>
-          <dd>{s.entries.parked ?? 0}</dd>
-        </div>
-      </dl>
-      <ul className="proofs">
-        <li>{s.books_tie ? <IconApproved size={14} /> : <IconDenied size={14} />} Trial balance {s.books_tie ? 'ties' : 'does not tie'}</li>
-        {rev.audit && (
-          <li>
-            <IconShield size={14} /> Independent auditor: {rev.audit.opinion} opinion, {rev.audit.summary.findings} findings over {rev.audit.summary.entries} entries
-          </li>
         )}
-      </ul>
+      </dl>
+      <dl className="deskline">
+        <dt>Revenue desk · 2024 season</dt>
+        {rev.online && s ? (
+          <>
+            <dd>
+              <b>{finalRounds}</b> of {rev.timeline.length} rounds final
+            </dd>
+            <dd>
+              <b>
+                {s.bonuses.correct}/{s.bonuses.truth}
+              </b>{' '}
+              sponsor bonuses booked right
+            </dd>
+            <dd>
+              <b>{usdShort(s.dollars_protected_cents)}</b> kept off invoices
+            </dd>
+            <dd>
+              <b>{s.router.code}</b> by code, <b>{s.router.agent}</b> by Claude
+            </dd>
+            <dd>books {s.books_tie ? 'tie' : 'do not tie'}</dd>
+            {rev.audit && (
+              <dd>
+                auditor: <b>{rev.audit.opinion}</b>
+              </dd>
+            )}
+          </>
+        ) : (
+          <dd className="muted">{rev.online ? 'no season running: open Revenue to replay 2024' : 'revenue API not reachable (make revenue-api)'}</dd>
+        )}
+      </dl>
     </section>
   );
 }
 
-export function Overview({ inbox, open, toAudit }: { inbox: InboxItem[]; open: (key: string) => void; toAudit: (from: number, to: number) => void }) {
-  const top = inbox.slice(0, 7);
+export function Overview({ inbox, status, toAudit }: { inbox: InboxItem[]; status: SeatStatus; toAudit: (from: number, to: number) => void }) {
+  const cc = useCostCap();
+  const [selected, setSelected] = useState<string | null>(null);
+  const top = inbox.slice(0, 8);
+  const key = selected ?? top[0]?.key ?? null;
   return (
     <div className="overview">
       <CapTrack />
       <Spine onWindow={toAudit} />
-      <div className="ov-grid">
+      <div className="split">
         <section className="waiting" aria-labelledby="waiting-h">
           <div className="sec-head">
             <h2 id="waiting-h">Waiting for a person</h2>
@@ -154,18 +128,16 @@ export function Overview({ inbox, open, toAudit }: { inbox: InboxItem[]; open: (
           {top.length ? (
             <ul className="inbox-list">
               {top.map((i) => (
-                <InboxRow key={i.key} item={i} selected={false} onSelect={() => open(i.key)} />
+                <InboxRow key={i.key} item={i} selected={i.key === key} onSelect={() => setSelected(i.key)} />
               ))}
             </ul>
           ) : (
             <p className="muted">Nothing waits for a person. Every proposal is decided.</p>
           )}
         </section>
-        <div className="desks">
-          <CostDesk />
-          <RevenueDesk />
-        </div>
+        <WhyPane entry={resolveEntry(key, inbox, cc)} status={status} />
       </div>
+      <DeskLines />
     </div>
   );
 }

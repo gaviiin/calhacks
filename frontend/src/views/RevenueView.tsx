@@ -7,9 +7,8 @@ import { DEMO_STOP_BEFORE, useRevenue, type Round, type Weekend } from '../lib/r
 
 const MERIDIAN_CARS = [44, 63]; // Meridian's results mirror Mercedes, cars 44 and 63
 const SERIES = [
-  { key: 'base', label: 'Base fees', cls: 's1' },
-  { key: 'bonus', label: 'Performance bonuses', cls: 's2' },
-  { key: 'prize', label: 'Prize money accrual', cls: 's3' },
+  { key: 'contract', label: 'Base fees and prize money accrual', cls: 's1', of: (r: Round['revenue']) => r.base + r.prize },
+  { key: 'bonus', label: 'Performance bonuses', cls: 's2', of: (r: Round['revenue']) => r.bonus },
 ] as const;
 
 function SeasonColumns({ rounds }: { rounds: Round[] }) {
@@ -50,11 +49,11 @@ function SeasonColumns({ rounds }: { rounds: Round[] }) {
             <g key={rd.round} onPointerEnter={() => setHover(i)} onPointerLeave={() => setHover(null)} className={rd.final ? '' : 'col--pending'}>
               <rect x={GUT + i * band} y={0} width={band} height={H} fill="transparent" />
               {SERIES.map((s, si) => {
-                const v = rd.revenue[s.key];
+                const v = s.of(rd.revenue);
                 const h = y(v);
                 const top = H - acc - h;
                 acc += h + (h > 0 ? 2 : 0);
-                return v > 0 ? <rect key={s.key} x={x} y={top} width={bw} height={Math.max(0, h)} rx={si === 2 ? 2 : 0} className={`col ${s.cls}`} /> : null;
+                return v > 0 ? <rect key={s.key} x={x} y={top} width={bw} height={Math.max(0, h)} rx={si === SERIES.length - 1 ? 2 : 0} className={`col ${s.cls}`} /> : null;
               })}
               {(i % 3 === 0 || i === rounds.length - 1) && (
                 <text x={GUT + i * band + band / 2} y={H + 16} textAnchor="middle" className="axis-label">
@@ -80,7 +79,7 @@ function SeasonColumns({ rounds }: { rounds: Round[] }) {
           {SERIES.map((s) => (
             <div key={s.key} className="tooltip-row">
               <span className={`tooltip-line ${s.cls}`} />
-              <b className="mono">{usdShort(r.revenue[s.key])}</b>
+              <b className="mono">{usdShort(s.of(r.revenue))}</b>
               <span className="muted">{s.label}</span>
             </div>
           ))}
@@ -210,7 +209,7 @@ export function RevenueView() {
     return () => {
       live = false;
     };
-  }, [rev.run?.run_id, rev.run?.events_done, rev]);
+  }, [rev.run?.run_id, rev.run?.events_done, rev.weekend]);
 
   if (!rev.online) {
     return (
@@ -267,33 +266,25 @@ export function RevenueView() {
       </section>
 
       {s && (
-        <dl className="figures figures--wide">
-          <div>
-            <dt>Sponsor bonuses booked right</dt>
-            <dd>
+        <dl className="deskline deskline--solo">
+          <dd>
+            <b>
               {s.bonuses.correct}/{s.bonuses.truth}
-            </dd>
-          </div>
-          <div>
-            <dt>Kept off invoices</dt>
-            <dd>{usdShort(s.dollars_protected_cents)}</dd>
-          </div>
-          <div>
-            <dt>Routed to code · to Claude</dt>
-            <dd>
-              {s.router.code} · {s.router.agent}
-            </dd>
-          </div>
-          <div>
-            <dt>Claude calls this season, and their cost</dt>
-            <dd>
-              {s.model.model_calls} · {s.model.cost_cents < 1 ? 'under 1¢' : `${s.model.cost_cents.toFixed(1)}¢`}
-            </dd>
-          </div>
-          <div>
-            <dt>Independent auditor</dt>
-            <dd>{rev.audit ? rev.audit.opinion : 'not run'}</dd>
-          </div>
+            </b>{' '}
+            sponsor bonuses booked right
+          </dd>
+          <dd>
+            <b>{usdShort(s.dollars_protected_cents)}</b> kept off invoices
+          </dd>
+          <dd>
+            <b>{s.router.code}</b> decisions by code, <b>{s.router.agent}</b> by Claude
+          </dd>
+          <dd>
+            <b>{s.model.model_calls}</b> Claude calls, {s.model.cost_cents < 1 ? 'under 1¢' : `${s.model.cost_cents.toFixed(1)}¢`}
+          </dd>
+          <dd>
+            independent auditor: <b>{rev.audit ? rev.audit.opinion : 'not run'}</b>
+          </dd>
         </dl>
       )}
 

@@ -1,5 +1,6 @@
 import type { Policy, WorkItem } from '../cost_cap_bindings/types';
 import { abs, needsHead, type CostCapData } from '../lib/costcap';
+import { tidyMemo } from '../lib/format';
 import type { Parked, Queue } from '../lib/revenue';
 
 // Everything that waits for a person, from both desks, in one list.
@@ -47,8 +48,8 @@ export function inboxItems(cc: CostCapData, queue: Queue | null): InboxItem[] {
       entry: e,
       needs: e.needs.map((n) => (n === 'cfo' ? 'CFO' : n === 'controller' ? 'Controller' : n)).join(' + '),
       amount: e.total_cents,
-      title: e.memo,
-      sub: `${e.kind.replace(/_/g, ' ')} · ${e.je_id}`,
+      title: tidyMemo(e.memo),
+      sub: e.je_id,
     });
   }
   const rank = (i: InboxItem) => (i.kind === 'entry' ? 0 : i.kind === 'item' && i.item.state === 'NEEDS_INFO' ? 2 : i.kind === 'policy' ? 3 : 1);

@@ -59,7 +59,7 @@ export default function App() {
         {!cc.ready && route.view !== 'revenue' && route.view !== 'evidence' ? (
           <p className="muted loading">Connecting to the cost cap desk on SpacetimeDB…</p>
         ) : route.view === 'overview' ? (
-          <Overview inbox={inbox} open={(k) => nav(`/inbox/${k}`)} toAudit={(a, b) => nav(`/audit/${Math.floor(a)}-${Math.ceil(b)}`)} />
+          <Overview inbox={inbox} status={status} toAudit={(a, b) => nav(`/audit/${Math.floor(a)}-${Math.ceil(b)}`)} />
         ) : route.view === 'inbox' ? (
           <InboxView inbox={inbox} selected={route.arg} select={(k) => nav(`/inbox/${k}`)} status={status} />
         ) : route.view === 'cost-cap' ? (

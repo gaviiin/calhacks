@@ -204,6 +204,16 @@ export function RevenueProvider({ children }: { children: ReactNode }) {
     [refresh]
   );
 
+  // stable across polls, so a pane reading one entry is not restarted every refresh
+  const why = useCallback(
+    (je: string) => (runRef.current ? get<Why>(`/api/runs/${runRef.current.run_id}/entries/${je}/why`) : Promise.resolve(null)),
+    []
+  );
+  const weekend = useCallback(
+    (round: number) => (runRef.current ? get<Weekend>(`/api/runs/${runRef.current.run_id}/weekend/${round}`) : Promise.resolve(null)),
+    []
+  );
+
   const value = useMemo<RevenueState>(
     () => ({
       online, run, queue, scorecard, sponsors, timeline, impact, audit, busy, error, refresh,
@@ -223,14 +233,14 @@ export function RevenueProvider({ children }: { children: ReactNode }) {
           });
           return [res.status, res.reason].filter(Boolean).join(': ');
         }),
-      why: (je) => (runRef.current ? get<Why>(`/api/runs/${runRef.current.run_id}/entries/${je}/why`) : Promise.resolve(null)),
-      weekend: (round) => (runRef.current ? get<Weekend>(`/api/runs/${runRef.current.run_id}/weekend/${round}`) : Promise.resolve(null)),
+      why,
+      weekend,
       runAudit: () =>
         act('Running the independent audit', async () => {
           if (runRef.current) await post(`/api/runs/${runRef.current.run_id}/audit`, {});
         }),
     }),
-    [online, run, queue, scorecard, sponsors, timeline, impact, audit, busy, error, refresh, act]
+    [online, run, queue, scorecard, sponsors, timeline, impact, audit, busy, error, refresh, act, why, weekend]
   );
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;

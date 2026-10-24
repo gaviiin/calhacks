@@ -2,7 +2,7 @@ import { useMemo, useState } from 'react';
 import { IconApproved, IconDenied } from '../components/icons';
 import { ROLE_LABEL } from '../components/Why';
 import { useCostCap } from '../lib/costcap';
-import { clock } from '../lib/format';
+import { clock, refusalText } from '../lib/format';
 
 // The spine's table: every transition the system of work recorded, allowed or refused, newest first.
 
@@ -98,8 +98,8 @@ export function AuditView({ window: win, clearWindow }: { window: [number, numbe
                         <IconApproved size={12} /> {a.fromState} → {a.toState}
                       </span>
                     ) : (
-                      <span className="outcome-cell tone-alert">
-                        <IconDenied size={12} /> {a.reason}
+                      <span className="outcome-cell outcome-cell--refused" title={a.reason}>
+                        <IconDenied size={12} /> {refusalText(a.reason)}
                       </span>
                     )}
                   </td>
@@ -112,7 +112,7 @@ export function AuditView({ window: win, clearWindow }: { window: [number, numbe
       </section>
       <section className="matrix" aria-labelledby="matrix-h">
         <h2 id="matrix-h">Who may do what</h2>
-        <p className="muted">Enforced inside the module's one transition function, not by the agents. Live seat holders per role on the right.</p>
+        <p className="muted">Enforced inside the module's one transition function, not by the agents.</p>
         <table className="data">
           <tbody>
             {MATRIX.map((m) => (
@@ -123,6 +123,7 @@ export function AuditView({ window: win, clearWindow }: { window: [number, numbe
             ))}
           </tbody>
         </table>
+        <h3>Seat holders now</h3>
         <ul className="holders">
           {[...holders.entries()].map(([r, n]) => (
             <li key={r}>
