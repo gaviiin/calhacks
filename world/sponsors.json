@@ -1,0 +1,107 @@
+{
+  "_note": "SYNTHETIC. Fictional sponsors and terms for the Pit Wall hackathon project. Structured mirror of world/contracts/*.md. The Contract Reader agent should reproduce these terms from the markdown; the kernel and generator use this file as ground truth.",
+  "company": {
+    "name": "Meridian Racing",
+    "functional_currency": "USD",
+    "materiality_cents": 25000000,
+    "cfo_threshold_cents": 100000000
+  },
+  "sponsors": [
+    {
+      "id": "halcyon",
+      "name": "Halcyon Energy",
+      "currency": "USD",
+      "base_fee": 2400000000,
+      "payment_terms_days": 30,
+      "contracts": [
+        {
+          "version": 1,
+          "contract_ref": "halcyon_v1",
+          "effective_from_round": 1,
+          "clauses": [
+            {"id": "4.1", "type": "win", "amount": 200000000, "scope": "grand_prix", "per": "car",
+             "quote": "USD 2,000,000 for each Grand Prix won by a Meridian car"},
+            {"id": "4.2", "type": "podium", "amount": 75000000, "scope": "grand_prix", "per": "car", "excludes_win": true,
+             "quote": "USD 750,000 for each Grand Prix podium finish by a Meridian car, other than a win"}
+          ]
+        },
+        {
+          "version": 2,
+          "contract_ref": "halcyon_v2",
+          "effective_from_round": 12,
+          "amends": "halcyon_v1",
+          "clauses": [
+            {"id": "4.1", "type": "win", "amount": 200000000, "scope": "grand_prix", "per": "car",
+             "quote": "USD 2,000,000 for each Grand Prix won by a Meridian car"},
+            {"id": "4.2", "type": "podium", "amount": 100000000, "scope": "grand_prix", "per": "car", "excludes_win": true,
+             "quote": "USD 1,000,000 for each Grand Prix podium finish by a Meridian car, other than a win"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "volta",
+      "name": "Volta Telecom",
+      "currency": "EUR",
+      "base_fee": 800000000,
+      "payment_terms_days": 30,
+      "contracts": [
+        {
+          "version": 1,
+          "contract_ref": "volta_v1",
+          "effective_from_round": 1,
+          "clauses": [
+            {"id": "5.1", "type": "points_finish", "amount": 10000000, "scope": "ambiguous", "per": "car",
+             "quote": "EUR 100,000 for each points finish by a Meridian car"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "arcadia",
+      "name": "Arcadia Watches",
+      "currency": "GBP",
+      "base_fee": 500000000,
+      "payment_terms_days": 30,
+      "contracts": [
+        {
+          "version": 1,
+          "contract_ref": "arcadia_v1",
+          "effective_from_round": 1,
+          "clauses": [
+            {"id": "4.2", "type": "podium", "amount": 40000000, "scope": "grand_prix_and_sprint", "per": "car", "excludes_win": false,
+             "quote": "GBP 400,000 for each podium finish by a Meridian car, including sprint races"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "northwind",
+      "name": "Northwind Cloud",
+      "currency": "USD",
+      "base_fee": 600000000,
+      "payment_terms_days": 30,
+      "contracts": [
+        {
+          "version": 1,
+          "contract_ref": "northwind_v1",
+          "effective_from_round": 1,
+          "clauses": [
+            {"id": "6.3", "type": "top6", "amount": 15000000, "scope": "grand_prix", "per": "car",
+             "quote": "USD 150,000 for each top-six classified finish by a Meridian car in a Grand Prix"}
+          ]
+        }
+      ]
+    },
+    {
+      "id": "ridgeline",
+      "name": "Ridgeline Logistics",
+      "currency": "USD",
+      "base_fee": 300000000,
+      "payment_terms_days": 30,
+      "contracts": [
+        {"version": 1, "contract_ref": "ridgeline_v1", "effective_from_round": 1, "clauses": []}
+      ]
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+{
+  "_note": "SYNTHETIC people. Contact details come from environment variables so no real address or phone number is ever committed. For the demo, point each variable at a teammate.",
+  "people": {
+    "dana": {
+      "name": "Dana Okafor", "title": "Controller", "roles": ["controller"],
+      "channels": ["slack", "email", "teams"],
+      "slack_user_env": "SLACK_USER_DANA", "email_env": "EMAIL_DANA", "phone_env": "PHONE_DANA"
+    },
+    "priya": {
+      "name": "Priya Raman", "title": "CFO", "roles": ["cfo"],
+      "channels": ["slack", "email", "sms"],
+      "slack_user_env": "SLACK_USER_PRIYA", "email_env": "EMAIL_PRIYA", "phone_env": "PHONE_PRIYA"
+    },
+    "luis": {
+      "name": "Luis Ferreira", "title": "Commercial Director", "roles": ["commercial"],
+      "channels": ["slack", "email"],
+      "slack_user_env": "SLACK_USER_LUIS", "email_env": "EMAIL_LUIS", "phone_env": "PHONE_LUIS"
+    }
+  },
+  "sponsors": {
+    "halcyon": {"contact": "Halcyon Energy accounts payable", "email_env": "EMAIL_SPONSOR_HALCYON"},
+    "volta": {"contact": "Volta Telecom accounts payable", "email_env": "EMAIL_SPONSOR_VOLTA"},
+    "arcadia": {"contact": "Arcadia Watches accounts payable", "email_env": "EMAIL_SPONSOR_ARCADIA"},
+    "northwind": {"contact": "Northwind Cloud accounts payable", "email_env": "EMAIL_SPONSOR_NORTHWIND"},
+    "ridgeline": {"contact": "Ridgeline Logistics accounts payable", "email_env": "EMAIL_SPONSOR_RIDGELINE"}
+  }
+}

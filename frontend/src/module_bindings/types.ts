@@ -17,6 +17,26 @@ export const Config = __t.object("Config", {
 });
 export type Config = __Infer<typeof Config>;
 
+export const EntryInput = __t.object("EntryInput", {
+  jeId: __t.string(),
+  runId: __t.string(),
+  kind: __t.string(),
+  status: __t.string(),
+  memo: __t.string(),
+  sponsorId: __t.string(),
+  totalCents: __t.i64(),
+  effectiveDate: __t.string(),
+  recordedAt: __t.string(),
+  postedAt: __t.string(),
+  preparer: __t.string(),
+  needs: __t.string(),
+  reason: __t.string(),
+  reversesJeId: __t.string(),
+  policyIds: __t.string(),
+  answer: __t.string(),
+});
+export type EntryInput = __Infer<typeof EntryInput>;
+
 export const FiaDocumentInput = __t.object("FiaDocumentInput", {
   docKey: __t.string(),
   source: __t.string(),
@@ -51,4 +71,66 @@ export const FiaDocuments = __t.object("FiaDocuments", {
   reviewStatus: __t.string(),
 });
 export type FiaDocuments = __Infer<typeof FiaDocuments>;
+
+export const JeLines = __t.object("JeLines", {
+  lineKey: __t.string(),
+  jeId: __t.string(),
+  lineNo: __t.u32(),
+  account: __t.string(),
+  debitCents: __t.i64(),
+  creditCents: __t.i64(),
+  origCurrency: __t.string(),
+  origAmountCents: __t.i64(),
+  fxRate: __t.string(),
+  sponsorId: __t.string(),
+});
+export type JeLines = __Infer<typeof JeLines>;
+
+export const JournalEntries = __t.object("JournalEntries", {
+  jeId: __t.string(),
+  runId: __t.string(),
+  kind: __t.string(),
+  status: __t.string(),
+  memo: __t.string(),
+  sponsorId: __t.string(),
+  totalCents: __t.i64(),
+  effectiveDate: __t.string(),
+  recordedAt: __t.string(),
+  postedAt: __t.string(),
+  preparer: __t.string(),
+  needs: __t.string(),
+  reason: __t.string(),
+  reversesJeId: __t.string(),
+  policyIds: __t.string(),
+  answer: __t.string(),
+  lineCount: __t.u32(),
+});
+export type JournalEntries = __Infer<typeof JournalEntries>;
+
+export const LineInput = __t.object("LineInput", {
+  account: __t.string(),
+  debitCents: __t.i64(),
+  creditCents: __t.i64(),
+  origCurrency: __t.string(),
+  origAmountCents: __t.i64(),
+  fxRate: __t.string(),
+  sponsorId: __t.string(),
+});
+export type LineInput = __Infer<typeof LineInput>;
+
+export const PitWallItems = __t.object("PitWallItems", {
+  itemId: __t.string(),
+  runId: __t.string(),
+  itemType: __t.string(),
+  status: __t.string(),
+  payloadJson: __t.string(),
+  updatedAt: __t.string(),
+});
+export type PitWallItems = __Infer<typeof PitWallItems>;
+
+export const Writers = __t.object("Writers", {
+  who: __t.identity(),
+  role: __t.string(),
+});
+export type Writers = __Infer<typeof Writers>;
 
