@@ -18,3 +18,11 @@ def test_spa_timing_comes_from_the_real_fia_capture(world, tmp_path, store):
         ("fia_document", "2024-07-28T16:53:00Z"),
         ("race_final", "2024-07-28T17:56:00Z"),
     ]
+
+
+def test_dsq_reported_as_numbered_last_place_is_still_a_dsq():
+    from finance.world import _row
+
+    row = _row({"number": 63, "driver_id": "russell", "constructor_id": "mercedes", "position": 20,
+                "position_text": "20", "status": "Disqualified", "points": 0})
+    assert row.pos is None and row.pos_text == "D"

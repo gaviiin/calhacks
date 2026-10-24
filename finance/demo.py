@@ -36,7 +36,7 @@ def narrate(event: dict, results: list) -> list[str]:
     for r in results:
         if hasattr(r, "status") and r.status in ("posted", "parked", "refused"):
             lines.append(f"   ledger: {r.status.upper()} {r.je_id}" + (f" - {r.reason}" if r.reason else ""))
-        elif isinstance(r, dict) and r.get("type") == "billing":
+        elif isinstance(r, dict) and r.get("type") == "billing" and not r.get("unchanged"):
             lines.append(f"   billing review: {r['status'].upper()} ({r['reason']})")
         elif isinstance(r, dict) and r.get("type") == "alert":
             lines.append(f"   ALERT to controller: {r['text']}")
@@ -52,9 +52,10 @@ def main() -> None:
     ap.add_argument("--pace", type=float, default=120.0)
     ap.add_argument("--people", action="store_true", help="let Dana and Priya answer automatically")
     args = ap.parse_args()
-    run = new_run(args.season, auto_people=args.people)
+    run = new_run(args.season, auto_people=True)  # Dana and Priya clear the backlog while history fast-forwards
     weekend = ("race_provisional", "fia_document", "race_final")
     run.run_until(lambda e: e["type"] in weekend and e["payload"]["round"] >= args.round)
+    run.router.auto_people = args.people  # from here on, a person approves (UI, Slack, email) unless --people
     print(f"Season {args.season} booked through R{args.round - 1}. Books tie: {run.ledger.trial_balance()['ties']}\n")
     prev = None
     while run.cursor < len(run.events):
