@@ -479,3 +479,10 @@ def redteam_report(sid: str):
 from .integrations_api import build_router  # noqa: E402
 
 app.include_router(build_router(get_run, RUNS))
+
+# --------------------------------------------------------------------------- independent auditor, impact, Microsoft integrations
+from . import telemetry  # noqa: E402
+from .microsoft_api import build_router as build_microsoft_router  # noqa: E402
+
+telemetry.configure(app)
+app.include_router(build_microsoft_router(get_run, STORE))
