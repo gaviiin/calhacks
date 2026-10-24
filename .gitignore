@@ -22,3 +22,6 @@ spacetimedb/dist/
 # finance
 data/
 keys/
+
+# Fetch.ai agent local storage
+agent1q*_data.json
