@@ -39,6 +39,7 @@ import re
 import sys
 import unicodedata
 from collections import Counter, defaultdict
+from concurrent.futures import ThreadPoolExecutor
 from dataclasses import dataclass, field
 from pathlib import Path
 from typing import Any, Iterable
@@ -58,6 +59,8 @@ log = logging.getLogger("agents.policy_learner")
 
 MIN_PRECEDENTS = 10
 MIN_CONSISTENCY = 0.95
+# Online reviews are independent API calls; they run concurrently and are recorded in candidate order.
+REVIEW_WORKERS = 8
 MIN_ALIKE_CORRECTIONS = 3
 
 # Race and circuit names (not nationalities: "British" would catch British Airways). Matching is
@@ -203,6 +206,7 @@ class Candidate:
     parent_policy_id: int | None = None  # for a child proposed under an existing policy
     residual_consistency: float | None = None
     majority_refs: list[str] = field(default_factory=list)  # every majority case (cornerstone check)
+    sample_cases: list[Case] = field(default_factory=list)  # what the online reviewer is shown
 
     @property
     def proposable(self) -> bool:
@@ -461,6 +465,7 @@ def mine_history(h: History, rb: Rulebook, min_precedents: int = MIN_PRECEDENTS,
                 near.append(cand)
                 continue
         target = m.category_2026
+        cand.sample_cases = rows[:15]
         majority = [c for c in rows if c.cat26 == target]
         exc = [c for c in rows if c.cat26 != target]
         cand.precedent_count = len(rows)
@@ -546,6 +551,16 @@ class PolicyReview(BaseModel):
     concerns: str
 
 
+def review_sample(c: Case) -> str:
+    """One 2025 case as the reviewer sees it: a bill line carries the memo of the invoice it is on,
+    so a charge billed with the goods (carriage, packaging) reads as part of that purchase."""
+    memo = c.line.get("memo") or ""
+    if c.bill_line is None:
+        return memo
+    desc = c.bill_line.get("description") or ""
+    return desc if desc == memo else f"{desc} [a line on the supplier invoice for: {memo}]"
+
+
 REVIEW_SYSTEM = """\
 You review draft cost cap policies that a deterministic miner drafted from a Formula 1 team's 2025 \
 ledger and cost cap submission. The category and the 2026 rule version were chosen by code; do not \
@@ -553,17 +568,30 @@ change them. Write a two-sentence rationale a Head of Cost Cap can approve: what
 many precedents, and (if the 2026 rule differs from 2025 practice) that it differs and why. Do not \
 write article numbers. Set generalises=false if the pattern is too broad for the evidence (for \
 example mixed activities under one account, or exceptions that look like a different kind of cost), \
-and say why in concerns; otherwise concerns is an empty string."""
+and say why in concerns; otherwise concerns is an empty string. A sample line taken from a supplier \
+invoice shows the invoice it is on: a charge the supplier bills with the goods or service it delivers \
+(carriage, packaging, handling) is part of that purchase under the team's accounting policy, not a \
+separate activity. `refinements` are exception rules drafted under this policy; each takes precedence \
+on the lines it matches, so judge the policy together with them (`consistency_after_refinements` is \
+its share right on the lines no refinement takes)."""
 
 
 def llm_review(client: Any, c: Candidate, rec: Any = None) -> PolicyReview | None:
     """Model review of one candidate; recorded as a model_call step (SCHEMA §6b) when `rec` is given."""
-    rec = rec or NullRecorder()
+    return _record_review(c, *_call_review(client, c), rec)
+
+
+def _call_review(client: Any, c: Candidate) -> tuple[dict, Any, Exception | None]:
+    """The API call alone, safe to run on a worker thread: returns (prompt, message, error)."""
     m = c.mapping
     payload = {
         "policy_key": c.policy_key, "pattern": c.pattern, "description": c.description,
         "precedent_count": c.precedent_count, "consistency": round(c.consistency, 4),
-        "exceptions": c.exceptions[:10], "sample_memos": c.nature.memos[:15],
+        "exceptions": c.exceptions[:10],
+        "sample_lines": [review_sample(s) for s in c.sample_cases] or c.nature.memos[:15],
+        "refinements": [{"when": ch.description, "category_2026": ch.mapping.category_2026 if ch.mapping else None,
+                         "precedents": ch.precedent_count} for ch in c.children],
+        "consistency_after_refinements": None if c.residual_consistency is None else round(c.residual_consistency, 4),
         "category_2025": c.category_2025, "entry_2025": c.entry_2025_id,
         "category_2026": m.category_2026 if m else None, "entry_2026": m.entry_2026_id if m else None,
         "rule_change": m.explanation if m and m.status == "changed" else None,
@@ -579,8 +607,17 @@ def llm_review(client: Any, c: Candidate, rec: Any = None) -> PolicyReview | Non
             output_format=PolicyReview,
         )
     except Exception as e:
-        log.warning("LLM review failed for %s: %s", c.policy_key, e)
-        rec.record("error", "policy_learner.review", prompt, f"{type(e).__name__}: {e}", model=config.model())
+        return prompt, None, e
+    return prompt, msg, None
+
+
+def _record_review(c: Candidate, prompt: dict, msg: Any, err: Exception | None,
+                   rec: Any = None) -> PolicyReview | None:
+    """Record one review's outcome (on the calling thread, so step numbers stay in candidate order)."""
+    rec = rec or NullRecorder()
+    if err is not None:
+        log.warning("LLM review failed for %s: %s", c.policy_key, err)
+        rec.record("error", "policy_learner.review", prompt, f"{type(err).__name__}: {err}", model=config.model())
         return None
     parsed = getattr(msg, "parsed_output", None)
     out = model_call_output(msg)
@@ -864,12 +901,16 @@ def onboard(world: WorldClient, rb: Rulebook, tools: AgentTools | None, *, clien
     cands, near = mine_history(h, rb, kinds=kinds)
     rec.record("note", "mine_history", {"min_precedents": MIN_PRECEDENTS, "min_consistency": MIN_CONSISTENCY},
                {"candidates": [c.policy_key for c in cands], "near_misses": [c.policy_key for c in near]})
+    to_review = [c for c in cands if not offline and client is not None
+                 and c.mapping and c.mapping.status in ("same", "changed")]
+    with ThreadPoolExecutor(max_workers=REVIEW_WORKERS) as pool:
+        calls = dict(zip(map(id, to_review), pool.map(lambda c: _call_review(client, c), to_review)))
     for c in cands:
         for child in c.tree()[1:]:
             child.rationale = template_rationale(child)
         c.rationale = template_rationale(c)
-        if not offline and client is not None and c.mapping and c.mapping.status in ("same", "changed"):
-            review = llm_review(client, c, rec)
+        if id(c) in calls:
+            review = _record_review(c, *calls[id(c)], rec)
             if review is not None:
                 if not review.generalises:
                     c.llm_concerns = review.concerns or "reviewer judged the pattern too broad"

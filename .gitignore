@@ -23,7 +23,7 @@ system_of_work/spacetimedb/target/
 system_of_work/spacetimedb/dist/
 
 # finance
-data/
+/data/
 keys/
 
 # cost cap desk
