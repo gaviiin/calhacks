@@ -5,12 +5,15 @@ import * as THREE from 'three';
 import CarModel from './car/CarModel';
 import Effects from './Effects';
 import { liveryNow, liveryUniforms, syncLivery } from './livery';
+import { getSheets, preloadSheets } from './sheets';
 import { createCarMaterials, skinMaterials, type CarMaterials } from './materials';
 import AuditTrail from './overlays/AuditTrail';
 import Callouts from './overlays/Callouts';
 import ReasoningGraph from './overlays/ReasoningGraph';
 import Streams from './overlays/Streams';
-import { sceneState } from './state';
+import Tethers from './overlays/Tethers';
+import { teardownStatus } from './car/explode';
+import { liverySequence, sceneState } from './state';
 import { StudioEnvironment, StudioFloor, StudioLights } from './Studio';
 
 const UP = new THREE.Vector3(0, 1, 0);
@@ -26,6 +29,8 @@ function Rig({ m, reduceMotion, mobile, onReady }: { m: CarMaterials; reduceMoti
   const pos = useRef(new THREE.Vector3(sceneState.camX, sceneState.camY, sceneState.camZ));
   const look = useRef(new THREE.Vector3(sceneState.lookX, sceneState.lookY, sceneState.lookZ));
   const frames = useRef(0);
+  const lastFactor = useRef(0);
+  const lastTarget = useRef(new THREE.Vector3(NaN, NaN, NaN));
   const tmp = useMemo(() => ({ p: new THREE.Vector3(), l: new THREE.Vector3(), d: new THREE.Vector3(), r: new THREE.Vector3(), u: new THREE.Vector3() }), []);
   const skins = useMemo(() => skinMaterials(m), [m]);
 
@@ -38,16 +43,27 @@ function Rig({ m, reduceMotion, mobile, onReady }: { m: CarMaterials; reduceMoti
 
     tmp.l.set(s.lookX, s.lookY, s.lookZ);
     tmp.p.set(s.camX, s.camY, s.camZ).sub(tmp.l).multiplyScalar(fit).add(tmp.l);
+    // Callouts hide while the station is changing and re-acquire once it holds.
+    const travel = Number.isNaN(lastTarget.current.x) ? 0 : lastTarget.current.distanceTo(tmp.p);
+    lastTarget.current.copy(tmp.p);
+    s.settled = travel > 0.0008 ? 0 : Math.min(1, s.settled + dt * 1.6);
     if (!reduceMotion && s.idle > 0) {
       const t = state.clock.elapsedTime;
       tmp.p.x += Math.sin(t * 0.27) * 0.12 * s.idle;
       tmp.p.y += Math.sin(t * 0.41) * 0.05 * s.idle;
       tmp.p.z += Math.cos(t * 0.19) * 0.08 * s.idle;
     }
-    if (cam.fov !== s.fov) {
-      cam.fov = s.fov;
+    // The frame breathes with the teardown: a touch of lens push as parts come off.
+    const teardown = teardownStatus();
+    const fov = s.fov + 2.2 * teardown.factor;
+    if (Math.abs(cam.fov - fov) > 1e-3) {
+      cam.fov = fov;
       cam.updateProjectionMatrix();
     }
+    // Reassembly flash: when the car locks back together, sweep the key light over it once.
+    if (lastFactor.current >= 0.5 && teardown.factor < 0.03) s.flash = 1;
+    lastFactor.current = teardown.factor;
+    if (s.flash > 0) s.flash = Math.max(0, s.flash - dt / 1.8);
     // Truck the camera sideways so the focus lands at (screenX, screenY) in the frame.
     const dist = tmp.p.distanceTo(tmp.l);
     const halfH = dist * Math.tan(THREE.MathUtils.degToRad(cam.fov) / 2);
@@ -67,9 +83,18 @@ function Rig({ m, reduceMotion, mobile, onReady }: { m: CarMaterials; reduceMoti
     look.current.lerp(tmp.l, k);
     cam.position.copy(pos.current);
     cam.lookAt(look.current);
+    if (s.roll !== 0) cam.rotateZ(s.roll);
 
     // Livery + x-ray.
     syncLivery(state.clock.elapsedTime);
+    const sheetsA = getSheets(liverySequence[liveryNow.lo]);
+    const sheetsB = getSheets(liverySequence[liveryNow.hi]);
+    liveryUniforms.uSideA.value = sheetsA?.side ?? null;
+    liveryUniforms.uTopA.value = sheetsA?.top ?? null;
+    liveryUniforms.uSheetA.value = sheetsA ? 1 : 0;
+    liveryUniforms.uSideB.value = sheetsB?.side ?? null;
+    liveryUniforms.uTopB.value = sheetsB?.top ?? null;
+    liveryUniforms.uSheetB.value = sheetsB ? 1 : 0;
     const skin = 1 - 0.56 * s.xray;
     for (const mat of skins) mat.opacity = skin;
     m.pod.opacity = Math.max(0.25, skin - 0.5 * s.explodeMid);
@@ -84,7 +109,11 @@ function Rig({ m, reduceMotion, mobile, onReady }: { m: CarMaterials; reduceMoti
     liveryUniforms.uTime.value = state.clock.elapsedTime;
 
     frames.current++;
-    if (frames.current === 3) onReady();
+    if (frames.current === 3) {
+      onReady();
+      // Generated livery sheets stream in after the first frames, in scroll order.
+      preloadSheets(liverySequence, mobile, state.gl.capabilities.getMaxAnisotropy());
+    }
   });
   return null;
 }
@@ -137,6 +166,7 @@ function Scene({ reduceMotion, running, onReady }: SceneProps) {
         <Streams m={m} reduceMotion={reduceMotion} />
         <ReasoningGraph />
         <AuditTrail />
+        <Tethers />
         <Callouts />
         <StudioFloor mobile={mobile} />
         {!mobile && <Effects quality={quality} />}

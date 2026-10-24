@@ -333,15 +333,15 @@ export function tyreProfile(radius: number, width: number, rim: number): THREE.V
 export function wheelCoverProfile(rim: number, width: number): THREE.Vector2[] {
   const face = width / 2 - 0.018;
   return [
-    new THREE.Vector2(0.0, face - 0.012),
-    new THREE.Vector2(0.045, face - 0.012),
-    new THREE.Vector2(0.055, face - 0.03),
-    new THREE.Vector2(0.15, face - 0.036),
-    new THREE.Vector2(rim - 0.012, face - 0.014),
+    new THREE.Vector2(0.0, face - 0.008),
+    new THREE.Vector2(0.045, face - 0.008),
+    new THREE.Vector2(0.058, face - 0.02),
+    new THREE.Vector2(0.15, face - 0.024),
+    new THREE.Vector2(rim - 0.014, face - 0.01),
     new THREE.Vector2(rim, face - 0.004),
     new THREE.Vector2(rim, -face),
     new THREE.Vector2(rim - 0.03, -face),
-  ];
+  ].reverse();
 }
 
 export function plateShape(points: [number, number][]): THREE.Shape {

@@ -14,7 +14,7 @@ export default function Callouts() {
     const sec = sceneState.section;
     for (const el of refs.current) {
       if (!el) continue;
-      const on = Number(el.dataset.scene) === sec && sceneState.fade < 0.5;
+      const on = Number(el.dataset.scene) === sec && sceneState.fade < 0.5 && sceneState.settled > 0.6;
       if (on !== el.classList.contains('is-on')) el.classList.toggle('is-on', on);
     }
   });

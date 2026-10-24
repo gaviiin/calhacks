@@ -2,7 +2,7 @@ import { useLayoutEffect, useState, type ReactNode, type RefObject } from 'react
 import gsap from 'gsap';
 import { ScrollTrigger } from 'gsap/ScrollTrigger';
 import { LIVERY_SEQUENCE, PRODUCT_ID, PRODUCT_STATION, SCENES } from '../../data/story';
-import { sceneState, setLiverySequence, stationValues } from '../../three/state';
+import { LIVERIES, sceneState, setLiverySequence, stationValues, type LiveryKey } from '../../three/state';
 
 gsap.registerPlugin(ScrollTrigger);
 
@@ -41,7 +41,8 @@ export function useStoryTimeline(container: RefObject<HTMLElement>, reduceMotion
     const mobile = window.matchMedia('(max-width: 900px)').matches;
     const stations = [...SCENES.map(s => stationValues(s.station, mobile)), stationValues(PRODUCT_STATION, mobile)];
     const ids = [...SCENES.map(s => s.id), PRODUCT_ID];
-    setLiverySequence(LIVERY_SEQUENCE);
+    const lock = import.meta.env.DEV ? new URLSearchParams(window.location.search).get('livery') : null;
+    setLiverySequence(lock && lock in LIVERIES ? LIVERY_SEQUENCE.map(() => lock as LiveryKey) : LIVERY_SEQUENCE);
     Object.assign(sceneState, stations[0], { liveryT: 0 });
 
     const ctx = gsap.context(() => {
