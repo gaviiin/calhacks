@@ -46,7 +46,7 @@ async def main() -> None:
         actor_input = await Actor.get_input() or {}
         season = int(actor_input.get("season", 2024))
         event_slug = str(actor_input.get("event_slug", "belgian-grand-prix")).strip().lower()
-        max_items = max(1, min(int(actor_input.get("max_items", 10)), 100))
+        max_items = max(1, min(int(actor_input.get("max_items", 100)), 100))
         document_filter = actor_input.get("document_filter", "decisions_and_classifications")
 
         async with httpx.AsyncClient(

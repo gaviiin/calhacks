@@ -1,0 +1,16 @@
+{
+  "_note": "SYNTHETIC. Invented constructors' prize table for the Pit Wall project. Real F1 prize money per position is not officially published. Amounts in USD cents, paid after the season.",
+  "currency": "USD",
+  "by_position": {
+    "1": 14000000000,
+    "2": 13100000000,
+    "3": 12200000000,
+    "4": 11300000000,
+    "5": 10400000000,
+    "6": 9500000000,
+    "7": 8600000000,
+    "8": 7700000000,
+    "9": 6800000000,
+    "10": 6000000000
+  }
+}

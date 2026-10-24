@@ -18,3 +18,7 @@ ingestion/actor/storage/
 
 # spacetimedb build output
 spacetimedb/dist/
+
+# finance
+data/
+keys/

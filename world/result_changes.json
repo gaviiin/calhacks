@@ -1,0 +1,23 @@
+{
+  "_note": "Real post-race changes affecting the mirrored constructor. road_position is where the car crossed the line before the decision. Lane B: confirm each against world/results (the car shows position_text 'D') and the FIA capture. verified=false until checked.",
+  "changes": [
+    {
+      "season": 2024, "round": 14, "slug": "belgian-grand-prix", "session": "race",
+      "car": 63, "driver_id": "russell", "road_position": 1, "final_status": "DSQ",
+      "fia_doc": "Doc 44 - Infringement - Car 63 - Technical non-compliance (Weight)",
+      "verified": false
+    },
+    {
+      "season": 2023, "round": 18, "slug": "united-states-grand-prix", "session": "race",
+      "car": 44, "driver_id": "hamilton", "road_position": 2, "final_status": "DSQ",
+      "fia_doc": "Infringement - Car 44 - Technical non-compliance (Plank)",
+      "verified": false
+    },
+    {
+      "season": 2023, "round": 18, "slug": "united-states-grand-prix", "session": "race",
+      "car": 16, "driver_id": "leclerc", "road_position": 6, "final_status": "DSQ",
+      "fia_doc": "Infringement - Car 16 - Technical non-compliance (Plank)",
+      "verified": false
+    }
+  ]
+}
