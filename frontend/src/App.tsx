@@ -1,9 +1,18 @@
 import { useEffect, useRef, useState } from 'react';
 import { useSpacetimeDB, useTable } from 'spacetimedb/react';
 import { tables } from './module_bindings';
-import type { FiaDocuments } from './module_bindings/types';
+import type { FiaDecisionFacts, FiaDocuments } from './module_bindings/types';
 
 const HIGHLIGHT_MS = 8000;
+
+const OUTCOME_LABEL: Record<string, string> = {
+  disqualification: 'Disqualification',
+  time_penalty: 'Time penalty',
+  fine: 'Fine',
+  reprimand: 'Reprimand',
+  warning: 'Warning',
+  no_further_action: 'No further action',
+};
 
 const MODE_LABEL: Record<string, { label: string; tone: string }> = {
   live_actor_run: { label: 'Apify run', tone: 'live' },
@@ -29,6 +38,23 @@ function byNewest(a: FiaDocuments, b: FiaDocuments) {
     b.season - a.season ||
     a.eventSlug.localeCompare(b.eventSlug) ||
     Number(b.documentNumber || 0) - Number(a.documentNumber || 0)
+  );
+}
+
+function DecisionExtract({ fact }: { fact: FiaDecisionFacts }) {
+  const cars = fact.cars
+    ? `${fact.cars.includes(',') ? 'Cars' : 'Car'} ${fact.cars.split(',').join(', ')}`
+    : '';
+  return (
+    <div className="extract">
+      <p className="extract-line">
+        {cars && <span className="mono">{cars}</span>}
+        <span>{fact.offence}</span>
+      </p>
+      <p className="extract-outcome">{fact.outcome ? OUTCOME_LABEL[fact.outcome] ?? fact.outcome : 'No recognized outcome'}</p>
+      {fact.excerpt && <q className="extract-quote">{fact.excerpt}</q>}
+      <p className="extract-note">Text taken from the official PDF · needs review</p>
+    </div>
   );
 }
 
@@ -60,6 +86,21 @@ export default function App({ host, database }: { host: string; database: string
   const [fresh, setFresh] = useState<ReadonlySet<string>>(new Set());
   const [lastArrival, setLastArrival] = useState<string | null>(null);
 
+  const [facts, factsReady] = useTable(tables.fiaDecisionFacts, {
+    onInsert: (row: FiaDecisionFacts) => {
+      if (!readyRef.current) return;
+      setFresh(prev => new Set(prev).add(row.docKey));
+      setLastArrival(OUTCOME_LABEL[row.outcome] ?? 'Decision extract');
+      setTimeout(() => {
+        setFresh(prev => {
+          const next = new Set(prev);
+          next.delete(row.docKey);
+          return next;
+        });
+      }, HIGHLIGHT_MS);
+    },
+  });
+
   const [docs, ready] = useTable(tables.fiaDocuments, {
     onInsert: (row: FiaDocuments) => {
       // Rows replayed by the initial subscription are not "new".
@@ -77,9 +118,10 @@ export default function App({ host, database }: { host: string; database: string
   });
 
   useEffect(() => {
-    readyRef.current = ready;
-  }, [ready]);
+    readyRef.current = ready && factsReady;
+  }, [ready, factsReady]);
 
+  const factByKey = new Map(facts.map(fact => [fact.docKey, fact]));
   const sorted = [...docs].sort(byNewest);
   const needsReview = docs.filter(d => d.reviewStatus === 'unreviewed').length;
   const events = new Set(docs.map(d => `${d.season}-${d.eventSlug}`)).size;
@@ -125,7 +167,7 @@ export default function App({ host, database }: { host: string; database: string
         entry; every row waits for human review.
       </p>
 
-      {!ready ? (
+      {!ready || !factsReady ? (
         <p className="empty">Loading current evidence…</p>
       ) : sorted.length === 0 ? (
         <p className="empty">
@@ -156,6 +198,7 @@ export default function App({ host, database }: { host: string; database: string
                 <td data-label="Document">
                   {doc.documentNumber && <span className="doc-num mono">#{doc.documentNumber}</span>}
                   <span className="doc-title">{doc.title.replace(/^Doc\s+\d+\s*-\s*/i, '')}</span>
+                  {factByKey.get(doc.docKey) && <DecisionExtract fact={factByKey.get(doc.docKey)!} />}
                 </td>
                 <td data-label="Published" className="mono nowrap">
                   {doc.publishedAt || <span className="muted">not shown</span>}

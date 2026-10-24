@@ -120,8 +120,58 @@ def test_stranger_cannot_read_config_or_take_over_ingestion(stranger_token):
     assert takeover.status_code != 200
 
 
-def test_module_has_no_ledger_tables(owner_db):
-    # The evidence store holds documents and config only: no journal, no postings.
+def fact_record(**overrides):
+    parent = record()
+    base = {
+        "doc_key": parent["doc_key"],
+        "document_url": parent["document_url"],
+        "cars": "63",
+        "offence": "Breach of Article 4.1 of the FIA Formula One Technical Regulations.",
+        "outcome": "disqualification",
+        "excerpt": "Car 63 is disqualified from the Race classification.",
+        "pdf_hash": "ab" * 32,
+        "actor_run_id": "",
+        "ingest_mode": "test_fixture",
+        "extracted_at": ingest.utc_now(),
+    }
+    return {**base, **overrides}
+
+
+def test_decision_fact_is_idempotent(owner_db):
+    assert owner_db.ingest(record()) == (True, "")
+    before = owner_db.count_facts()
+    assert owner_db.ingest_decision(fact_record()) == (True, "")
+    assert owner_db.count_facts() == before + 1
+    assert owner_db.ingest_decision(fact_record()) == (True, "")
+    assert owner_db.count_facts() == before + 1
+
+
+def test_decision_fact_without_parent_is_rejected(owner_db):
+    ok, message = owner_db.ingest_decision(
+        fact_record(doc_key="a" * 64, document_url="https://www.fia.com/missing-parent.pdf")
+    )
+    assert not ok and "parent document" in message
+
+
+def test_decision_fact_rejects_a_non_fia_url(owner_db):
+    ok, message = owner_db.ingest_decision(fact_record(document_url="https://evil.example/x.pdf"))
+    assert not ok and "documentUrl" in message
+
+
+def test_stranger_cannot_store_a_decision(owner_db, stranger_token):
+    stranger = ingest.SpacetimeClient(URL, DB, stranger_token)
+    before = owner_db.count_facts()
+    with pytest.raises(ingest.IngestError, match="unauthorized"):
+        stranger.ingest_decision(fact_record(doc_key="c" * 64, document_url="https://www.fia.com/stranger-decision.pdf"))
+    assert owner_db.count_facts() == before
+
+
+def test_anonymous_cannot_store_a_decision(owner_db):
+    response = httpx.post(f"{URL}/v1/database/{DB}/call/ingest_decision", json=[fact_record()])
+    assert response.status_code == ingest.REDUCER_REJECTED and "unauthorized" in response.text
+
+
+def test_module_tables_are_the_evidence_and_finance_mirror(owner_db):
     out = subprocess.run([CLI, "describe", "--server", "local", "--json", DB],
                          check=True, capture_output=True, text=True).stdout
     tables = {
@@ -129,4 +179,12 @@ def test_module_has_no_ledger_tables(owner_db):
         for section in json.loads(out)["sections"] if "Tables" in section
         for t in section["Tables"]
     }
-    assert tables == {"fiaDocuments", "config"}  # module accessor names (SQL: fia_documents, config)
+    assert tables == {
+        "fiaDocuments",
+        "fiaDecisionFacts",
+        "config",
+        "journalEntries",
+        "jeLines",
+        "pitWallItems",
+        "writers",
+    }

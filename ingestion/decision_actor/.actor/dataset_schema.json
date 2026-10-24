@@ -1,0 +1,24 @@
+{
+  "actorSpecification": 1,
+  "fields": {},
+  "views": {
+    "overview": {
+      "title": "Decisions",
+      "transformation": {
+        "fields": ["season", "event_name", "document_number", "cars", "offence", "outcome", "excerpt"]
+      },
+      "display": {
+        "component": "table",
+        "properties": {
+          "season": { "label": "Season", "format": "number" },
+          "event_name": { "label": "Event", "format": "text" },
+          "document_number": { "label": "Doc #", "format": "text" },
+          "cars": { "label": "Cars", "format": "text" },
+          "offence": { "label": "Offence", "format": "text" },
+          "outcome": { "label": "Outcome", "format": "text" },
+          "excerpt": { "label": "Quote", "format": "text" }
+        }
+      }
+    }
+  }
+}

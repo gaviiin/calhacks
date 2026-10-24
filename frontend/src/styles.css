@@ -244,6 +244,43 @@ h1 {
   min-width: 150px;
 }
 
+.extract {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--border);
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  max-width: 520px;
+}
+
+.extract-line,
+.extract-outcome,
+.extract-note {
+  margin: 0;
+}
+
+.extract-line {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.extract-outcome {
+  font-weight: 600;
+}
+
+.extract-quote {
+  margin: 0;
+  color: var(--muted);
+  font-size: 13px;
+}
+
+.extract-note {
+  color: var(--review-fg);
+  font-size: 12px;
+}
+
 .doc-num {
   display: inline-block;
   min-width: 34px;

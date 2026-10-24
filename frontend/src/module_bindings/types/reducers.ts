@@ -6,9 +6,19 @@
 import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
+import IngestDecisionReducer from "../ingest_decision_reducer";
 import IngestDocumentReducer from "../ingest_document_reducer";
+import MirrorEntryReducer from "../mirror_entry_reducer";
+import MirrorItemReducer from "../mirror_item_reducer";
 import SetIngestorReducer from "../set_ingestor_reducer";
+import SetReviewStatusReducer from "../set_review_status_reducer";
+import SetWriterReducer from "../set_writer_reducer";
 
+export type IngestDecisionParams = __Infer<typeof IngestDecisionReducer>;
 export type IngestDocumentParams = __Infer<typeof IngestDocumentReducer>;
+export type MirrorEntryParams = __Infer<typeof MirrorEntryReducer>;
+export type MirrorItemParams = __Infer<typeof MirrorItemReducer>;
 export type SetIngestorParams = __Infer<typeof SetIngestorReducer>;
+export type SetReviewStatusParams = __Infer<typeof SetReviewStatusReducer>;
+export type SetWriterParams = __Infer<typeof SetWriterReducer>;
 

@@ -94,7 +94,33 @@ const pitWallItems = table(
 // Private: which identities may write the mirror (role 'kernel') or mark FIA documents reviewed (role 'router').
 const writers = table({ name: 'writers' }, { who: t.identity().primaryKey(), role: t.string() });
 
-const spacetimedb = schema({ fiaDocuments, config, journalEntries, jeLines, pitWallItems, writers });
+// One reviewable extract per official document. Text taken from the PDF, not a journal entry.
+const fiaDecisionFacts = table(
+  { name: 'fia_decision_facts', public: true },
+  {
+    docKey: t.string().primaryKey(),
+    documentUrl: t.string(),
+    cars: t.string(),
+    offence: t.string(),
+    outcome: t.string(),
+    excerpt: t.string(),
+    pdfHash: t.string(),
+    actorRunId: t.string(),
+    ingestMode: t.string(),
+    extractedAt: t.string(),
+    reviewStatus: t.string(),
+  }
+);
+
+const spacetimedb = schema({
+  fiaDocuments,
+  config,
+  journalEntries,
+  jeLines,
+  pitWallItems,
+  writers,
+  fiaDecisionFacts,
+});
 export default spacetimedb;
 
 const FiaDocumentInput = t.object('FiaDocumentInput', {
@@ -263,5 +289,53 @@ export const setReviewStatus = spacetimedb.reducer(
     const doc = ctx.db.fiaDocuments.docKey.find(docKey);
     if (!doc) throw new SenderError('no such document');
     ctx.db.fiaDocuments.docKey.update({ ...doc, reviewStatus });
+  }
+);
+
+const FiaDecisionInput = t.object('FiaDecisionInput', {
+  docKey: t.string(),
+  documentUrl: t.string(),
+  cars: t.string(),
+  offence: t.string(),
+  outcome: t.string(),
+  excerpt: t.string(),
+  pdfHash: t.string(),
+  actorRunId: t.string(),
+  ingestMode: t.string(),
+  extractedAt: t.string(),
+});
+
+const DECISION_OUTCOMES = ['', 'no_further_action', 'disqualification', 'time_penalty', 'fine', 'reprimand', 'warning'];
+const PDF_SHA256 = /^[0-9a-f]{64}$/;
+const CARS = /^(?:\d{1,2}(?:,\d{1,2})*)?$/;
+
+// Evidence from the PDF. The ingestion identity may write it; it never posts a journal entry.
+export const ingestDecision = spacetimedb.reducer(
+  { fact: FiaDecisionInput },
+  (ctx, { fact }) => {
+    const cfg = ctx.db.config.id.find(CONFIG_ID);
+    if (!cfg || !ctx.sender.equals(cfg.ingestor)) {
+      throw new SenderError('unauthorized: caller is not the ingestion identity');
+    }
+    if (!DOC_KEY.test(fact.docKey)) throw new SenderError('invalid decision: docKey must be 64 hex chars');
+    if (!ctx.db.fiaDocuments.docKey.find(fact.docKey)) {
+      throw new SenderError('invalid decision: parent document is not in fia_documents');
+    }
+    if (fact.documentUrl.length > 2048 || !OFFICIAL_URL.test(fact.documentUrl)) {
+      throw new SenderError('invalid decision: documentUrl must be an https://www.fia.com/ URL');
+    }
+    if (!CARS.test(fact.cars)) throw new SenderError('invalid decision: cars malformed');
+    requireText('offence', fact.offence);
+    if (!DECISION_OUTCOMES.includes(fact.outcome)) throw new SenderError('invalid decision: unknown outcome');
+    if (fact.excerpt.length > 500) throw new SenderError('invalid decision: excerpt exceeds 500 chars');
+    if (!PDF_SHA256.test(fact.pdfHash)) throw new SenderError('invalid decision: pdfHash must be 64 hex chars');
+    if (!INGEST_MODES.includes(fact.ingestMode)) throw new SenderError('invalid decision: unknown ingestMode');
+    if (fact.ingestMode === 'test_fixture' ? fact.actorRunId !== '' : !APIFY_RUN_ID.test(fact.actorRunId)) {
+      throw new SenderError('invalid decision: actorRunId does not match ingestMode');
+    }
+    if (!ISO_UTC.test(fact.extractedAt)) throw new SenderError('invalid decision: extractedAt must be ISO-8601 UTC');
+
+    if (ctx.db.fiaDecisionFacts.docKey.find(fact.docKey)) return;
+    ctx.db.fiaDecisionFacts.insert({ ...fact, reviewStatus: 'unreviewed' });
   }
 );

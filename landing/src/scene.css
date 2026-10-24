@@ -1,0 +1,440 @@
+/* Scroll story layout, 3D stage, HUD and engineering callouts. Design tokens live in styles.css. */
+
+.stage {
+  --stage-fade: 0;
+  position: fixed;
+  inset: 0;
+  z-index: 0;
+  opacity: calc(1 - var(--stage-fade) * 0.82);
+  background:
+    radial-gradient(ellipse 60% 42% at 58% 64%, var(--glow), transparent 70%),
+    radial-gradient(ellipse 80% 55% at 50% 100%, #0d1118 0%, transparent 70%),
+    var(--bg);
+  transition: background 1s;
+}
+
+.stage::after {
+  content: '';
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background:
+    linear-gradient(0deg, rgba(7, 9, 12, 0.92), transparent 20%),
+    linear-gradient(180deg, rgba(7, 9, 12, 0.7), transparent 22%),
+    linear-gradient(90deg, rgba(7, 9, 12, 0.8), rgba(7, 9, 12, 0.35) 30%, transparent 50%);
+}
+
+.stage canvas {
+  display: block;
+}
+
+.car-wrap {
+  position: absolute;
+  left: 50%;
+  top: 55%;
+  width: min(80vw, 1200px);
+  transform: translate(-40%, -50%);
+}
+
+.car-wrap svg {
+  width: 100%;
+  height: auto;
+}
+
+/* ---------- HUD ---------- */
+
+.hud {
+  position: absolute;
+  inset: 0;
+  z-index: 2;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 1s 0.4s;
+}
+
+.is-started .hud {
+  opacity: 1;
+}
+
+.hud-spec {
+  position: absolute;
+  left: var(--gutter);
+  bottom: 30px;
+  display: flex;
+  gap: 0;
+}
+
+.hud-spec div {
+  padding: 0 18px;
+  border-left: 1px solid rgba(255, 255, 255, 0.16);
+}
+
+.hud-spec div:first-child {
+  padding-left: 0;
+  border-left: 0;
+}
+
+.hud-spec b {
+  display: block;
+  font: 700 12px var(--mono);
+  letter-spacing: 0.1em;
+  color: var(--ink);
+}
+
+.hud-spec small {
+  display: block;
+  margin-top: 4px;
+  font: 500 8px var(--mono);
+  letter-spacing: 0.2em;
+  color: #6f7a84;
+}
+
+.telemetry {
+  position: absolute;
+  right: var(--gutter);
+  bottom: 68px;
+  display: flex;
+  gap: 22px;
+  font: 500 9px var(--mono);
+  letter-spacing: 0.14em;
+}
+
+.telemetry div {
+  display: grid;
+  gap: 3px;
+  text-align: right;
+}
+
+.telemetry small {
+  color: #5f6a74;
+  font-size: 8px;
+}
+
+.telemetry b {
+  font-weight: 600;
+  color: #c6ced4;
+  font-variant-numeric: tabular-nums;
+}
+
+.stage-status {
+  position: absolute;
+  right: var(--gutter);
+  bottom: 30px;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font: 500 9px var(--mono);
+  letter-spacing: 0.18em;
+  color: #8a949d;
+}
+
+.stage-status span {
+  width: 6px;
+  height: 6px;
+  border-radius: 50%;
+  background: var(--car-color);
+  box-shadow: 0 0 10px var(--car-color);
+  animation: pulse 2s infinite;
+}
+
+.stage-status--hold {
+  color: var(--hold);
+}
+
+.stage-status--hold span {
+  background: var(--hold);
+  box-shadow: 0 0 10px var(--hold);
+}
+
+@keyframes pulse {
+  50% {
+    opacity: 0.35;
+  }
+}
+
+/* ---------- scenes ---------- */
+
+.story {
+  position: relative;
+  z-index: 10;
+}
+
+.scene {
+  position: relative;
+  min-height: 170vh;
+  padding: 0 var(--gutter);
+}
+
+.scene--hero {
+  min-height: 140vh;
+}
+
+.scene-copy {
+  position: sticky;
+  top: clamp(120px, 17vh, 190px);
+  max-width: 520px;
+  padding-bottom: 20vh;
+}
+
+.scene--hero .scene-copy {
+  max-width: 780px;
+}
+
+.scene--hero h1 {
+  white-space: nowrap;
+}
+
+.facts {
+  display: grid;
+  max-width: 440px;
+  margin: 28px 0 0;
+  border-top: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+.facts div {
+  display: grid;
+  grid-template-columns: 112px 1fr;
+  gap: 12px;
+  padding: 11px 0;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+  font: 500 10px/1.6 var(--mono);
+}
+
+.facts dt {
+  color: var(--car-color);
+  letter-spacing: 0.16em;
+  transition: color 0.8s;
+}
+
+.facts dd {
+  margin: 0;
+  color: #dde3e4;
+}
+
+/* ---------- callouts: a dot on the part, a hairline to a glass label ---------- */
+
+.callout {
+  position: absolute;
+  left: 0;
+  top: 0;
+  opacity: 0;
+  transition: opacity 0.4s;
+}
+
+.callout.is-on {
+  opacity: 1;
+  transition-delay: var(--delay, 0s);
+}
+
+.callout-dot {
+  position: absolute;
+  left: -5px;
+  top: -5px;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 1.5px solid var(--car-color);
+  background: rgba(7, 9, 12, 0.7);
+  box-shadow: 0 0 12px var(--car-color);
+}
+
+.callout-dot::after {
+  content: '';
+  position: absolute;
+  inset: -6px;
+  border-radius: 50%;
+  border: 1px solid var(--car-color);
+  opacity: 0;
+}
+
+.callout.is-on .callout-dot::after {
+  animation: ping 2.4s var(--ease) infinite;
+}
+
+@keyframes ping {
+  0% {
+    transform: scale(0.4);
+    opacity: 0.8;
+  }
+  70%,
+  100% {
+    transform: scale(1.6);
+    opacity: 0;
+  }
+}
+
+.callout-line {
+  position: absolute;
+  overflow: visible;
+}
+
+.callout-line line {
+  stroke: var(--car-color);
+  stroke-width: 1;
+  stroke-dasharray: 1;
+  stroke-dashoffset: 1;
+  transition: stroke-dashoffset 0.6s var(--ease);
+}
+
+.callout.is-on .callout-line line {
+  stroke-dashoffset: 0;
+  transition-delay: inherit;
+}
+
+.callout-label {
+  position: absolute;
+  left: var(--dx);
+  top: var(--dy);
+  transform: translate(var(--lx, 0), -50%) translateY(6px);
+  white-space: nowrap;
+  padding: 9px 13px;
+  border: 1px solid rgba(255, 255, 255, 0.14);
+  border-left: 2px solid var(--car-color);
+  background: rgba(10, 13, 17, 0.9);
+  backdrop-filter: blur(8px);
+  font: 500 10px/1.5 var(--mono);
+  opacity: 0;
+  transition: opacity 0.4s, transform 0.5s var(--ease);
+  transition-delay: inherit;
+}
+
+.callout--left .callout-label {
+  --lx: -100%;
+}
+
+.callout.is-on .callout-label {
+  opacity: 1;
+  transform: translate(var(--lx, 0), -50%);
+}
+
+.callout-label b {
+  display: block;
+  color: var(--car-color);
+  font-size: 9px;
+  letter-spacing: 0.18em;
+}
+
+.callout-label span {
+  color: #eef2f1;
+}
+
+.callout-label em {
+  display: block;
+  margin-top: 5px;
+  padding-top: 5px;
+  border-top: 1px solid rgba(255, 255, 255, 0.1);
+  font-style: normal;
+  font-size: 9px;
+  letter-spacing: 0.12em;
+  color: #98a3ab;
+}
+
+.callout-label em.neg {
+  color: var(--alert);
+}
+
+.callout-label em.pos {
+  color: #c8ff6f;
+}
+
+.callout-label em.hold {
+  color: var(--hold);
+}
+
+/* Product console boots when reached. */
+.product .console {
+  opacity: 0;
+}
+
+@media (max-width: 900px) {
+  .callout {
+    display: none;
+  }
+
+  .stage {
+    position: sticky;
+    inset: auto;
+    top: 0;
+    height: 58svh;
+    z-index: 1;
+  }
+
+  .stage::after {
+    background:
+      linear-gradient(0deg, rgba(7, 9, 12, 0.95), transparent 22%),
+      linear-gradient(180deg, rgba(7, 9, 12, 0.7), transparent 24%);
+  }
+
+  .scene {
+    min-height: 105vh;
+    padding: 0 22px;
+  }
+
+  .scene--hero {
+    min-height: 95vh;
+  }
+
+  .scene-copy {
+    position: relative;
+    top: auto;
+    max-width: 100%;
+    padding: 6vh 0 6vh;
+  }
+
+  .scene--hero h1 {
+    white-space: normal;
+  }
+
+  .telemetry {
+    display: none;
+  }
+
+  /* Phones: the stage is a sticky header the story slides under; readouts move to its top edge. */
+  .stage {
+    z-index: 20;
+  }
+
+  .hud-spec {
+    left: 18px;
+    top: 92px;
+    bottom: auto;
+  }
+
+  .hud-spec b {
+    font-size: 10px;
+  }
+
+  .hud-spec div {
+    padding: 0 12px;
+  }
+
+  .stage-status {
+    display: none;
+  }
+
+  .story {
+    margin-top: -58svh;
+    padding-top: 58svh;
+  }
+
+  .facts div {
+    grid-template-columns: 92px 1fr;
+  }
+
+  .car-wrap {
+    width: 120vw;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .product .console,
+  .hud {
+    opacity: 1;
+    transform: none;
+  }
+
+  .stage-status span,
+  .callout.is-on .callout-dot::after {
+    animation: none;
+  }
+}

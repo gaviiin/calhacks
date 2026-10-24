@@ -1,0 +1,21 @@
+{
+  "captured_at": "2026-10-24T19:02:00Z",
+  "actor_id": "IaTOmd3dkqdfgsLWe",
+  "actor_run_id": "qePdgU4y2vLaeFTPB",
+  "dataset_id": "3UEnxfUjU6eBGFKdI",
+  "key_value_store_id": "TbcJEhdQmIvPxIH5H",
+  "run_started_at": "2026-10-24T19:01:22.531000+00:00",
+  "run_finished_at": "2026-10-24T19:01:53.420000+00:00",
+  "run_summary": {
+    "items_requested": 1,
+    "items_pushed": 0,
+    "skipped": [
+      {
+        "document_url": "https://www.fia.com/sites/default/files/decision-document/2024%20Belgian%20Grand%20Prix%20-%20Infringement%20-%20Car%2063%20-%20Technical%20non-compliance%20%28Weight%29.pdf",
+        "reason": "download failed: HTTP status error occurred with status code 404."
+      }
+    ],
+    "extracted_at": "2026-10-24T19:01:26Z"
+  },
+  "items": []
+}
