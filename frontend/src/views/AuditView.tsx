@@ -9,10 +9,11 @@ import { clock, refusalText } from '../lib/format';
 const MATRIX: { action: string; who: string }[] = [
   { action: 'Propose a classification, ask a question', who: 'Cap Analyst (AI)' },
   { action: 'Propose a house policy', who: 'Policy Learner (AI)' },
-  { action: 'Approve or reject below materiality, answer', who: 'Controller, Head of Cost Cap' },
-  { action: 'Approve at or above materiality', who: 'Head of Cost Cap' },
-  { action: 'Approve or reject a policy, grant autonomy', who: 'Head of Cost Cap' },
-  { action: 'Approve under a standing approval', who: 'Standing approvals, only for a policy granted autonomy' },
+  { action: 'Approve what an approved rule decided, at any amount', who: 'Standing approvals' },
+  { action: 'Decide a line no rule covers, below materiality', who: 'Controller, Head of Cost Cap' },
+  { action: 'Decide a line no rule covers, at or above materiality', who: 'Head of Cost Cap' },
+  { action: 'Teach a rule from one decision', who: 'Head of Cost Cap; Controller, below materiality only' },
+  { action: 'Approve a policy, take its standing approval back', who: 'Head of Cost Cap' },
   { action: 'Post to the ERP', who: 'ERP gateway, only when approved' },
   { action: 'Approve your own proposal', who: 'Nobody' },
 ];

@@ -42,8 +42,8 @@ def perform(run, notifier, who: str, action: str, context: dict, text: str = "",
         led.answer(q["q_id"], text.strip())
         out = run.router.agent.apply_answer(dict(led.one("SELECT * FROM questions WHERE q_id=?", q["q_id"])), led)
         run.router.engine.rereview(led)
-        drafted = [r for r in out if isinstance(r, dict) and r.get("type") == "rule_draft"]
-        tail = f" I drafted rule {drafted[0]['rule_id']} from your rulings; approve it in Pit Wall." if drafted else ""
+        learned = [r for r in out if isinstance(r, dict) and r.get("type") == "rule_learned"]
+        tail = f" I'll apply it to every later case of this clause (rule {learned[0]['rule_id']})." if learned else ""
         return {"ok": True, "text": f"Thanks, got it: \"{text.strip()}\".{tail}"}
 
     if action == "send_draft":

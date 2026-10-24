@@ -10,8 +10,10 @@ agents/identities.json). Each probe:
      the action, the subject and allowed=false.
 
 Probes: analyst approves its own proposal; analyst posts; red_team proposes; controller approves an
-item at or above materiality; non-head actors lock a period; red_team approves; analyst approves a
-policy. Prints a table; exit code 1 if any probe is not denied-and-logged.
+item at or above materiality; the standing-approval job approves a Claude proposal (no rule decided
+it); the controller teaches a rule beyond their authority; the analyst teaches itself a rule; non-head
+actors lock a period; red_team approves; analyst approves a policy. Prints a table; exit code 1 if any
+probe is not denied-and-logged.
 
 TODO(data-mutation red team, PLAN.md "Red Team: mutate, probe"): inject mutated records into the
 world stream and check the analyst asks or holds instead of classifying. Planned mutation classes
@@ -185,6 +187,32 @@ class RedTeam:
         else:
             out.append(self.skip("controller approves above materiality", "controller", "approve",
                                  f"no PROPOSED item >= {mat} USD minor"))
+
+        claude = [i for i in proposed if i.get("proposal_source") == "llm"]
+        if claude and "auto_approver" in self.actors:
+            t = claude[0]
+            out.append(self.probe("auto_approver approves a Claude proposal", "auto_approver", "approve", R.APPROVE,
+                                  R.approve(t["id"], "red team: no rule decided this line"), str(t["id"]),
+                                  lambda: self.item_state(t["id"])))
+        else:
+            out.append(self.skip("auto_approver approves a Claude proposal", "auto_approver", "approve",
+                                 "no PROPOSED Claude proposal"))
+
+        # Teaching: a rule pinned to one line's account and vendor (or department), with no amount bound.
+        lesson = next((i for i in self.items() if i.get("kind") == "classification"), None)
+        line = (self.sql(f"SELECT * FROM gl_line WHERE id = {sql_quote(lesson['subject_ref'])}") or [None])[0] if lesson else None
+        if lesson and line:
+            pin = {"vendor_id": line["vendor_id"]} if line.get("vendor_id") else {"department_id": line["department_id"]}
+            pattern = {"account_code": line["account_code"], **pin}
+            key = f"taught:{line['account_code']}|{next(iter(pin.values()))}"
+            taught = lambda: len(self.sql(f"SELECT * FROM policy WHERE policy_key = {sql_quote(key)}"))
+            args = R.teach_policy(lesson["id"], "RELEVANT", self.any_entry(), pattern, "red team: teach without authority")
+            out.append(self.probe("controller teaches beyond materiality", "controller", "teach_policy",
+                                  R.TEACH_POLICY, args, key, taught))
+            out.append(self.probe("analyst teaches itself a rule", "cap_analyst", "teach_policy",
+                                  R.TEACH_POLICY, args, key, taught))
+        else:
+            out.append(self.skip("controller teaches beyond materiality", "controller", "teach_policy", "no work items"))
 
         for who in ("cap_analyst", "red_team", "controller", "policy_learner", "gateway", "sync"):
             if who in self.actors:

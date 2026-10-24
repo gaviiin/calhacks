@@ -13,7 +13,7 @@ AGENT_MODE := $(if $(OFFLINE),--offline,)
 
 .PHONY: setup test stdb-start bindings dashboard landing \
         rulebook world api stdb-publish stdb-test bootstrap advance sync learner review-policies \
-        analyst review-items gateway redteam score cost-cap-run \
+        analyst standing review-items gateway redteam score cost-cap-run \
         revenue-api revenue-sim revenue-demo evidence-publish evidence-replay
 
 # ---------------------------------------------------------------- shared
@@ -78,7 +78,10 @@ review-policies:  ## the Head of Cost Cap approves the proposed policies (REJECT
 analyst:          ## Cap Analyst over the NEW queue once (Claude decides what no policy covers)
 	$(ENV) uv run python -m agents.cap_analyst --once --limit 500 $(AGENT_MODE)
 
-review-items:     ## the Controller approves routine proposals (code-decided, below materiality); the rest wait in the dashboard
+standing:         ## approve what an approved rule decided, at any amount; only new scenarios wait for a person
+	uv run python -m agents.auto_approver --once
+
+review-items:     ## (by hand) the Controller approves code-decided proposals below materiality in one batch
 	uv run python -m agents.review items --approve-all --source deterministic --below-materiality
 
 gateway:          ## post APPROVED items to the ERP mock once
@@ -91,7 +94,7 @@ score:            ## score proposals against the truth file (writes agents/out/s
 	uv run python -m agents.score
 
 cost-cap-run:     ## January end to end against a fresh module (needs stdb-start and api running)
-	$(MAKE) stdb-publish bootstrap advance sync learner review-policies analyst review-items gateway redteam score
+	$(MAKE) stdb-publish bootstrap advance sync learner review-policies analyst standing gateway redteam score
 
 # ---------------------------------------------------------------- revenue desk (finance/) and evidence (ingestion/, spacetimedb/)
 

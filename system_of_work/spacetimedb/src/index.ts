@@ -28,6 +28,7 @@ import {
   bumpCap,
   isAllocated,
   isLocked,
+  materiality,
   ledgerDeltas,
   lineChain,
   plannedBookings,
@@ -723,23 +724,31 @@ export const answer = spacetimedb.reducer(
   }
 );
 
-// For an auto_approver call, the audit evidence names the standing approval it relies on,
-// including the human who granted autonomy, so every autonomous decision traces to them.
+// For an auto_approver call, the audit evidence names what it relied on: each cited policy with
+// the person whose approval (or teaching) gave it standing approval, or the person whose answer
+// the proposal was built from, so every decision taken without a person traces to one.
 function approvalEvidence(ctx: Ctx, workItemId: bigint): string | undefined {
   if (roleOf(ctx) !== AUTONOMOUS_ROLE) return undefined;
   const item = ctx.db.workItem.id.find(workItemId);
   if (!item) return undefined; // itemStep throws for the unknown id
-  const pol = item.proposedPolicyId !== undefined ? ctx.db.policy.id.find(item.proposedPolicyId) : null;
-  const granted = pol?.autonomy === 'GRANTED';
-  return JSON.stringify({
-    standing_approval: {
-      policy_id: toJson(item.proposedPolicyId),
+  const standing = (policyId: bigint | undefined) => {
+    const pol = policyId !== undefined ? ctx.db.policy.id.find(policyId) : null;
+    const granted = pol?.autonomy === 'GRANTED';
+    return {
+      policy_id: toJson(policyId),
       policy_key: pol?.policyKey ?? null,
       policy_version: pol?.version ?? null,
       autonomy: pol?.autonomy ?? null,
       autonomy_granted_by: granted ? toJson(pol.autonomyBy) : null,
       autonomy_granted_at: granted ? toJson(pol.autonomyAt) : null,
-    },
+    };
+  };
+  return JSON.stringify({
+    standing_approval: standing(item.proposedPolicyId),
+    allocations: isAllocated(item)
+      ? allocationRowsOf(ctx, item.id).map(a => ({ line_no: a.lineNo, basis: a.basis, ...standing(a.policyId) }))
+      : [],
+    answered_by: toJson(item.answeredBy),
     proposal_source: item.proposalSource,
     evidence_refs: item.evidenceRefs,
   });
@@ -1025,6 +1034,7 @@ function decidePolicy(ctx: Ctx, policyId: bigint, action: 'approve_policy' | 're
         decidedBy: ctx.sender,
         decidedReason: reason,
         decidedAt: ctx.timestamp,
+        ...(action === 'approve_policy' && pol.autonomy === 'NONE' ? standingApproval(ctx, 'standing approval comes with approval') : {}),
       };
       ctx.db.policy.id.update(after);
       if (action !== 'approve_policy') return { after: snap(after) };
@@ -1041,6 +1051,7 @@ function decidePolicy(ctx: Ctx, policyId: bigint, action: 'approve_policy' | 're
           ctx.db.policy.id.update(after);
         }
       }
+      Object.assign(effects, ruleCoversOpenItems(ctx, after));
       return { after: snap(after), effects };
     },
     reason,
@@ -1156,6 +1167,146 @@ export const rejectPolicy = spacetimedb.reducer(
   (ctx, { policyId, reason }) => {
     requireNonEmpty('reason', reason);
     decidePolicy(ctx, policyId, 'reject_policy', reason);
+  }
+);
+
+// Standing approval comes with approval: the lines an approved rule decides need no person. The
+// head withdraws it with revokeAutonomy, and every later line of that rule goes back to people.
+function standingApproval(ctx: Ctx, reason: string) {
+  return { autonomy: 'GRANTED', autonomyBy: ctx.sender, autonomyReason: reason, autonomyAt: ctx.timestamp };
+}
+
+// A rule approved or taught now covers lines a person was about to decide: open items no rule
+// decided (a Claude proposal, a question) that the rule applies to go back to NEW with an audit
+// `reopen`, so the analyst re-proposes them under the rule and nobody is asked the same thing twice.
+function ruleCoversOpenItems(ctx: Ctx, approved: { id: bigint }): Diff {
+  const effects: Diff = {};
+  const forest = policyForest(ctx);
+  const node = forest.byId.get(approved.id);
+  if (!node) return effects;
+  for (const state of ['PROPOSED', 'NEEDS_INFO']) {
+    for (const it of [...ctx.db.workItem.state.filter(state)].sort((a, b) => Number(a.id - b.id))) {
+      if (it.kind !== 'classification' || (state === 'PROPOSED' && it.proposalSource !== 'llm')) continue;
+      const line = subjectLine(ctx, it);
+      if (!line || isLocked(ctx, it.periodKey)) continue;
+      if (!forest.applies(node, lineFacts(ctx, line), it.periodKey)) continue;
+      Object.assign(effects, reopenItem(ctx, it, `rule now covers it: pol-${approved.id}`, JSON.stringify([line.rawRef])).effects);
+    }
+  }
+  return effects;
+}
+
+// A person decided a line and asked the system to remember it. The rule is born APPROVED with
+// standing approval, authored and approved by that person in one transition; a correction of a
+// policy's decision becomes an exception under that policy. One example earns a narrow rule: the
+// pattern pins the account and the vendor, department or memo (broader rules come from history
+// or several alike corrections, through the Policy Learner), and a controller may teach only
+// within the authority they hold: the rule must stay below materiality.
+export const teachPolicy = spacetimedb.reducer(
+  { name: 'teachPolicy' },
+  { workItemId: t.u64(), categoryCode: t.string(), rulebookEntryId: t.string(), pattern: t.string(), reason: t.string() },
+  (ctx, args) => {
+    requireNonEmpty('categoryCode', args.categoryCode);
+    requireNonEmpty('rulebookEntryId', args.rulebookEntryId);
+    requireNonEmpty('reason', args.reason);
+    const item = ctx.db.workItem.id.find(args.workItemId);
+    if (!item) throw bad(`unknown work item ${args.workItemId}`);
+    const line = subjectLine(ctx, item);
+    if (!line) throw bad(`work item ${item.id} has no ledger line to learn from`);
+    const pattern = parsePattern(args.pattern);
+    const narrow: string[] = [];
+    if (pattern.account_code === undefined) narrow.push('teach_too_broad: a taught rule must pin account_code');
+    if (pattern.vendor_id === undefined && pattern.department_id === undefined && pattern.memo_regex === undefined && pattern.description_regex === undefined) {
+      narrow.push('teach_too_broad: a taught rule must also pin the vendor, department or memo; one example earns a narrow rule');
+    }
+    if (roleOf(ctx) === 'human_controller') {
+      const m = materiality(ctx);
+      const capped =
+        m !== undefined &&
+        pattern.max_amount_usd_minor !== undefined &&
+        pattern.max_amount_usd_minor < m &&
+        pattern.min_amount_usd_minor !== undefined &&
+        pattern.min_amount_usd_minor > -m;
+      if (!capped) narrow.push(`teach_beyond_authority: a controller's rule must stay within ±materiality (set min/max_amount_usd_minor inside ${m ?? 'materiality'})`);
+    }
+    const prior = item.proposedPolicyId !== undefined ? ctx.db.policy.id.find(item.proposedPolicyId) : undefined;
+    const parentPolicyId = prior && prior.state === 'APPROVED' && prior.categoryCode !== args.categoryCode ? prior.id : undefined;
+    const policyKey = `taught:${pattern.account_code ?? '-'}|${pattern.vendor_id ?? pattern.department_id ?? 'memo'}`;
+    const version = [...ctx.db.policy.policyKey.filter(policyKey)].reduce((m, p) => Math.max(m, p.version), 0) + 1;
+    const effectiveFrom = `${item.periodKey}-01`;
+    const cornerstones: Cornerstone[] = [{ ref: line.id, category_code: args.categoryCode }];
+    const evidenceRefs = JSON.stringify([line.id, `work_item:${item.id}`]);
+    const nextId = [...ctx.db.policy.iter()].reduce((m, p) => (p.id > m ? p.id : m), 0n) + 1n;
+    const analysis = analyseDraft(
+      ctx,
+      {
+        id: nextId,
+        policyKey,
+        version,
+        categoryCode: args.categoryCode,
+        rulebookEntryId: args.rulebookEntryId,
+        pattern: args.pattern,
+        parentPolicyId,
+        state: 'APPROVED',
+        effectiveFrom,
+        effectiveTo: undefined,
+      },
+      cornerstones,
+      evidenceRefs
+    );
+    const who = ctx.db.role.identity.find(ctx.sender)?.label ?? roleOf(ctx);
+    const rationale = `Taught by ${who} on work item ${item.id} (${line.id}): ${args.reason}`;
+    transition(ctx, {
+      action: 'teach_policy',
+      resourceKind: 'policy',
+      machine: 'policy',
+      subjectId: policyKey,
+      fromState: 'ABSENT',
+      before: null,
+      policyDraft: {
+        categoryCode: args.categoryCode,
+        rulebookEntryId: args.rulebookEntryId,
+        effectiveFrom,
+        rdrViolations: [...narrow, ...analysis.violations],
+      },
+      apply: () => {
+        const row = ctx.db.policy.insert({
+          id: 0n,
+          policyKey,
+          version,
+          categoryCode: args.categoryCode,
+          rulebookEntryId: args.rulebookEntryId,
+          pattern: args.pattern,
+          rationale,
+          evidenceRefs,
+          precedentCount: 1,
+          effectiveFrom,
+          effectiveTo: undefined,
+          parentPolicyId,
+          cornerstones: JSON.stringify(cornerstones),
+          flipReport: JSON.stringify(flipReportJson(analysis.flipReport)),
+          state: 'APPROVED',
+          proposedBy: ctx.sender,
+          decidedBy: ctx.sender,
+          decidedReason: args.reason,
+          createdAt: ctx.timestamp,
+          decidedAt: ctx.timestamp,
+          autonomyEvidence: '',
+          ...standingApproval(ctx, 'taught by a person: standing approval comes with it'),
+        });
+        const effects = supersedeOlderVersions(ctx, row);
+        if (row.parentPolicyId !== undefined || version > 1) Object.assign(effects, exceptionApproved(ctx, row).effects);
+        Object.assign(effects, ruleCoversOpenItems(ctx, row));
+        return {
+          after: snap(row),
+          effects,
+          policyRef: { id: row.id, version },
+          reason: `policy ${row.id} ${policyKey} v${version}${parentPolicyId !== undefined ? ` (exception to pol-${parentPolicyId})` : ''}: ${rationale}`,
+        };
+      },
+      reason: rationale,
+      evidence: analysis.evidence,
+    });
   }
 );
 

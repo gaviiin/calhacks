@@ -37,6 +37,7 @@ PROPOSE_POLICY = "proposePolicy"
 PROPOSE_ALLOCATIONS = "proposeAllocations"
 APPROVE_POLICY = "approvePolicy"
 REJECT_POLICY = "rejectPolicy"
+TEACH_POLICY = "teachPolicy"
 GRANT_AUTONOMY = "grantAutonomy"
 REVOKE_AUTONOMY = "revokeAutonomy"
 RECORD_STEP = "recordStep"
@@ -322,6 +323,12 @@ def approve_policy(policy_id: int, reason: str) -> list:
 
 def reject_policy(policy_id: int, reason: str) -> list:
     return [_int(policy_id), reason]
+
+
+def teach_policy(work_item_id: int, category_code: str, rulebook_entry_id: str, pattern: dict | str, reason: str) -> list:
+    """REDUCERS.md: workItemId, categoryCode, rulebookEntryId, pattern (JSON string), reason. A person
+    turns their decision on a line into a narrow rule, approved by them in the same call."""
+    return [_int(work_item_id), category_code, rulebook_entry_id, _json_obj(pattern), reason]
 
 
 def grant_autonomy(policy_id: int, evidence: dict | str, reason: str) -> list:

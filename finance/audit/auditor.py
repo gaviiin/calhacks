@@ -278,7 +278,8 @@ class Auditor:
         for e in posted:
             total = e["total_cents"] or 0
             judgment = e["kind"] in JUDGMENT_KINDS or e["preparer"] != "code" or e["basis"].get("exception")
-            required = (["controller", "cfo"] if total >= CFO_CENTS else ["controller"]) if judgment and total >= MATERIALITY_CENTS else []
+            # the control: a person decides every judgment entry, whatever its size (the CFO too at $1M or more)
+            required = (["controller", "cfo"] if total >= CFO_CENTS else ["controller"]) if judgment else []
             if not required and not e["approvals"]:
                 continue
             tested += 1
@@ -286,7 +287,7 @@ class Auditor:
             roles = {a["role"] for a in approved}
             missing = [r for r in required if r not in roles]
             if missing:
-                self.add("A4", "high", "Material entry posted without the required approval",
+                self.add("A4", "high", "Judgment entry posted without the required approval",
                          f"{fmt(total)} {e['kind']} needs {' and '.join(required)}; has {sorted(roles) or 'none'}", e["je_id"], total,
                          "Get the approval now or reverse the entry; find how it skipped the queue.")
             for a in approved:

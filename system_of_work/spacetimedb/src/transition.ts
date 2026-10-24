@@ -14,6 +14,7 @@ import {
   AUTONOMOUS_ROLE,
   RELEVANT_CATEGORY,
   DETERMINISTIC_SOURCE,
+  HUMAN_TEXT_SOURCE,
   MATERIALITY_ACTIONS,
   MATERIALITY_ROLE,
   PERIOD_LOCKED_ACTIONS,
@@ -205,7 +206,7 @@ function guardViolations(ctx: Ctx, actorRole: string, req: TransitionRequest): s
         v.push(`separation_of_duties: caller answered the question on work item ${item.id} and may not ${req.action} it`);
       }
     }
-    if (MATERIALITY_ACTIONS.includes(req.action) && actorRole !== MATERIALITY_ROLE) {
+    if (MATERIALITY_ACTIONS.includes(req.action) && actorRole !== MATERIALITY_ROLE && actorRole !== AUTONOMOUS_ROLE) {
       const threshold = materiality(ctx);
       // Materiality is about size, not sign: a large credit (a reversal, a refund) moves the
       // cap as much as a large charge, so compare the absolute amount.
@@ -570,31 +571,46 @@ function limitViolations(ctx: Ctx, item: WorkItem, planned: Booking[], verb: 'pr
   return v;
 }
 
-// auto_approver: the proposal must be deterministic and cite a policy that is APPROVED, in
-// force for the item's period and has autonomy GRANTED (SUSPENDED and REVOKED fail here; a
-// superseded version fails the re-validation above). Materiality and SoD are general guards.
+// auto_approver approves what an approved rule decided, at any amount: a person is needed only
+// where no rule covers the line. Allowed: a deterministic proposal whose every citation (the whole
+// line, or each bill-line allocation; a cap_limit_excess split is computed by rule beside its
+// sibling) is a policy that is APPROVED, in force and keeps its standing approval (autonomy
+// GRANTED, given with approval, withdrawn by revoke, SUSPENDED by a newer version); or a proposal
+// built from a person's answer on this very line (human_text with answered_by on record). Never a
+// Claude proposal: no rule covered that line, so a person decides it once and may teach the rule.
 function standingApprovalViolations(ctx: Ctx, item: WorkItem): string[] {
   const v: string[] = [];
+  if (item.proposalSource === HUMAN_TEXT_SOURCE) {
+    if (item.answeredBy === undefined) v.push(`standing_approval: work item ${item.id} has a human_text proposal but no answer on record`);
+    return v;
+  }
   if (item.proposalSource !== DETERMINISTIC_SOURCE) {
     v.push(
-      `standing_approval: work item ${item.id} proposal_source is ${JSON.stringify(item.proposalSource)}; ${AUTONOMOUS_ROLE} may only approve ${DETERMINISTIC_SOURCE} proposals`
+      `standing_approval: work item ${item.id} proposal_source is ${JSON.stringify(item.proposalSource)}; no approved rule decided it, so a person does`
     );
-  }
-  if (item.proposedPolicyId === undefined) {
-    v.push(`standing_approval: work item ${item.id} cites no policy; ${AUTONOMOUS_ROLE} may only approve under a policy with autonomy GRANTED`);
     return v;
   }
-  const pol = ctx.db.policy.id.find(item.proposedPolicyId);
-  if (!pol) {
-    v.push(`standing_approval: cited policy ${item.proposedPolicyId} does not exist`);
-    return v;
+  const cites: { policyId?: bigint; basis: string; label: string }[] = isAllocated(item)
+    ? allocationRowsOf(ctx, item.id).map(a => ({ policyId: a.policyId, basis: a.basis, label: `allocation ${a.lineNo}` }))
+    : [{ policyId: item.proposedPolicyId, basis: 'line', label: 'the proposal' }];
+  for (const c of cites) {
+    if (c.basis === 'cap_limit_excess') continue;
+    if (c.policyId === undefined) {
+      v.push(`standing_approval: work item ${item.id}: ${c.label} cites no policy; a person decides it`);
+      continue;
+    }
+    const pol = ctx.db.policy.id.find(c.policyId);
+    if (!pol) {
+      v.push(`standing_approval: cited policy ${c.policyId} does not exist`);
+      continue;
+    }
+    const tag = `policy ${pol.id} (${pol.policyKey} v${pol.version})`;
+    if (pol.state !== 'APPROVED') v.push(`standing_approval: ${tag} is ${pol.state}, not APPROVED`);
+    if (!windowCoversPeriod(pol.effectiveFrom, pol.effectiveTo, item.periodKey)) {
+      v.push(`standing_approval: ${tag} is not in force for period ${item.periodKey}`);
+    }
+    if (pol.autonomy !== 'GRANTED') v.push(`standing_approval: ${tag} standing approval is ${pol.autonomy}, not GRANTED`);
   }
-  const tag = `policy ${pol.id} (${pol.policyKey} v${pol.version})`;
-  if (pol.state !== 'APPROVED') v.push(`standing_approval: ${tag} is ${pol.state}, not APPROVED`);
-  if (!windowCoversPeriod(pol.effectiveFrom, pol.effectiveTo, item.periodKey)) {
-    v.push(`standing_approval: ${tag} is not in force for period ${item.periodKey}`);
-  }
-  if (pol.autonomy !== 'GRANTED') v.push(`standing_approval: ${tag} autonomy is ${pol.autonomy}, not GRANTED`);
   return v;
 }
 

@@ -12,7 +12,7 @@ function kindLabel(item: InboxItem): string {
   if (item.kind === 'policy') return 'Policy';
   if (item.kind === 'entry') return 'Revenue entry';
   if (item.item.state === 'NEEDS_INFO') return 'Question';
-  return item.item.proposalSource === 'llm' ? 'Claude proposal' : 'Proposal';
+  return item.item.proposalSource === 'llm' ? 'New scenario' : 'Proposal';
 }
 
 export function InboxRow({ item, selected, onSelect }: { item: InboxItem; selected: boolean; onSelect: () => void }) {

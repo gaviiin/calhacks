@@ -90,6 +90,7 @@ const ACTION_WORDS: Record<string, string> = {
   lock_period: 'lock the month',
   propose_policy: 'propose a policy',
   approve_policy: 'approve a policy',
+  teach_policy: 'teach a rule',
   reject_policy: 'reject a policy',
   grant_autonomy: 'grant a policy autonomy',
   upsert_gl_line: 'write ledger lines',
@@ -129,6 +130,16 @@ export function refusalText(reason: string): string {
           return 'The month cannot be locked while work items are still open.';
         case 'cap_limit_exceeded':
           return 'Posting it would take the category past its limit under the regulations.';
+        case 'standing_approval':
+          return /answer on record/.test(body)
+            ? 'No person answered this line, so its proposal needs a person.'
+            : /REVOKED|SUSPENDED|NONE/.test(body)
+              ? "The policy's standing approval was taken back, so a person approves its lines."
+              : 'No approved rule decided this line, so a person does.';
+        case 'teach_too_broad':
+          return 'One example earns a narrow rule: pin the vendor, department or memo as well as the account.';
+        case 'teach_beyond_authority':
+          return "A controller's rule must stay inside the materiality line; the Head of Cost Cap can teach beyond it.";
         default:
           return p.trim();
       }

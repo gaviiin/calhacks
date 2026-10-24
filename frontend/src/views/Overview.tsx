@@ -44,6 +44,10 @@ function DeskLines() {
   const items = cc.workItems.filter((w) => w.kind === 'classification');
   const count = (f: (s: string) => boolean) => items.filter((w) => f(w.state)).length;
   const refused = cc.audit.filter((a) => !a.allowed).length;
+  const standing = cc.audit.filter((a) => a.action === 'approve' && a.allowed && a.actorRole === 'auto_approver').length;
+  const byPeople = cc.audit.filter(
+    (a) => a.allowed && a.actorRole.startsWith('human_') && ['approve', 'reject', 'answer', 'teach_policy'].includes(a.action)
+  ).length;
   const s = rev.scorecard;
   const finalRounds = rev.timeline.filter((r) => r.final).length;
   return (
@@ -55,6 +59,12 @@ function DeskLines() {
         </dd>
         <dd>
           <b>{items.filter((w) => w.proposalSource === 'llm').length}</b> by Claude
+        </dd>
+        <dd>
+          <b>{standing}</b> approved under an approved rule, no person
+        </dd>
+        <dd>
+          <b>{byPeople}</b> decisions by people
         </dd>
         <dd>
           <b>{count((x) => x === 'NEEDS_INFO')}</b> asked a person

@@ -119,3 +119,8 @@ def test_reducer_names_are_schema_names():
     assert names == {"bootstrapAdmin", "createRoleInvite", "claimRole", "setSetting", "loadRulebookEntry",
                      "lockPeriod", "upsertGlLine", "upsertBillLine", "upsertVendor", "upsertFairValue", "propose",
                      "ask", "answer", "approve", "reject", "post", "proposePolicy", "approvePolicy", "rejectPolicy"}
+
+
+def test_teach_policy_args():
+    assert R.teach_policy(9, "RELEVANT", "RELEVANT@SECD-ISS07", {"vendor_id": "ven-1", "account_code": "6410"}, "why") == [
+        9, "RELEVANT", "RELEVANT@SECD-ISS07", '{"account_code": "6410", "vendor_id": "ven-1"}', "why"]

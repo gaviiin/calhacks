@@ -53,6 +53,7 @@ import RejectReducer from "./reject_reducer";
 import RejectPolicyReducer from "./reject_policy_reducer";
 import RevokeAutonomyReducer from "./revoke_autonomy_reducer";
 import SetSettingReducer from "./set_setting_reducer";
+import TeachPolicyReducer from "./teach_policy_reducer";
 import UpsertBillLineReducer from "./upsert_bill_line_reducer";
 import UpsertFairValueReducer from "./upsert_fair_value_reducer";
 import UpsertGlLineReducer from "./upsert_gl_line_reducer";
@@ -335,6 +336,7 @@ const reducersSchema = __reducers(
   __reducerSchema("rejectPolicy", RejectPolicyReducer),
   __reducerSchema("revokeAutonomy", RevokeAutonomyReducer),
   __reducerSchema("setSetting", SetSettingReducer),
+  __reducerSchema("teachPolicy", TeachPolicyReducer),
   __reducerSchema("upsertBillLine", UpsertBillLineReducer),
   __reducerSchema("upsertFairValue", UpsertFairValueReducer),
   __reducerSchema("upsertGlLine", UpsertGlLineReducer),

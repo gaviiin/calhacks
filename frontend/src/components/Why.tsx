@@ -240,7 +240,7 @@ function WorkItemWhy({ item, status }: { item: WorkItem; status: SeatStatus }) {
         <h3>
           {source === 'llm' ? (
             <>
-              <IconAgent size={14} /> Decided by Claude{model ? ` (${model})` : ''}: no approved policy covered this line
+              <IconAgent size={14} /> New scenario: no approved rule covered this line, so Claude{model ? ` (${model})` : ''} drafted this for a person
             </>
           ) : source === 'human_text' ? (
             <>
@@ -347,62 +347,160 @@ function Outcome({ row }: { row: AuditLog | null }) {
   );
 }
 
+/** The rule a person's decision would teach: this line's account and vendor (or department), and for
+ * a controller, only lines inside the materiality line (they may not delegate more than they hold). */
+function useLesson(item: WorkItem) {
+  const cc = useCostCap();
+  const { person } = useSeat();
+  return useMemo(() => {
+    const gl = cc.glLines.get(item.subjectRef);
+    if (!gl || item.kind !== 'classification') return null;
+    const vendor = gl.vendorId ? cc.vendors.get(gl.vendorId) : undefined;
+    const controller = person.costCapRole === 'human_controller';
+    const bound = Number(cc.materiality) - 1;
+    const pattern = {
+      account_code: gl.accountCode,
+      ...(gl.vendorId ? { vendor_id: gl.vendorId } : { department_id: gl.departmentId }),
+      ...(controller ? { min_amount_usd_minor: -bound, max_amount_usd_minor: bound } : {}),
+    };
+    const who = vendor?.name ?? gl.departmentId.replace('dept-', '') + ' department';
+    const start = `${item.periodKey}-01`;
+    const end = `${item.periodKey}-28`;
+    const entries = [...cc.rulebook.values()]
+      .filter((e) => e.effectiveFrom <= start && (!e.effectiveTo || e.effectiveTo >= end))
+      .sort((a, b) => categoryName(a.categoryCode).localeCompare(categoryName(b.categoryCode)));
+    return { pattern, scope: `${who} on account ${gl.accountCode}${controller ? `, lines under ${usdShort(cc.materiality)}` : ''}`, entries };
+  }, [cc, item.subjectRef, item.kind, item.periodKey, person.costCapRole]);
+}
+
+function useTeachOutcome(since: number | null) {
+  const cc = useCostCap();
+  const { identityHex } = useSeatConnection();
+  return useMemo(() => {
+    if (since === null || !identityHex) return null;
+    return (
+      cc.audit
+        .filter((a) => a.action === 'teach_policy' && a.actor.toHexString() === identityHex && a.at.toDate().getTime() >= since - 2000)
+        .sort((a, b) => Number(b.id - a.id))[0] ?? null
+    );
+  }, [cc.audit, since, identityHex]);
+}
+
 function ItemDecision({ item, status, material, trail }: { item: WorkItem; status: SeatStatus; material: boolean; trail: AuditLog[] }) {
   const { person } = useSeat();
   const { conn } = useSeatConnection();
+  const lesson = useLesson(item);
+  const proposed = item.proposedCategoryCode && item.proposedCategoryCode !== 'ALLOCATED' ? item.proposedCategoryCode : '';
   const [text, setText] = useState('');
+  const [category, setCategory] = useState(proposed);
+  const [remember, setRemember] = useState(false);
   const [since, setSince] = useState<number | null>(null);
   const outcome = useOutcome(trail, since);
+  const taught = useTeachOutcome(since);
   useEffect(() => {
     setText('');
+    setCategory(proposed);
+    // a line no rule covered is the case worth remembering
+    setRemember(item.proposalSource === 'llm' || item.state === 'NEEDS_INFO');
     setSince(null);
-  }, [item.id]);
+  }, [item.id, item.state, item.proposalSource, proposed]);
   const open = item.state === 'PROPOSED' || item.state === 'NEEDS_INFO';
+  const asking = item.state === 'NEEDS_INFO';
   const seated = status === 'seated';
-  const go = async (fn: (c: NonNullable<typeof conn>) => Promise<void>) => {
+  const reason = text.trim() || `Reviewed in the dashboard by ${person.name}`;
+  const entry = lesson?.entries.find((e) => e.categoryCode === category);
+  const canRemember = !!lesson && item.proposedCategoryCode !== 'ALLOCATED';
+  const go = async (fn: (c: NonNullable<typeof conn>) => Promise<void>, teachAs?: string) => {
     if (!conn) return;
     setSince(Date.now());
     await fn(conn).catch(() => undefined);
+    const e = lesson?.entries.find((x) => x.categoryCode === teachAs);
+    if (remember && canRemember && teachAs && e && lesson) {
+      await conn.reducers
+        .teachPolicy({ workItemId: item.id, categoryCode: teachAs, rulebookEntryId: e.id, pattern: JSON.stringify(lesson.pattern), reason })
+        .catch(() => undefined);
+    }
   };
-  const reason = text.trim() || `Reviewed in the dashboard by ${person.name}`;
+  const named = (t: string) => (category ? `${t} Category: ${categoryName(category)} (${category}).` : t);
 
   return (
     <footer className="decide">
       <SeatHint status={status} />
-      {seated && material && person.costCapRole === 'human_controller' && open && item.state === 'PROPOSED' && (
+      {seated && material && person.costCapRole === 'human_controller' && open && !asking && (
         <p className="decide-hint tone-hold">Above materiality: the module will refuse a Controller approval and log the attempt.</p>
       )}
-      {open && item.state === 'NEEDS_INFO' ? (
+      {open ? (
         <>
           <label className="field">
-            <span>Your answer (name one category, or the cap effect)</span>
-            <textarea value={text} onChange={(e) => setText(e.target.value)} rows={3} disabled={!seated} />
+            <span>{asking ? 'Your answer' : 'Reason (a rejection needs one; the analyst learns from it)'}</span>
+            {asking ? (
+              <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2} disabled={!seated} />
+            ) : (
+              <input value={text} onChange={(e) => setText(e.target.value)} disabled={!seated} placeholder={`Reviewed in the dashboard by ${person.name}`} />
+            )}
           </label>
+          {lesson && (asking || remember || category !== proposed) && (
+            <label className="field">
+              <span>{asking ? 'Category' : 'The right category'}</span>
+              <select value={category} onChange={(e) => setCategory(e.target.value)} disabled={!seated}>
+                <option value="">Choose a category</option>
+                {lesson.entries.map((e) => (
+                  <option key={e.id} value={e.categoryCode}>
+                    {categoryName(e.categoryCode)} ({e.treatment === 'RELEVANT' ? 'inside the cap' : e.treatment === 'EXCLUDED' ? 'excluded' : 'adjustment'})
+                  </option>
+                ))}
+              </select>
+            </label>
+          )}
+          {canRemember && (
+            <label className="remember">
+              <input type="checkbox" checked={remember} onChange={(e) => setRemember(e.target.checked)} disabled={!seated} />
+              <span>
+                Remember: {lesson!.scope} {category ? `→ ${categoryName(category)}` : ''} from now on, without asking
+              </span>
+            </label>
+          )}
           <div className="decide-actions">
-            <button className="btn btn--primary" disabled={!seated || !text.trim()} onClick={() => go((c) => c.reducers.answer({ workItemId: item.id, answer: text.trim() }))}>
-              Send answer
-            </button>
-          </div>
-        </>
-      ) : open ? (
-        <>
-          <label className="field">
-            <span>Reason (a rejection needs one; the analyst learns from it)</span>
-            <input value={text} onChange={(e) => setText(e.target.value)} disabled={!seated} placeholder={`Reviewed in the dashboard by ${person.name}`} />
-          </label>
-          <div className="decide-actions">
-            <button className="btn btn--primary" disabled={!seated} onClick={() => go((c) => c.reducers.approve({ workItemId: item.id, reason }))}>
-              <IconApproved size={14} /> Approve
-            </button>
-            <button className="btn" disabled={!seated || !text.trim()} onClick={() => go((c) => c.reducers.reject({ workItemId: item.id, reason: text.trim() }))}>
-              <IconDenied size={14} /> Reject
-            </button>
+            {asking ? (
+              <button
+                className="btn btn--primary"
+                disabled={!seated || !text.trim() || (remember && !entry)}
+                onClick={() => go((c) => c.reducers.answer({ workItemId: item.id, answer: named(text.trim()) }), category)}
+              >
+                Send answer
+              </button>
+            ) : (
+              <>
+                <button
+                  className="btn btn--primary"
+                  disabled={!seated || category !== proposed}
+                  title={category !== proposed ? 'Approving keeps the proposed category; reject to correct it' : undefined}
+                  onClick={() => go((c) => c.reducers.approve({ workItemId: item.id, reason }), proposed)}
+                >
+                  <IconApproved size={14} /> Approve
+                </button>
+                <button
+                  className="btn"
+                  disabled={!seated || !text.trim() || (remember && (!entry || category === proposed))}
+                  onClick={() => go((c) => c.reducers.reject({ workItemId: item.id, reason: named(text.trim()) }), category)}
+                >
+                  <IconDenied size={14} /> Reject{category && category !== proposed ? ` as ${categoryName(category)}` : ''}
+                </button>
+              </>
+            )}
           </div>
         </>
       ) : (
         <p className="decide-hint">Decided: {item.decidedReason ?? item.state.toLowerCase()}</p>
       )}
       <Outcome row={outcome} />
+      {taught && (taught.allowed ? (
+        <p className="outcome outcome--ok">
+          <IconApproved size={14} /> Remembered as rule {taught.subjectId}: lines like this are decided without asking from now on.
+        </p>
+      ) : (
+        <Outcome row={taught} />
+      ))}
     </footer>
   );
 }
@@ -483,6 +581,33 @@ function PolicyWhy({ policy, status }: { policy: Policy; status: SeatStatus }) {
       <footer className="decide">
         <SeatHint status={status} />
         {seated && !isHead && <p className="decide-hint tone-hold">Only the Head of Cost Cap may approve a policy; the module will refuse and log any other seat.</p>}
+        {policy.state === 'APPROVED' && (
+          <div className="standing">
+            <p>
+              {policy.autonomy === 'GRANTED'
+                ? 'Standing approval: lines this policy decides are approved without a person, at any amount.'
+                : `Standing approval ${policy.autonomy === 'SUSPENDED' ? 'suspended by a newer version' : 'taken back'}: a person approves its lines.`}
+            </p>
+            {seated && isHead && (
+              <button
+                className="btn"
+                onClick={() =>
+                  go((c) =>
+                    policy.autonomy === 'GRANTED'
+                      ? c.reducers.revokeAutonomy({ policyId: policy.id, reason: text.trim() || `Reviewing its lines (${person.name})` })
+                      : c.reducers.grantAutonomy({
+                          policyId: policy.id,
+                          evidence: JSON.stringify({ reviewed_in: 'dashboard', by: person.name }),
+                          reason: text.trim() || `Lines reviewed (${person.name})`,
+                        })
+                  )
+                }
+              >
+                {policy.autonomy === 'GRANTED' ? 'Take standing approval back' : 'Give standing approval back'}
+              </button>
+            )}
+          </div>
+        )}
         {policy.state === 'PROPOSED' && (
           <>
             <label className="field">

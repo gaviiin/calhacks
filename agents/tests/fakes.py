@@ -553,8 +553,33 @@ class FakeStdb:
         p = next(p for p in self.tables["policy"] if p["id"] == int(a[0]))
         if self.role_of(t) != "human_head_of_cost_cap" or p["proposed_by"] == self.tokens[t]:
             return self.audit(t, "approve_policy", p["policy_key"], False)
-        p.update(state="APPROVED", decided_by=self.tokens[t], decided_reason=a[1])
+        # standing approval comes with approval (the module's decidePolicy)
+        p.update(state="APPROVED", decided_by=self.tokens[t], decided_reason=a[1],
+                 autonomy="GRANTED" if p.get("autonomy", "NONE") == "NONE" else p["autonomy"])
         self.audit(t, "approve_policy", p["policy_key"], True)
+
+    def _r_teachPolicy(self, t, a):
+        # The module's teachPolicy, reduced to who may teach and how narrow: people only; the account plus
+        # a vendor, department or memo; a controller only within ±materiality.
+        wid, cat, entry, pattern_text, reason = a
+        pattern = json.loads(pattern_text)
+        key = f"taught:{pattern.get('account_code', '-')}|{pattern.get('vendor_id') or pattern.get('department_id') or 'memo'}"
+        role = self.role_of(t)
+        m = self.materiality()
+        ok = role in ("human_controller", "human_head_of_cost_cap") and "account_code" in pattern and any(
+            k in pattern for k in ("vendor_id", "department_id", "memo_regex", "description_regex"))
+        if role == "human_controller":
+            lo, hi = pattern.get("min_amount_usd_minor"), pattern.get("max_amount_usd_minor")
+            ok = ok and lo is not None and hi is not None and int(hi) < m and int(lo) > -m
+        if not ok:
+            return self.audit(t, "teach_policy", key, False)
+        self.tables["policy"].append(dict(
+            id=self.next_id("policy"), policy_key=key, version=1, category_code=cat, rulebook_entry_id=entry,
+            pattern=pattern_text, rationale=f"Taught on work item {wid}: {reason}", evidence_refs="[]",
+            precedent_count=1, effective_from="2026-01-01", effective_to=None, state="APPROVED",
+            proposed_by=self.tokens[t], decided_by=self.tokens[t], decided_reason=reason, autonomy="GRANTED",
+            parent_policy_id=None, cornerstones="[]", flip_report="{}"))
+        self.audit(t, "teach_policy", key, True)
 
 
 # ---- world ----------------------------------------------------------------------------------------

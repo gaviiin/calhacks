@@ -20,9 +20,9 @@ const LANES: Lane[] = [
   { key: 'sync', label: 'Sync job', kind: 'system', note: 'systems of record → work' },
   { key: 'ai_policy_learner', label: 'Policy Learner', kind: 'agent', note: 'Claude · drafts policies' },
   { key: 'ai_cap_analyst', label: 'Cap Analyst', kind: 'agent', note: 'Claude · proposes, asks' },
-  { key: 'auto_approver', label: 'Standing approvals', kind: 'system', note: 'earned autonomy only' },
-  { key: 'human_head_of_cost_cap', label: 'Head of Cost Cap', kind: 'person', note: 'policies, material items' },
-  { key: 'human_controller', label: 'Controller', kind: 'person', note: 'below materiality' },
+  { key: 'auto_approver', label: 'Standing approvals', kind: 'system', note: 'what an approved rule decided' },
+  { key: 'human_head_of_cost_cap', label: 'Head of Cost Cap', kind: 'person', note: 'new scenarios, policies' },
+  { key: 'human_controller', label: 'Controller', kind: 'person', note: 'new scenarios below materiality' },
   { key: 'gateway', label: 'ERP gateway', kind: 'system', note: 'the only poster' },
   { key: 'red_team', label: 'Red team', kind: 'system', note: 'forbidden calls on purpose' },
 ];

@@ -186,11 +186,8 @@ function approvedPolicy(d: Desk, over: Partial<Parameters<typeof mod.proposePoli
   d.as('learner', ctx => mod.proposePolicy(ctx, proposePolicyArgs(over)));
   const pol = [...d.h.db.policy.iter()].sort((a, b) => Number(b.id - a.id))[0]!;
   d.as('head', ctx => mod.approvePolicy(ctx, { policyId: pol.id, reason: 'matches 2025 practice' }));
-  if (grant) {
-    d.as('head', ctx =>
-      mod.grantAutonomy(ctx, { policyId: pol.id, evidence: SANDBOX_EVIDENCE, reason: '0 errors over 5 sandboxes' })
-    );
-  }
+  // Approval gives a policy standing approval; `grant = false` is a policy the head then took it back from.
+  if (!grant) d.as('head', ctx => mod.revokeAutonomy(ctx, { policyId: pol.id, reason: 'review its lines first' }));
   return d.h.db.policy.id.find(pol.id)!;
 }
 
@@ -325,7 +322,7 @@ describe('RT state and races (defects 2, 3)', () => {
     expect(v1now.autonomy).toBe('SUSPENDED');
     expect(v1now.autonomyBy?.isEqual(d.identity('head'))).toBe(true);
     expect(v1now.autonomyReason).toBe(`superseded by grove-canteen-catering v2 (policy ${v2.id})`);
-    expect(v1now.autonomyEvidence).toBe(SANDBOX_EVIDENCE);
+    expect(v1now.autonomyEvidence).toBe('');
     expect(v1now.state).toBe('APPROVED');
 
     for (const it of [it0, approved]) expectCleared(d.item(it.id));
@@ -343,8 +340,8 @@ describe('RT state and races (defects 2, 3)', () => {
     expect(d.item(it0.id).state).toBe('NEW');
     expect(d.lastAudit().allowed).toBe(false);
 
-    // A fresh proposal citing v1 is refused as superseded; one citing v2 goes through, but
-    // v2 has no autonomy, so the auto_approver is still refused.
+    // A fresh proposal citing v1 is refused as superseded; one citing v2 goes through, but the
+    // head took v2's standing approval back, so the auto_approver is still refused.
     const it1 = d.sync({ id: 'gl-auto-3', rawRef: 'gl_line:gl-auto-3:1' });
     d.proposeAs('analyst', it1.id, { policyId: v1.id });
     expect(d.item(it1.id).state).toBe('NEW');
@@ -352,7 +349,7 @@ describe('RT state and races (defects 2, 3)', () => {
     d.proposeAs('analyst', it1.id, { ...REL, policyId: v2.id });
     expect(d.item(it1.id).state).toBe('PROPOSED');
     d.approveAs('autoApprover', it1.id);
-    expect(d.lastAudit().reason).toContain('autonomy is NONE, not GRANTED');
+    expect(d.lastAudit().reason).toContain('standing approval is REVOKED, not GRANTED');
 
     // The head may re-grant a suspended version (SUSPENDED -> GRANTED), or revoke it.
     d.as('head', ctx => mod.grantAutonomy(ctx, { policyId: v1.id, evidence: SANDBOX_EVIDENCE, reason: 'v1 still wanted for 2025 lines' }));
@@ -371,7 +368,7 @@ describe('RT state and races (defects 2, 3)', () => {
     d.approveAs('controller', march.id);
     expect(d.item(march.id).state).toBe('APPROVED');
     d.approveAs('autoApprover', proposedUnder(d, 'gl-mar2', v1.id).id);
-    expect(d.lastAudit().reason).toContain('autonomy is SUSPENDED, not GRANTED');
+    expect(d.lastAudit().reason).toContain('standing approval is SUSPENDED, not GRANTED');
   });
 
   it('RT4 a rulebook entry reloaded out of force after propose blocks approve and post', () => {
@@ -684,7 +681,7 @@ describe('RT patterns and money', () => {
     expect(st.actor.isEqual(d.identity('redTeam'))).toBe(true);
   });
 
-  it('T0 the auto_approver is denied for non-deterministic proposals even under a granted, matching policy', () => {
+  it('T0 the auto_approver is denied for a Claude proposal even under a granted, matching policy', () => {
     const d = makeDesk();
     const pol = approvedPolicy(d);
     const it0 = d.sync({ id: 'gl-llm', rawRef: 'r' });
@@ -692,7 +689,7 @@ describe('RT patterns and money', () => {
     expect(d.item(it0.id).state).toBe('PROPOSED');
     d.approveAs('autoApprover', it0.id);
     expect(d.item(it0.id).state).toBe('PROPOSED');
-    expect(d.lastAudit().reason).toBe(`standing_approval: work item ${it0.id} proposal_source is "llm"; auto_approver may only approve deterministic proposals`);
+    expect(d.lastAudit().reason).toBe(`standing_approval: work item ${it0.id} proposal_source is "llm"; no approved rule decided it, so a person does`);
     expect(JSON.parse(d.lastAudit().evidence).proposal_source).toBe('llm');
     d.approveAs('controller', it0.id);
     expect(d.item(it0.id).state).toBe('APPROVED');
