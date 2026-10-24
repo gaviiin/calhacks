@@ -15,3 +15,4 @@ spacetime.local.json
 agents/state/
 agents/out/
 research/review/redteam-repro/ts/node_modules/
+replay/.cache/

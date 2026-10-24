@@ -3,9 +3,10 @@
     uv run python -m world.generate --seed 7 --out world/out
 
 Writes one JSONL per source (file order == cursor order: sorted by visible_at, a re-emitted
-record appears again later with the same id), world/out/answer_key.csv (the planted items) and
+record appears again later with the same id), world/out/answer_key.csv (the planted items),
 world/out/truth_2026.csv (the correct 2026 treatment of every gl_line, for scoring; not part of
-the SCHEMA contract).
+the SCHEMA contract) and world/out/truth_2026_allocations.csv (the correct split of every 2026 line
+whose treatment is a split: mixed invoices by bill line, category-limit excesses).
 
 Deterministic: every random draw comes from random.Random(f"{seed}:{year}:{stream}"); nothing
 reads the clock or global random state.
@@ -29,6 +30,7 @@ from . import company as C
 SOURCES = [
     "account", "department", "vendor", "gl_line", "bill", "bill_line", "contract", "fair_value", "bank_txn",
     "history_2025_gl_line", "history_2025_cap_classification", "history_2025_approval", "rulebook_issue",
+    "history_2025_bill_line", "history_2025_bill_line_classification",
 ]
 REFERENCE_VISIBLE = "2025-01-01"
 SIM_START = date(2026, 1, 1)
@@ -106,6 +108,40 @@ def month_end(year: int, month: int) -> date:
 
 
 # ---------------------------------------------------------------------------------------------
+# bill-line descriptions shared by the 2025 history and the 2026 stream, so that description-level
+# patterns learned from history_2025_bill_line_classification carry over to 2026 bills.
+# Treatment tuples are (c25, c26, reason_2025, note_2026).
+# ---------------------------------------------------------------------------------------------
+def day_text(day: date) -> str:
+    return f"{day.day} {MONTHS[day.month - 1]} {day.year}"
+
+
+def desc_sponsor_dinner(partner: str, day: date) -> str:
+    return f"Sponsor dinner - {partner} partners evening, factory atrium, {day_text(day)}"
+
+
+def desc_partner_lunch(partner: str, day: date) -> str:
+    return f"Partner guest hospitality - {partner} factory tour lunch, {day_text(day)}"
+
+
+def desc_canteen_topup(day: date) -> str:
+    wk = day - timedelta(days=day.weekday())
+    return f"Factory canteen top-up - extended build shift service, w/c {wk.isoformat()}"
+
+
+def desc_tunnel_lunch(day: date) -> str:
+    return f"Engineering offsite lunch - aero team at Northbrook Wind Tunnel session, {day_text(day)}"
+
+
+T_MARKETING = ("MARKETING", "MARKETING", "Hospitality for sponsor and partner guests: Directly Attributable to Marketing Activities.",
+               "partner hospitality, D5.1.1.a")
+T_CANTEEN = ("RELEVANT", "CATERING", "Factory canteen service for staff at team premises: no catering exclusion under ISS22, inside the cap.",
+             "factory canteen at team premises, D5.1.1.z")
+T_TUNNEL = ("RELEVANT", "RELEVANT", "Offsite engineering lunch at a third-party wind tunnel session: not Marketing and not at team premises, inside the cap.",
+            "offsite engineering lunch at a third-party wind tunnel: not catering at premises or a Competition")
+
+
+# ---------------------------------------------------------------------------------------------
 # model
 # ---------------------------------------------------------------------------------------------
 @dataclass(eq=False)
@@ -131,6 +167,10 @@ class Line:
     fv: tuple | None = None  # (fair_value_id, fair_value_minor in line currency)
     # 2026 stream
     bill_lines: list | None = None  # [(description, amount_minor)]
+    # per bill line treatment when the bill mixes categories: [(c25, c26, reason_2025, note_2026)], parallel to bill_lines
+    bill_cats: list | None = None
+    keep_bill_draw: bool = False  # base line given bill_lines after generation: consume the bills rng as before
+    limit_cat: str | None = None  # truth is a split at a category limit (BONUS, PU_SUPPLY): the limited category
     no_bill: bool = False
     bill_of: "Line | None" = None  # journal that references another line's bill
     bill_date: date | None = None
@@ -311,16 +351,26 @@ class YearGen:
                      memo=f"Statutory & enhanced parental leave pay - {self.ml(m)} - {n} employees (policy HR-07, all staff)",
                      entity="TECHNOLOGY", c25="PARENTAL_LEAVE", c26="PARENTAL_LEAVE", tag="parental_leave",
                      reason="Parental leave under a written policy applying to all employees: excluded.")
-            if m == 3:  # annual bonus
+            if m == 3:  # annual bonus round
                 pct = {"AERO": .06, "CHASSIS": .05, "VD": .06, "RACEOPS": .07, "MFG": .03, "LOGISTICS": .03, "MARKETING": .05,
                        "HOSPITALITY": .02, "HR": .04, "FINANCE": .04, "LEGAL": .04, "HERITAGE": .02, "APPLIED": .04, "FACILITIES": .02}
                 for key, p in pct.items():
                     dep = C.DEPARTMENTS[key]
                     amt = int(dep["hc"] * dep["avg"] * p * self.growth * 100)
-                    self.add(posted=day, acct="5060", dept=key, vendor=None, amount=amt, ccy="GBP",
-                             memo=f"Annual bonus {self.year - 1} performance - {dep['name']}", entity="TECHNOLOGY",
-                             c25="BONUS", c26="BONUS", tag="bonus",
-                             reason="Employee Bonus Costs, cumulative total within the lower of 20% of fixed remuneration and the Excluded Bonus Maximum.")
+                    if self.year == 2025:
+                        # ISS22: Employee Bonus Costs may be set by the team's points, podiums or race wins
+                        memo = f"Championship bonus {self.year - 1} - team points, podiums & race wins scheme (BS-{(self.year - 1) % 100}) - {dep['name']}"
+                    elif key in ("RACEOPS", "VD"):
+                        memo = f"Podium & race-win bonus {self.year - 1} (BS-{(self.year - 1) % 100} points & podiums scheme) - {dep['name']}"
+                    else:
+                        memo = f"Annual bonus {self.year - 1} performance - {dep['name']}"
+                    # 2026: only a Formal Bonus Scheme set solely by the final Constructors' classification and paid
+                    # after the last Competition is Employee Bonus Costs (D1); these payments are Relevant.
+                    self.add(posted=day, acct="5060", dept=key, vendor=None, amount=amt, ccy="GBP", memo=memo, entity="TECHNOLOGY",
+                             c25="BONUS", c26="RELEVANT", tag="bonus", erp="BONUS",
+                             reason="Formal Bonus Scheme (board-approved, communicated before the first Competition) paid by reference to the "
+                                    "team's points, podiums and race wins: Employee Bonus Costs under ISS22, within the lower of 20% of "
+                                    "fixed remuneration and the Excluded Bonus Maximum.")
                 self.add(posted=day, acct="5060", dept="EXEC", vendor=None, amount=int(310_000 * self.growth * 100), ccy="GBP",
                          memo=f"Annual bonus {self.year - 1} performance - Executive Office (three highest paid)", entity="TECHNOLOGY",
                          c25="EXCLUDED_PERSONS", c26="EXCLUDED_PERSONS", tag="bonus_exec",
@@ -407,7 +457,7 @@ class YearGen:
                 r = reasons[c25] if key != "HOSPITALITY" else "Expenses of the catering crew: no catering exclusion under ISS22, inside the cap."
                 self.add(posted=day, acct="5230", dept=key, vendor=None, amount=amt, ccy="GBP",
                          memo=f"Staff expense claims - {dep['name']} - {self.ml(m)} ({n} claims)", entity="TECHNOLOGY",
-                         c25=c25, c26=c26, tag="staff_expenses", reason=r)
+                         c25=c25, c26=c26, tag="staff_expenses", reason=r, erp="NON_F1" if c25 == "SPLIT" else None)
 
     # ---- parts and materials ---------------------------------------------------------------
     def gen_materials(self):
@@ -769,6 +819,44 @@ class YearGen:
                      reason="Working dinner with supplier engineers on F1 parts quality: not Marketing, inside the cap.",
                      why="a working dinner with supplier engineers is an F1 Activities cost, not Marketing")
 
+    def gen_hospitality_invoices(self):
+        """2025 only: Grove Catering invoices raised by Marketing that mix partner hospitality with staff catering.
+
+        The requester codes the whole invoice MARKETING on 6420; the 2025 submission splits it by bill line
+        (MARKETING for the guests, RELEVANT for the canteen top-up and the wind tunnel lunch)."""
+        if self.year != 2025:
+            return
+        rng = self.rng("hospitality_invoices")
+        for i in range(14):
+            m = rng.choice([mm for mm in self.months if mm != 8])
+            day = rng.choice(month_bdays(self.year, m))
+            partner = PARTNERS[(i + 1) % len(PARTNERS)]
+            parts, cats = [], []
+            dinner = rng.random() < 0.6
+            if dinner:
+                parts.append((desc_sponsor_dinner(partner, day), money(rng, 5_500, 11_000)))
+            else:
+                parts.append((desc_partner_lunch(partner, day), money(rng, 1_800, 3_900)))
+            cats.append(T_MARKETING)
+            if rng.random() < 0.3:
+                other = desc_partner_lunch(partner, day) if dinner else desc_sponsor_dinner(partner, day)
+                parts.append((other, money(rng, 1_800, 3_900) if dinner else money(rng, 5_500, 11_000)))
+                cats.append(T_MARKETING)
+            canteen = rng.random() < 0.7
+            tunnel = rng.random() < 0.5 or not canteen
+            if canteen:
+                parts.append((desc_canteen_topup(day), money(rng, 1_200, 4_800)))
+                cats.append(T_CANTEEN)
+            if tunnel:
+                parts.append((desc_tunnel_lunch(day), money(rng, 1_700, 3_600)))
+                cats.append(T_TUNNEL)
+            self.add(posted=day, acct="6420", dept="MARKETING", vendor=C.V_CANTEEN, amount=sum(a for _, a in parts), ccy="GBP",
+                     memo=f"Hospitality - {partner} partner visit & build week catering (requester: Marketing)", entity="RACING",
+                     c25="MARKETING", c26="MARKETING", tag="hospitality_mixed", erp="MARKETING", catch_p=0.75,
+                     bill_lines=parts, bill_cats=cats,
+                     reason="Mixed hospitality invoice split by bill line: partner hospitality Marketing, staff catering and engineering lunches Relevant.",
+                     why="only the partner-guest lines are Marketing; the canteen top-up and the wind tunnel lunch are F1 Activities costs")
+
     def gen_staff_entertainment(self):
         rng = self.rng("ent")
         items = {2025: [("2025-07-18", "All-staff summer party - Upper Heyford campus", 210_000, "STAFF_ENTERTAINMENT"),
@@ -846,7 +934,7 @@ class YearGen:
     # ---- property, facilities, IT, insurance, H&S, BCDR, sustainability -------------------
     def gen_facilities(self):
         rng = self.rng("facilities")
-        maint_n = 0
+        maint_n = bm_n = 0
         machines = ["5-axis CNC mill 3", "autoclave 1", "CMM inspection cell", "seven-post rig hydraulics", "gearbox dyno cell",
                     "clean room HVAC filtration", "composite oven 2", "waterjet cutter"]
         buildings = ["Building 3 roof repairs", "car park lighting", "reception refurbishment", "Building 1 fire doors", "drainage works"]
@@ -883,13 +971,18 @@ class YearGen:
             for _ in range(rng.randint(1, 3)):
                 if not odays:
                     continue
+                bm_n += 1
+                # Property Costs never include maintenance (ISS22: rent, lease, rates, taxes; SECD adds insurance, security,
+                # landscaping, cleaning and waste). The ERP user still codes every third one PROPERTY out of habit.
                 self.add(posted=rng.choice(odays), acct="6730", dept="FACILITIES", vendor="ven-025", amount=money(rng, 2_500, 26_000),
-                         ccy="GBP", memo=f"Building maintenance - {rng.choice(buildings)}", entity="TECHNOLOGY", c25="PROPERTY", c26="PROPERTY",
-                         tag="building_maintenance", reason="Maintenance of Property: excluded.")
+                         ccy="GBP", memo=f"Building maintenance - {rng.choice(buildings)}", entity="TECHNOLOGY", c25="RELEVANT", c26="RELEVANT",
+                         tag="building_maintenance", erp="PROPERTY" if bm_n % 3 == 1 else "RELEVANT", catch_p=0.6,
+                         reason="Building repairs and maintenance are not Property Costs (rent, lease, business rates and property taxes): inside the cap.",
+                         why="building maintenance is not a Property Cost (rent, lease, rates and taxes only); it stays Relevant")
             self.add(posted=bday_on_or_after(date(self.year, m, 12)), acct="6740", dept="FACILITIES", vendor="ven-033",
                      amount=money(rng, 13_500, 19_500), ccy="GBP", memo=f"Occupational health & H&S compliance services - {self.ml(m)}",
-                     entity="TECHNOLOGY", c25="RELEVANT", c26="HEALTH_SAFETY", tag="health_safety",
-                     reason="No Health and Safety exclusion under ISS22: inside the cap.")
+                     entity="TECHNOLOGY", c25="HR_FINANCE_LEGAL", c26="HEALTH_SAFETY", tag="health_safety",
+                     reason="ISS22 Human Resources Activities include health and safety matters: excluded as HR/Finance/Legal Activities (SECD moves them to the separate Health and Safety Costs exclusion).")
             self.add(posted=bday_on_or_after(date(self.year, m, 4)), acct="6750", dept="CORP", vendor="ven-049",
                      amount=money(rng, 38_000, 45_000), ccy="GBP", memo=f"Managed IT services - {self.ml(m)}", entity="TECHNOLOGY",
                      c25="RELEVANT", c26="RELEVANT", tag="it", reason="IT for F1 Activities: inside the cap.")
@@ -906,8 +999,8 @@ class YearGen:
                          entity="TECHNOLOGY", c25="RELEVANT", c26="RELEVANT", tag="it", reason="Engineering software: inside the cap.")
                 self.add(posted=bday_on_or_after(date(self.year, m, 20)), acct="6740", dept="FACILITIES", vendor="ven-033",
                          amount=money(rng, 4_800, 7_900), ccy="GBP", memo=f"Fire safety inspection & extinguisher service - Q{q}",
-                         entity="TECHNOLOGY", c25="RELEVANT", c26="HEALTH_SAFETY", tag="health_safety",
-                         reason="No Health and Safety exclusion under ISS22: inside the cap.")
+                         entity="TECHNOLOGY", c25="HR_FINANCE_LEGAL", c26="HEALTH_SAFETY", tag="health_safety",
+                         reason="ISS22 Human Resources Activities include health and safety matters: excluded as HR/Finance/Legal Activities (SECD moves them to the separate Health and Safety Costs exclusion).")
                 self.add(posted=bday_on_or_after(date(self.year, m, 22)), acct="6930", dept="CORP", vendor="ven-035",
                          amount=money(rng, 92_000, 118_000), ccy="GBP", memo=f"Disaster recovery site & offsite backup - Q{q} {self.year}",
                          entity="TECHNOLOGY", c25="RELEVANT", c26="BCDR", tag="bcdr",
@@ -921,9 +1014,10 @@ class YearGen:
                  entity="RACING", c25="RELEVANT", c26="RELEVANT", tag="insurance", reason="Insurance of F1 equipment and operations: inside the cap.")
         self.add(posted=bday_on_or_after(date(self.year, 1, 9)), acct="6760", dept="FACILITIES", vendor="ven-029",
                  amount=money(rng, 182_000, 196_000), ccy="GBP", memo=f"Buildings insurance - Upper Heyford campus - annual {self.year}",
-                 entity="TECHNOLOGY", c25="PROPERTY", c26="PROPERTY", tag="insurance_property",
-                 erp="RELEVANT" if self.year == 2025 else None, catch_p=1.0,
-                 reason="Insurance of land and buildings is a Property Cost: excluded.", why="buildings insurance is a Property Cost")
+                 entity="TECHNOLOGY", c25="RELEVANT", c26="PROPERTY", tag="insurance_property",
+                 erp="RELEVANT" if self.year == 2025 else None,
+                 reason="ISS22 Property Costs are property rent, lease costs, business rates and property taxes only: buildings insurance "
+                        "stays inside the cap (SECD adds property insurance from 2026).")
 
     # ---- heritage, applied technologies, FIA ------------------------------------------------
     def gen_heritage_applied(self):
@@ -1044,16 +1138,42 @@ def usd_text(minor: int) -> str:
     return f"${abs(minor) / 100:,.0f}"
 
 
+def mix_canteen_invoices_2025(lines: list[Line], seed: int, n: int = 12) -> None:
+    """Some 2025 weekly canteen invoices also bill a wind tunnel session lunch (both RELEVANT under ISS22)."""
+    rng = random.Random(f"{seed}:2025:mixed_bills")
+    pool = [ln for ln in lines if ln.tag == "canteen" and ln.memo.startswith("Factory canteen service") and ln.posted.month != 8]
+    for ln in sorted(rng.sample(pool, n), key=lambda x: x.posted):
+        lunch = money(rng, 1_700, 3_600)
+        ln.bill_lines = [(ln.memo, ln.amount - lunch), (desc_tunnel_lunch(ln.posted - timedelta(days=rng.randint(1, 3))), lunch)]
+        ln.bill_cats = [T_CANTEEN, T_TUNNEL]
+
+
+def bill_parts_2025(ln: Line, rng: random.Random) -> list[tuple[str, int, tuple]]:
+    """[(description, amount_minor, (c25, c26, reason_2025, note_2026))] for a 2025 line with a vendor."""
+    own = (ln.c25, ln.c26, ln.reason, "")
+    if ln.bill_lines:
+        cats = ln.bill_cats or [own] * len(ln.bill_lines)
+        return [(desc, amt, cat) for (desc, amt), cat in zip(ln.bill_lines, cats)]
+    if rng.random() < 0.3 and abs(ln.amount) > 200_000:
+        carriage = int(ln.amount * rng.uniform(0.015, 0.04))
+        carry = (ln.c25, ln.c26, "Carriage, packaging and handling on the invoice follows the goods it delivers: " + ln.reason, "")
+        return [(ln.memo, ln.amount - carriage, own), ("Carriage, packaging & handling", carriage, carry)]
+    return [(ln.memo, ln.amount, own)]
+
+
 def build_history(seed: int) -> dict[str, list[dict]]:
     gen = YearGen(seed, 2025)
     lines = gen.generate()
+    mix_canteen_invoices_2025(lines, seed)
     order = random.Random(f"{seed}:2025:order")
     for ln in lines:
         ln.sort_key = order.random()
     lines.sort(key=lambda l: (l.posted, l.sort_key))
     erp_rng = random.Random(f"{seed}:2025:erp")
     rev_rng = random.Random(f"{seed}:2025:review")
-    gl, cls, apr = [], [], []
+    bill_rng = random.Random(f"{seed}:2025:bills")
+    gl, cls, apr, bls, blc = [], [], [], [], []
+    n_bill = 0
     for i, ln in enumerate(lines, start=1):
         resolve_erp(ln, 2025, erp_rng)
         gid = f"gl-2025-{i:05d}"
@@ -1061,10 +1181,16 @@ def build_history(seed: int) -> dict[str, list[dict]]:
         fx = C.fx_rate(ln.ccy, period)
         usd = to_usd(ln.amount, fx)
         ven = C.VENDORS.get(ln.vendor) if ln.vendor else None
+        parts, bill_id = [], None
+        if ln.vendor is not None and not ln.no_bill:
+            assert ln.c25 != "SPLIT", ln.memo  # department-share splits are payroll journals, never bills
+            n_bill += 1
+            bill_id = f"bill-2025-{n_bill:05d}"
+            parts = bill_parts_2025(ln, bill_rng)
         stamp = min(ln.posted + timedelta(days=rev_rng.randint(0, 2)), HISTORY_END).isoformat()
         gl.append({
             "id": gid, "source": "history_2025_gl_line", "posted_date": ln.posted.isoformat(), "period_key": period,
-            "account_id": f"acct-{ln.acct}", "department_id": f"dept-{ln.dept}", "vendor_id": ln.vendor, "bill_id": None,
+            "account_id": f"acct-{ln.acct}", "department_id": f"dept-{ln.dept}", "vendor_id": ln.vendor, "bill_id": bill_id,
             "amount_minor": ln.amount, "currency": ln.ccy, "fx_rate_to_usd": fx, "amount_usd_minor": usd, "memo": ln.memo,
             "erp_category_code": ln.erp, "entity": ln.entity, "correction_of": None, "visible_at": stamp, "updated_at": stamp,
         })
@@ -1080,10 +1206,23 @@ def build_history(seed: int) -> dict[str, list[dict]]:
         decided_by = "head_of_cost_cap" if escalated else "analyst"
         decided_on = min(ln.posted + timedelta(days=rev_rng.randint(3, 16)), HISTORY_END).isoformat()
         prefix = (esc_reason + " ") if escalated else "Below $250,000 and within analyst authority; controller review. "
-        truth = ln.c25
-        wrong = ln.erp != truth and truth != "SPLIT"
+        # categories of the line: one, or one per distinct bill-line category for a mixed invoice
+        line_cats = list(dict.fromkeys(c[0] for c in ln.bill_cats)) if ln.bill_cats else [ln.c25]
+        truth = line_cats[0] if len(line_cats) == 1 else "MIXED"
+        by_cat = {c: sum(amt for (_, amt), t in zip(ln.bill_lines, ln.bill_cats) if t[0] == c) for c in line_cats} if ln.bill_cats else {}
+        split_txt = ", ".join(f"{c} {fmt_money(ln.ccy, by_cat[c])}" for c in line_cats) if by_cat else ""
+        wrong = (ln.erp != truth and truth != "SPLIT") or truth == "MIXED"
         if truth == "SPLIT":
             decision, a_reason = "approved", prefix + "ERP coded NON_F1 for the whole line; analyst split 60% RELEVANT / 40% NON_F1 by dept-APPLIED f1_activity_share 0.6. Approved."
+        elif truth == "MIXED":
+            why = ln.why or ln.reason.rstrip(".")
+            if rev_rng.random() < ln.catch_p:
+                decision = "approved"
+                a_reason = prefix + f"ERP coded the whole invoice {ln.erp}; analyst split it by bill line ({split_txt}): {why}. Approved."
+            else:
+                decision = "rejected"
+                a_reason = (prefix + f"Rejected analyst proposal {ln.erp} for the whole invoice (followed the ERP coding): {why}. "
+                            f"Split by bill line: {split_txt}.")
         elif wrong:
             why = ln.why or ln.reason.rstrip(".")
             if rev_rng.random() < ln.catch_p:
@@ -1110,6 +1249,13 @@ def build_history(seed: int) -> dict[str, list[dict]]:
                             "category_code": cat, "rulebook_entry_id": f"{cat}@{V25}", "decided_by": decided_by,
                             "reason": "Applied Technologies payroll split by department share: " + txt,
                             "visible_at": decided_on, "updated_at": decided_on})
+        elif truth == "MIXED":
+            for k, cat in enumerate(line_cats, start=1):
+                cls.append({"id": f"h25c-{i:05d}" + ("" if k == 1 else f"-{k}"), "source": "history_2025_cap_classification",
+                            "gl_line_id": gid, "category_code": cat, "rulebook_entry_id": f"{cat}@{V25}", "decided_by": decided_by,
+                            "reason": f"Mixed invoice split by bill line: {cat} {fmt_money(ln.ccy, by_cat[cat])} of {fmt_money(ln.ccy, ln.amount)} "
+                                      f"(see history_2025_bill_line_classification). (ERP coded {ln.erp} for the whole invoice; split.)",
+                            "visible_at": decided_on, "updated_at": decided_on})
         else:
             reason = ln.reason
             if wrong:
@@ -1117,7 +1263,15 @@ def build_history(seed: int) -> dict[str, list[dict]]:
             cls.append({"id": f"h25c-{i:05d}", "source": "history_2025_cap_classification", "gl_line_id": gid,
                         "category_code": truth, "rulebook_entry_id": f"{truth}@{V25}", "decided_by": decided_by,
                         "reason": reason, "visible_at": decided_on, "updated_at": decided_on})
-    return {"history_2025_gl_line": gl, "history_2025_cap_classification": cls, "history_2025_approval": apr}
+        for k, (desc, amt, cat) in enumerate(parts, start=1):
+            blid = f"bl-2025-{n_bill:05d}-{k}"
+            bls.append({"id": blid, "source": "history_2025_bill_line", "bill_id": bill_id, "gl_line_id": gid, "line_no": k,
+                        "description": desc, "amount_minor": amt, "visible_at": stamp, "updated_at": stamp})
+            blc.append({"id": f"h25bc-{n_bill:05d}-{k}", "source": "history_2025_bill_line_classification", "bill_line_id": blid,
+                        "gl_line_id": gid, "category_code": cat[0], "rulebook_entry_id": f"{cat[0]}@{V25}", "amount_minor": amt,
+                        "decided_by": decided_by, "reason": cat[2], "visible_at": decided_on, "updated_at": decided_on})
+    return {"history_2025_gl_line": gl, "history_2025_cap_classification": cls, "history_2025_approval": apr,
+            "history_2025_bill_line": bls, "history_2025_bill_line_classification": blc}
 
 
 # ---------------------------------------------------------------------------------------------
@@ -1216,6 +1370,8 @@ class Stream:
             due = bdate + timedelta(days=ven["terms"])
             if ln.bill_lines:
                 parts = [(desc, amt, ln) for desc, amt in ln.bill_lines]
+                if ln.keep_bill_draw and rng.random() < 0.3 and abs(ln.amount) > 200_000:
+                    rng.uniform(0.015, 0.04)  # the draws this line made before it was given bill lines
             elif rng.random() < 0.3 and abs(ln.amount) > 200_000:
                 carriage = int(ln.amount * rng.uniform(0.015, 0.04))
                 parts = [(ln.memo, ln.amount - carriage, ln), ("Carriage, packaging & handling", carriage, ln)]
@@ -1331,19 +1487,67 @@ class Stream:
         return out
 
     # -- truth -------------------------------------------------------------------------------
-    def truth_rows(self, ln: Line) -> list[dict]:
+    def final_amounts(self, ln: Line) -> tuple[int, float, int, str]:
         final = self.state(ln, ln.emissions[-1][1])
         period = final["posted"].strftime("%Y-%m")
         fx = C.fx_rate(ln.ccy, period)
-        amount = final["amount"]
+        return final["amount"], fx, to_usd(final["amount"], fx), period
+
+    def allocations(self, ln: Line) -> list[dict] | None:
+        """The correct 2026 split of a line, in USD minor units summing exactly to the line's amount_usd_minor.
+
+        bill_line: one allocation per bill line of a mixed invoice (SCHEMA 11.1). cap_limit / cap_limit_excess: the
+        part within a category limit and the Relevant excess over it. share: department-share apportionment."""
+        amount, fx, usd, _ = self.final_amounts(ln)
+        rows: list[dict] = []
+        if ln.bill_cats is not None:
+            for k, ((desc, amt), cat) in enumerate(zip(ln.bill_lines, ln.bill_cats), start=1):
+                blid = f"bl-{ln.bill.num:05d}-{k}"
+                rows.append({"bill_line_id": blid, "basis": "bill_line", "basis_ref": blid, "category_code": cat[1],
+                             "amount_usd_minor": to_usd(amt, fx), "note": f"bill line {k}: {cat[3]}"})
+        elif ln.limit_cat is not None:
+            for cat, amt, rel, note in ln.truth:
+                if cat == "RELEVANT":
+                    rows.append({"bill_line_id": "", "basis": "cap_limit_excess", "basis_ref": ln.limit_cat, "category_code": "RELEVANT",
+                                 "amount_usd_minor": rel, "note": note})
+                else:
+                    rows.append({"bill_line_id": "", "basis": "cap_limit", "basis_ref": ln.limit_cat, "category_code": cat,
+                                 "amount_usd_minor": None, "note": note})
+            within = usd - sum(r["amount_usd_minor"] for r in rows if r["amount_usd_minor"] is not None)
+            for r in rows:
+                if r["amount_usd_minor"] is None:
+                    r["amount_usd_minor"] = within
+        elif ln.c26 == "SPLIT":
+            share = C.DEPARTMENTS[self.state(ln, ln.emissions[-1][1])["dept"]]["share"]
+            rel = to_usd(int(round(amount * share)), fx)
+            dep = f"dept-{ln.dept}"
+            rows = [{"bill_line_id": "", "basis": "share", "basis_ref": f"{dep}:{share}", "category_code": "RELEVANT", "amount_usd_minor": rel,
+                     "note": f"F1 share {share}"},
+                    {"bill_line_id": "", "basis": "share", "basis_ref": f"{dep}:{round(1 - share, 6)}", "category_code": "NON_F1",
+                     "amount_usd_minor": usd - rel, "note": f"Non-F1 share {round(1 - share, 6)}"}]
+        else:
+            return None
+        if ln.bill_cats is not None:  # rounding residue on the largest allocation, so the split ties to the ledger exactly
+            big = max(rows, key=lambda r: abs(r["amount_usd_minor"]))
+            big["amount_usd_minor"] += usd - sum(r["amount_usd_minor"] for r in rows)
+        assert sum(r["amount_usd_minor"] for r in rows) == usd, ln.memo
+        for r in rows:
+            r.update({"gl_line_id": ln.id, "rulebook_entry_id": f"{r['category_code']}@{V26}", "plant_id": ln.plant or ""})
+        return rows
+
+    def truth_rows(self, ln: Line) -> list[dict]:
+        amount, fx, usd, period = self.final_amounts(ln)
         rows = []
-        if ln.truth is not None:
+        if ln.bill_cats is not None:
+            for (desc, amt), cat, al in zip(ln.bill_lines, ln.bill_cats, self.allocations(ln)):
+                rows.append((cat[1], V26, amt, al["amount_usd_minor"] if cat[1] == "RELEVANT" else 0, al["note"]))
+        elif ln.truth is not None:
             for cat, amt, rel, note in ln.truth:
                 ver = V25 if cat.endswith("@ISS22") else V26
                 cat = cat.split("@")[0]
                 rows.append((cat, ver, amt, to_usd(amt, fx) if rel is None and cat == "RELEVANT" else (rel or 0), note))
         elif ln.c26 == "SPLIT":
-            share = C.DEPARTMENTS[final["dept"]]["share"]
+            share = C.DEPARTMENTS[self.state(ln, ln.emissions[-1][1])["dept"]]["share"]
             rel_amt = int(round(amount * share))
             rows.append(("RELEVANT", V26, rel_amt, to_usd(rel_amt, fx), f"split by f1_activity_share {share}"))
             rows.append(("NON_F1", V26, amount - rel_amt, 0, f"split by f1_activity_share {share}"))
@@ -1351,7 +1555,7 @@ class Stream:
             cat = ln.c26
             rel = 0
             if cat in ("RELEVANT", "ADJ_USED_INVENTORY"):
-                rel = to_usd(amount, fx)
+                rel = usd
             elif cat == "ADJ_RELATED_PARTY_FAIR_VALUE":
                 rel = to_usd(max(amount, ln.fv[1]), fx)
             rows.append((cat, V26, amount, rel, ln.note))
@@ -1420,6 +1624,7 @@ def build(seed: int) -> dict:
     st.build_bills()
     out.update(st.render())
     truth = [row for ln in st.lines for row in st.truth_rows(ln)]
+    allocations = [row for ln in st.lines for row in (st.allocations(ln) or [])]
     answers = []
     for r in st.answer_rows:
         ref = r["ref"]
@@ -1435,7 +1640,7 @@ def build(seed: int) -> dict:
         note = r["note"].format(*[x.id for x in r["note_refs"]]) if r["note_refs"] else r["note"]
         answers.append({"plant_id": r["plant_id"], "source": r["source"], "record_id": rid, "error_class": r["error_class"],
                         "expected_action": r["expected_action"], "expected_category_code": r["expected_category_code"], "note": note})
-    return {"records": out, "answer_key": answers, "truth": truth}
+    return {"records": out, "answer_key": answers, "truth": truth, "allocations": allocations}
 
 
 def ordered(records: list[dict]) -> list[dict]:
@@ -1466,7 +1671,13 @@ def write(result: dict, out_dir: Path) -> dict[str, int]:
         w = csv.DictWriter(f, fieldnames=tcols, lineterminator="\n")
         w.writeheader()
         w.writerows(result["truth"])
+    acols = ["gl_line_id", "bill_line_id", "basis", "basis_ref", "category_code", "rulebook_entry_id", "amount_usd_minor", "plant_id", "note"]
+    with (out_dir / "truth_2026_allocations.csv").open("w", encoding="utf-8", newline="") as f:
+        w = csv.DictWriter(f, fieldnames=acols, lineterminator="\n")
+        w.writeheader()
+        w.writerows(result["allocations"])
     counts["answer_key"] = len(result["answer_key"])
+    counts["truth_2026_allocations"] = len(result["allocations"])
     return counts
 
 

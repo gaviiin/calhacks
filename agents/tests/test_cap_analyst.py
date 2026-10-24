@@ -72,12 +72,14 @@ def test_learned_exception_refines_broad_policy(stdb, analyst_tools):
     assert d.reason.startswith("pol-31 v1: Generalised") and "refines" in d.note
 
 
-def test_agreeing_policies_cite_most_specific(stdb, analyst_tools):
+def test_agreeing_policies_cite_deepest_then_lowest_id(stdb, analyst_tools):
+    # SCHEMA §11.2: agreeing conclusions cite the deepest policy, ties broken by the lowest id
     seed_line(stdb, gl(), vendor())
     stdb.tables["policy"] += [policy(id=3, policy_key="a", pattern={"account_code": "6410"}),
-                              policy(id=4, policy_key="b")]
+                              policy(id=4, policy_key="b"),
+                              policy(id=5, policy_key="c", pattern={"memo_regex": "canteen"}, parent_policy_id=4)]
     [d] = _analyst(analyst_tools).run_once()
-    assert d.action == "propose" and d.policy_id == 4
+    assert d.action == "propose" and d.policy_id == 5 and d.result["ok"]
 
 
 def test_unapproved_or_out_of_window_policies_are_ignored(stdb, analyst_tools):

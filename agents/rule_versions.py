@@ -106,6 +106,9 @@ class VersionMapping:
     treatment_2026: str | None
     explanation: str
     source: str
+    # set when the 2026 rule only reaches lines whose memo says so (bonus definition): the policy
+    # pattern is narrowed with this memo_regex, so an unclear memo matches nothing and is asked
+    narrow_memo_regex: str | None = None
 
     @property
     def changed(self) -> bool:
@@ -120,6 +123,13 @@ class Override:
     # returns (category_code, rulebook_entry_id) or None to mean "ask"
     target: Callable[[str, Nature, Rulebook], tuple[str, str] | None]
     why: str
+    # line-level exemption: a line whose own text (memo / bill line description) says it is outside
+    # the rule (offsite catering is not premises catering); `blocks` names the 2026 category the
+    # generic master-data rule must then not reach for that line either
+    line_exempt: Callable[[str], bool] | None = None
+    blocks: str | None = None
+    # memo_regex narrowing the policy to the lines the 2026 rule reaches, by target category
+    narrow: Callable[[str], str | None] | None = None
 
 
 def _rx(pattern: str) -> Callable[[Nature], bool]:
@@ -143,6 +153,43 @@ _is_fia_fine = _rx(r"\b(fine|fines|penalty|penalties)\b")
 _is_fia = _rx(r"\b(fia|steward|stewards|sporting)\b")
 
 
+_OFFSITE = re.compile(r"\b(off-?site|offsite|away from (the )?(factory|premises|team premises))\b", re.IGNORECASE)
+_AT_EVENT = re.compile(r"(grand prix|\bgp\b|circuit|pre-season test|\btesting\b|motorhome|paddock)", re.IGNORECASE)
+
+
+def _offsite_catering(text: str) -> bool:
+    """Catering away from team premises and not at a Competition or testing: not D5.1.1.z."""
+    return bool(_OFFSITE.search(text or "")) and not _AT_EVENT.search(text or "")
+
+
+# 2026 bonus definition (D1, "Employee Bonus Costs"): only a Formal Bonus Scheme determined SOLELY by
+# the final Constructors' Championship classification and paid after the last Competition is a
+# bonus; annual performance, retention, race-win, podium and points bonuses are Relevant.
+BONUS_CONSTRUCTORS_REGEX = r"\bconstructors\b"
+BONUS_RELEVANT_REGEX = (r"\b(annual|performance|retention|retain|loyalty|sign-on|signing|podium|race win|"
+                        r"wins|points|discretionary|spot|referral|long service)\b")
+_BONUS_CONSTRUCTORS = re.compile(BONUS_CONSTRUCTORS_REGEX, re.IGNORECASE)
+_BONUS_RELEVANT = re.compile(BONUS_RELEVANT_REGEX, re.IGNORECASE)
+
+
+def _bonus_target(cat: str, n: Nature, rb: Rulebook) -> tuple[str, str] | None:
+    memos = [m for m in n.memos if m]
+    if not memos:
+        return None
+    relevant = sum(1 for m in memos if _BONUS_RELEVANT.search(m)) / len(memos)
+    constructors_only = sum(1 for m in memos if _BONUS_CONSTRUCTORS.search(m) and not _BONUS_RELEVANT.search(m)) \
+        / len(memos)
+    if constructors_only >= 0.5:
+        return "BONUS", _entry(rb, "BONUS")
+    if relevant >= 0.5:
+        return "RELEVANT", _entry(rb, "RELEVANT")
+    return None  # the memo does not say what the scheme is: ask
+
+
+def _bonus_narrow(code: str) -> str | None:
+    return BONUS_CONSTRUCTORS_REGEX if code == "BONUS" else BONUS_RELEVANT_REGEX if code == "RELEVANT" else None
+
+
 def _entry(rb: Rulebook, code: str) -> str:
     e = rb.in_force(code, NEW_DATE)
     if e is None:
@@ -162,6 +209,18 @@ def _depreciation_target(cat: str, n: Nature, rb: Rulebook) -> tuple[str, str] |
 
 
 OVERRIDES: list[Override] = [
+    # first: an employer NI line of the catering department is social security, not catering
+    Override(
+        name="social_security",
+        changes_row="Employer social security",
+        # every 2025 answer except the Excluded Persons ranking (which comes first and covers their
+        # on-costs): department practice (HR_FINANCE_LEGAL, MARKETING, HERITAGE ...) does not survive
+        # an exclusion of ALL mandatory employer contributions
+        applies=lambda cat, n, rb: cat not in ("SOCIAL_SECURITY", "EXCLUDED_PERSONS") and _is_social_security(n),
+        target=lambda cat, n, rb: ("SOCIAL_SECURITY", _entry(rb, "SOCIAL_SECURITY")),
+        why="ISS22 excluded only the employer social security above 13.8% of remuneration; SECD-ISS07 "
+            "excludes all mandatory employer contributions",
+    ),
     Override(
         name="catering",
         changes_row="Catering",
@@ -169,6 +228,8 @@ OVERRIDES: list[Override] = [
         target=lambda cat, n, rb: ("CATERING", _entry(rb, "CATERING")),
         why="catering was not mentioned in ISS22, so canteen costs were inside the cap; SECD-ISS07 "
             "excludes catering at Competitions, testing and team premises",
+        line_exempt=_offsite_catering,
+        blocks="CATERING",
     ),
     Override(
         name="depreciation",
@@ -180,12 +241,15 @@ OVERRIDES: list[Override] = [
             "the cap (Relevant), measured on IAS 16 terms per ADJ_DEPRECIATION_IAS16@SECD-ISS07",
     ),
     Override(
-        name="social_security",
-        changes_row="Employer social security",
-        applies=lambda cat, n, rb: cat == "RELEVANT" and _is_social_security(n),
-        target=lambda cat, n, rb: ("SOCIAL_SECURITY", _entry(rb, "SOCIAL_SECURITY")),
-        why="ISS22 excluded only the employer social security above 13.8% of remuneration; SECD-ISS07 "
-            "excludes all mandatory employer contributions",
+        name="bonus_definition",
+        changes_row="Employee bonuses",
+        applies=lambda cat, n, rb: cat == "BONUS",
+        target=_bonus_target,
+        why="SECD-ISS07 excludes only bonuses under a Formal Bonus Scheme determined solely by the final "
+            "Constructors' Championship classification and paid after the last Competition; ISS22 also "
+            "allowed points, podium and race-win schemes, and annual performance and retention bonuses "
+            "are fully Relevant",
+        narrow=_bonus_narrow,
     ),
     Override(
         name="competition_road_transport",
@@ -222,14 +286,23 @@ def _fmt_entry(e: dict | None) -> str:
 
 
 def map_to_2026(category_2025: str, nature: Nature, rb: Rulebook,
-                entry_2025_id: str | None = None) -> VersionMapping:
-    """Map a learned 2025 category to its 2026 classification. See the module docstring."""
+                entry_2025_id: str | None = None, line_text: str | None = None) -> VersionMapping:
+    """Map a learned 2025 category to its 2026 classification. See the module docstring.
+
+    `line_text` (one line's memo or bill line description) maps a single line: an override whose
+    `line_exempt` says that line is outside the rule is skipped, and its `blocks` category is not
+    reached through master data either."""
     e25 = rb.get(entry_2025_id) if entry_2025_id else rb.in_force(category_2025, OLD_DATE)
     e25_id = e25["id"] if e25 else entry_2025_id
+    blocked: set[str] = set()
 
     # 1. explicit overrides (CHANGES.md)
     for o in OVERRIDES:
         if not o.applies(category_2025, nature, rb):
+            continue
+        if line_text is not None and o.line_exempt is not None and o.line_exempt(line_text):
+            if o.blocks:
+                blocked.add(o.blocks)
             continue
         try:
             tgt = o.target(category_2025, nature, rb)
@@ -245,21 +318,24 @@ def map_to_2026(category_2025: str, nature: Nature, rb: Rulebook,
                 f"rulebook/CHANGES.md: {o.changes_row}")
         code, entry_id = tgt
         e26 = rb.get(entry_id)
+        narrow = o.narrow(code) if o.narrow else None
         if code == category_2025 and e25 and e26 and e26["treatment"] == e25["treatment"]:
             return VersionMapping("same", category_2025, e25_id, code, entry_id, e26["treatment"],
                                   f"same as 2025: {category_2025} under {_fmt_entry(e26)} ({o.why}; "
                                   f"these lines are on the unchanged side of that change)",
-                                  f"rulebook/CHANGES.md: {o.changes_row}")
+                                  f"rulebook/CHANGES.md: {o.changes_row}", narrow)
         return VersionMapping(
             "changed", category_2025, e25_id, code, entry_id, e26["treatment"] if e26 else None,
             f"DIFFERS FROM 2025 PRACTICE: in 2025 these lines were {category_2025} under "
             f"{_fmt_entry(e25)}; from {NEW_DATE} they are {code} ({(e26 or {}).get('treatment', '?')}) "
             f"under {_fmt_entry(e26)}, because {o.why}.",
-            f"rulebook/CHANGES.md: {o.changes_row}")
+            f"rulebook/CHANGES.md: {o.changes_row}", narrow)
 
     # 2. generic new exclusion pointed at by master data
     new_only = rb.only_in(NEW_VERSION)
     for hint in nature.hints():
+        if hint in blocked:
+            continue
         if hint in new_only and hint != category_2025 and category_2025 == "RELEVANT":
             e26 = rb.in_force(hint, NEW_DATE)
             if e26:

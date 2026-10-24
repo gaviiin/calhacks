@@ -87,6 +87,24 @@ make gateway
 make redteam
 ```
 
+### Third end-to-end run, January 2026, offline, after Tier 1 (Oct 24)
+
+Tier 1 added allocations, category limits and policies as Ripple-Down Rules. The simulated company also gained 2025 bill-line history and had four misreadings of the regulations corrected in its truth file (bonuses, mixed staff, building maintenance, Health and Safety under Issue 22). Those corrections alone move about $16m into the cap: Kestrel's January-November Relevant Costs are now $209.5m against a $215m cap, so the full year is on track to breach.
+
+| Measure | Result |
+|---|---|
+| Policies drafted from 2025 history | 101, of which 16 are learned exceptions (100 approved, 1 rejected) |
+| January lines covered | 262 of 285 (91.9%) |
+| Proposals matching the truth file, allocations included | 261, 98.9% |
+| Dollars put on the wrong side of the cap | $22,757 of $26.5m proposed |
+| Demo hospitality invoice (P01) | Split three ways, exact to the cent: canteen excluded as catering, sponsor dinner as marketing, offsite engineering lunch inside the cap |
+| Lines asked about instead of guessed | 24 |
+| Lines posted, all balanced | 261 |
+| Red-team probes denied and logged | 10 of 10 |
+| Tests passing: Python, module | 328, 135 |
+
+The three misses: two Health and Safety compliance lines mapped to HR_FINANCE_LEGAL (both excluded, so no cap effect; 2026 gives Health and Safety its own exclusion and the rule-version map doesn't yet carry that over), and one 2025 canteen invoice arriving in January, which belongs to 2025's rules.
+
 ### Second end-to-end run, January 2026, offline, after the Tier 0 fixes (Oct 24)
 
 | Measure | Result |

@@ -91,3 +91,5 @@ def test_cap_limits(rb):
     assert by_id["STAFF_ENTERTAINMENT@SECD-ISS07"]["cap_limit_usd_minor"] == 120_000_000
     assert by_id["STAFF_ENTERTAINMENT@ISS22"]["cap_limit_usd_minor"] == 100_000_000
     assert by_id["BCDR@SECD-ISS07"]["cap_limit_usd_minor"] == 150_000_000
+    assert by_id["BONUS@SECD-ISS07"]["cap_limit_usd_minor"] == 1_200_000_000
+    assert by_id["PU_SUPPLY@SECD-ISS07"]["cap_limit_usd_minor"] is None  # EUR limit, redline unresolved

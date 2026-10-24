@@ -199,6 +199,13 @@ const policy = table(
     autonomyEvidence: t.string(),
     autonomyReason: t.option(t.string()),
     autonomyAt: t.option(t.timestamp()),
+    // Tier 1 (SCHEMA section 11.2): Ripple-Down Rules. A child is an exception to its parent and
+    // applies only where the parent applies. cornerstones: JSON array of
+    // {"ref": "<gl_line id or history ref>", "category_code": "..."}. flip_report: JSON computed
+    // at proposePolicy, {"open": [..], "posted_open_period": [..], "posted_locked": [..], "usd_minor_by_state": {..}}.
+    parentPolicyId: t.option(t.u64()),
+    cornerstones: t.string(),
+    flipReport: t.string(),
   }
 );
 
@@ -260,6 +267,41 @@ const agentStep = table(
   }
 );
 
+// Tier 1 (SCHEMA section 11.1): one row per split of an allocated proposal (work item
+// proposed_category_code = "ALLOCATED"). Rows of an open item are replaced on re-proposal and
+// deleted on reopen; post fills posted_treatment / posted_cap_effect_usd_minor, and a reversal of
+// the item backs each one out once.
+const allocation = table(
+  { name: 'allocation', public: true },
+  {
+    id: t.u64().primaryKey().autoInc(),
+    workItemId: t.u64().index('btree'),
+    lineNo: t.u32(),
+    basis: t.string(), // bill_line | share | cap_limit_excess
+    basisRef: t.string(),
+    categoryCode: t.string(),
+    rulebookEntryId: t.string(),
+    policyId: t.option(t.u64()),
+    amountUsdMinor: t.i64(),
+    capEffectUsdMinor: t.option(t.i64()),
+    postedTreatment: t.option(t.string()),
+    postedCapEffectUsdMinor: t.option(t.i64()),
+  }
+);
+
+// Tier 1 (SCHEMA section 11.1): EXCLUDED amounts posted per cap year and category. Posting past a
+// category's cap_limit_usd_minor is denied (cap_limit_exceeded); a reversal subtracts what it
+// backs out. Every EXCLUDED category is tracked, so a reversal always nets exactly.
+const limitLedger = table(
+  { name: 'limit_ledger', public: true },
+  {
+    key: t.string().primaryKey(), // "<cap_year>|<category_code>"
+    capYear: t.u32(),
+    categoryCode: t.string(),
+    excludedUsdMinor: t.i64(),
+  }
+);
+
 const capPosition = table(
   { name: 'cap_position', public: true },
   {
@@ -288,6 +330,20 @@ const spacetimedb = schema({
   auditLog,
   capPosition,
   agentStep,
+  allocation,
+  limitLedger,
+});
+
+// Reducer argument type for proposeAllocations (SCHEMA section 11.1).
+// (The allocation table's row type already owns the SATS name "Allocation".)
+export const Allocation = t.object('AllocationInput', {
+  basis: t.string(),
+  basisRef: t.string(),
+  categoryCode: t.string(),
+  rulebookEntryId: t.string(),
+  policyId: t.option(t.u64()),
+  amountUsdMinor: t.i64(),
+  capEffectUsdMinor: t.option(t.i64()),
 });
 
 export default spacetimedb;

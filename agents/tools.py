@@ -21,6 +21,7 @@ from typing import Any, Callable, Sequence
 
 from anthropic import beta_tool
 from anthropic.lib.tools import ToolError
+from pydantic import BaseModel, ConfigDict
 
 from . import policy as pol
 from . import reducers as R
@@ -37,6 +38,7 @@ CAP_ANALYST_TOOLS: tuple[str, ...] = (
     "search_precedents",
     "search_rulebook",
     "propose_classification",
+    "propose_allocations",
     "ask",
 )
 POLICY_LEARNER_TOOLS: tuple[str, ...] = (
@@ -335,6 +337,44 @@ class AgentTools:
     def all_policies(self) -> list[dict]:
         return self._sql("SELECT * FROM policy")
 
+    def allocations_for(self, work_item_id: int) -> list[dict]:
+        """allocation rows of one work item (SCHEMA §11.1), in line_no order."""
+        rows = self._sql(f"SELECT * FROM allocation WHERE work_item_id = {int(work_item_id)}")
+        return sorted(rows, key=lambda r: (int(r.get("line_no", 0)), int(r.get("id", 0))))
+
+    def limit_entry(self, category_code: str, period_key: str) -> dict | None:
+        """The EXCLUDED rulebook entry in force for the period that carries a cap limit, if any."""
+        e = pol.rulebook_entry_in_force(self.rulebook(), category_code, period_key)
+        if e and e.get("treatment") == "EXCLUDED" and e.get("cap_limit_usd_minor") is not None:
+            return e
+        return None
+
+    def limit_remaining(self, category_code: str, period_key: str,
+                        exclude_work_item_id: int | None = None) -> int | None:
+        """Remaining category limit for the cap year (SCHEMA §11.1 "Category limits"), or None when
+        the category has no limit: limit - limit_ledger.excluded_usd_minor (posted) - what open
+        proposals (PROPOSED / APPROVED, whole-line or allocated) already claim, so two proposals
+        cannot each fit while together breaking the limit at post."""
+        entry = self.limit_entry(category_code, period_key)
+        if entry is None:
+            return None
+        year = int(period_key[:4])
+        led = self._sql(f"SELECT * FROM limit_ledger WHERE key = {sql_quote(f'{year}|{category_code}')}")
+        used = int(led[0].get("excluded_usd_minor") or 0) if led else 0
+        pending = 0
+        for state in ("PROPOSED", "APPROVED"):
+            for wi in self._sql(f"SELECT * FROM work_item WHERE state = {sql_quote(state)}"):
+                if exclude_work_item_id is not None and int(wi["id"]) == int(exclude_work_item_id):
+                    continue
+                if not str(wi.get("period_key") or "").startswith(f"{year}-"):
+                    continue
+                if wi.get("proposed_category_code") == category_code:
+                    pending += max(0, int(wi.get("amount_usd_minor") or 0))
+                elif wi.get("proposed_category_code") == R.ALLOCATED:
+                    pending += sum(max(0, int(a.get("amount_usd_minor") or 0)) for a in self.allocations_for(int(wi["id"]))
+                                   if a.get("category_code") == category_code)
+        return int(entry["cap_limit_usd_minor"]) - used - pending
+
     @_recorded
     def search_policies(self, category_code: str | None = None, vendor_id: str | None = None,
                         account_code: str | None = None, in_force_on: str | None = None) -> list[dict]:
@@ -385,6 +425,7 @@ class AgentTools:
             if wi is not None:
                 row["work_item_state"] = wi.get("state")
                 row["period_key"] = wi.get("period_key")
+                row["proposed_policy_id"] = wi.get("proposed_policy_id")
             if row.get("gl_line_id") is None:
                 gl_id = wi.get("subject_ref") if wi else None
                 if wi and wi.get("kind") == "reversal" and str(gl_id).isdigit() and int(gl_id) in items:
@@ -449,6 +490,18 @@ class AgentTools:
                 "note": None if ok else "not applied (denied or invalid); see audit_log"}
 
     @_recorded
+    def propose_allocations(self, work_item_id: int, allocations: Sequence[dict], reason: str,
+                            evidence_refs: Sequence[str], proposal_source: str = "deterministic") -> dict:
+        """proposeAllocations(...) (SCHEMA §11.1). `allocations`: dicts with basis, basis_ref,
+        category_code, rulebook_entry_id, policy_id, amount_usd_minor, cap_effect_usd_minor."""
+        self._call(R.PROPOSE_ALLOCATIONS, R.propose_allocations(work_item_id, list(allocations), reason,
+                                                                list(evidence_refs), proposal_source))
+        after = self.get_item(work_item_id) or {}
+        ok = after.get("state") == "PROPOSED" and after.get("proposed_category_code") == R.ALLOCATED
+        return {"ok": ok, "work_item_id": int(work_item_id), "state": after.get("state"),
+                "note": None if ok else "not applied (denied or invalid); see audit_log"}
+
+    @_recorded
     def ask(self, work_item_id: int, question: str) -> dict:
         self._call(R.ASK, R.ask(work_item_id, question))
         after = self.get_item(work_item_id) or {}
@@ -459,12 +512,16 @@ class AgentTools:
     @_recorded
     def propose_policy(self, policy_key: str, category_code: str, rulebook_entry_id: str,
                        pattern: dict | str, rationale: str, evidence_refs: Sequence[str],
-                       precedent_count: int, effective_from: str, effective_to: str | None) -> dict:
+                       precedent_count: int, effective_from: str, effective_to: str | None,
+                       parent_policy_id: int | None = None, cornerstones: Sequence[dict] | None = None) -> dict:
+        """proposePolicy (SCHEMA §11.2): `parent_policy_id` makes it an exception (child) of that
+        policy; `cornerstones` are the cases it was made for, [{"ref", "category_code"}]."""
         pattern_s = pol.pattern_json(pol.parse_pattern(pattern))
         before = {int(r["id"]) for r in self.policies_for_key(policy_key)}
         self._call(R.PROPOSE_POLICY, R.propose_policy(policy_key, R.AUTO_VERSION, category_code, rulebook_entry_id,
                                                       pattern_s, rationale, list(evidence_refs),
-                                                      precedent_count, effective_from, effective_to))
+                                                      precedent_count, effective_from, effective_to,
+                                                      parent_policy_id, list(cornerstones or [])))
         new = [r for r in self.policies_for_key(policy_key) if int(r["id"]) not in before]
         mine = new[-1] if new else None
         return {"ok": mine is not None, "policy_key": policy_key,
@@ -491,6 +548,8 @@ class AnalystSession:
     allowed_categories: set[str] | None = None
     decision: dict | None = None
     tool_calls: list[str] = field(default_factory=list)
+    bill_lines: list[dict] = field(default_factory=list)  # this item's own bill lines (allocations)
+    item_amount: int | None = None  # the work item's amount (allocations must sum to it)
 
     def observe(self, ids: Any) -> None:
         for i in ids or []:
@@ -509,6 +568,11 @@ def _observe_item(session: AnalystSession | None, data: dict) -> None:
     ids = [gl.get("id"), gl.get("bill_id")]
     ids += [b.get("id") for b in data.get("bill_lines") or []]
     ids += [f.get("id") for f in data.get("fair_values") or []]
+    session.bill_lines = list(data.get("bill_lines") or [])
+    if session.line is None and data.get("gl_line"):
+        session.line = data["gl_line"]
+    if session.item_amount is None and wi.get("amount_usd_minor") is not None:
+        session.item_amount = int(wi["amount_usd_minor"])
     if data.get("vendor"):
         ids.append(data["vendor"].get("id"))
     wi = data.get("work_item") or {}
@@ -570,6 +634,174 @@ def validate_proposal(tools: AgentTools, session: AnalystSession, work_item_id: 
     _, cap_err = llm_cap_effect(entry, session.line)
     if cap_err:
         return cap_err
+    refs = [str(r) for r in evidence_refs or [] if str(r).strip()]
+    if not refs:
+        return "evidence_refs is empty: a proposal without evidence is a plug. Cite source row ids or ask"
+    unknown = [r for r in refs if r not in session.known_evidence]
+    if unknown:
+        return (f"evidence_refs not part of work item {session.work_item_id}: {unknown}. Cite only ids returned "
+                f"by read_item for this work item, or precedent refs from search_precedents")
+    if not (reason or "").strip():
+        return "reason is empty"
+    if ARTICLE_RE.search(reason):
+        return "do not write article numbers in the reason; cite the rulebook_entry_id and code resolves the article"
+    limited = tools.limit_entry(category_code, session.period_key)
+    if limited is not None and int((session.line or {}).get("amount_usd_minor") or 0) > 0:
+        remaining = tools.limit_remaining(category_code, session.period_key, session.work_item_id)
+        amount = int(session.line.get("amount_usd_minor") or 0)
+        if remaining is not None and amount > remaining:
+            return (f"{category_code} has a cap limit and only {max(0, remaining)} USD minor remains this year; the "
+                    f"line is {amount}. Use propose_allocations with a {category_code} allocation of at most the "
+                    f"remaining limit and a cap_limit_excess RELEVANT allocation for the rest")
+    return None
+
+
+# ---- allocations (SCHEMA §11.1) ------------------------------------------------------------------
+
+# D5.1.1.h.c and e.ii: the only categories a "share" (apportionment) basis may carry, plus their
+# RELEVANT complement. "Directly Attributable" forbids apportioning anything else.
+APPORTIONABLE: frozenset[str] = frozenset({"NON_F1", "HERITAGE"})
+_SHARE_REF = re.compile(r"^(dept-[A-Za-z0-9_-]+):(0(\.\d+)?|1(\.0+)?)$")
+
+
+def allocation_problems(tools: AgentTools, *, work_item_id: int, period_key: str, line: dict,
+                        bill_lines: Sequence[dict], allocations: Sequence[dict],
+                        item_amount: int | None = None) -> list[str]:
+    """Code-side validation of an allocation set, mirroring the module's checks (SCHEMA §11.1).
+
+    Allocations are dicts with basis, basis_ref, category_code, rulebook_entry_id, policy_id?,
+    amount_usd_minor, cap_effect_usd_minor?. Returns every problem found (empty = valid)."""
+    out: list[str] = []
+    allocs = list(allocations)
+    total = int(line.get("amount_usd_minor") or 0) if item_amount is None else int(item_amount)
+    if len(allocs) < 2:
+        out.append("an allocation set needs at least two allocations (otherwise propose the whole line)")
+    try:
+        amounts = [int(a.get("amount_usd_minor")) for a in allocs]
+    except (TypeError, ValueError):
+        return out + ["every allocation needs an integer amount_usd_minor"]
+    if sum(amounts) != total:
+        out.append(f"allocations sum to {sum(amounts)} but the line is {total} USD minor; they must sum exactly")
+    rb = {e["id"]: e for e in tools.rulebook()}
+    own = {str(b.get("id")): b for b in bill_lines if b.get("gl_line_id") == line.get("id")}
+    used_bl: list[str] = []
+    by_cat: dict[str, int] = {}
+    for i, a in enumerate(allocs, start=1):
+        basis, ref, code = a.get("basis"), str(a.get("basis_ref") or ""), a.get("category_code")
+        entry = rb.get(a.get("rulebook_entry_id") or "")
+        ok, why = pol.entry_valid_for(entry, code, period_key)
+        if not ok:
+            out.append(f"allocation {i}: {why}")
+            continue
+        by_cat[code] = by_cat.get(code, 0) + int(a["amount_usd_minor"])
+        cap = a.get("cap_effect_usd_minor")
+        if entry.get("treatment") == "ADJUSTMENT" and cap is None:
+            out.append(f"allocation {i}: {code} is an ADJUSTMENT and needs a cap effect")
+        if entry.get("treatment") != "ADJUSTMENT" and cap is not None:
+            out.append(f"allocation {i}: {code} is {entry.get('treatment')}; no cap effect allowed")
+        if basis == "bill_line":
+            if ref not in own:
+                out.append(f"allocation {i}: {ref!r} is not a bill line of {line.get('id')}")
+            used_bl.append(ref)
+        elif basis == "share":
+            m = _SHARE_REF.match(ref)
+            if not m:
+                out.append(f"allocation {i}: share basis_ref must be '<department_id>:<share as decimal>', not {ref!r}")
+            else:
+                if m.group(1) != line.get("department_id"):
+                    out.append(f"allocation {i}: share department {m.group(1)} is not the line's "
+                               f"{line.get('department_id')}")
+                if abs(int(a["amount_usd_minor"]) - total * float(m.group(2))) > 1:
+                    out.append(f"allocation {i}: a share amount must be the line total x {m.group(2)} (within one "
+                               f"minor unit)")
+            if code not in APPORTIONABLE and code != "RELEVANT":
+                out.append(f"allocation {i}: apportionment_not_permitted: {code} must be Directly Attributable; only "
+                           f"{', '.join(sorted(APPORTIONABLE))} (and their RELEVANT complement) may use a share basis")
+        elif basis == "cap_limit_excess":
+            if code != "RELEVANT":
+                out.append(f"allocation {i}: a cap_limit_excess allocation is RELEVANT, not {code}")
+            if tools.limit_entry(ref, period_key) is None:
+                out.append(f"allocation {i}: {ref!r} is not a category with a cap limit in force for {period_key}")
+            elif not any(b.get("category_code") == ref for b in allocs):
+                out.append(f"allocation {i}: cap_limit_excess for {ref} needs a sibling {ref} allocation")
+        else:
+            out.append(f"allocation {i}: unknown basis {basis!r}")
+    if any(a.get("basis") == "share" for a in allocs):
+        share_cats = {a.get("category_code") for a in allocs if a.get("basis") == "share"}
+        if not share_cats & APPORTIONABLE:
+            out.append("a RELEVANT share is only the complement of an apportionable share (NON_F1 or HERITAGE)")
+    dupes = sorted({r for r in used_bl if used_bl.count(r) > 1})
+    if dupes:
+        out.append(f"each bill line may be used once: {', '.join(dupes)}")
+    if used_bl:
+        missing = sorted(set(own) - set(used_bl))
+        if missing:
+            out.append(f"bill-line allocations must cover every bill line of the line; missing {', '.join(missing)}")
+    for code, amt in by_cat.items():
+        if amt <= 0 or tools.limit_entry(code, period_key) is None:
+            continue
+        remaining = tools.limit_remaining(code, period_key, work_item_id)
+        if remaining is not None and amt > remaining:
+            out.append(f"cap_limit_exceeded: {code} allocations total {amt} but only {max(0, remaining)} USD minor of "
+                       f"the limit remains; put the excess in a cap_limit_excess RELEVANT allocation")
+    return out
+
+
+def split_usd(parts: Sequence[int], total_usd_minor: int, fx_rate_e6: int) -> list[int] | None:
+    """Bill line amounts (invoice currency, minor) -> USD minor at the line's rate, with the
+    rounding remainder on the largest part so the sum is exactly the line's USD amount. None when
+    the parts do not add up to the line in the invoice currency (the remainder would not be
+    rounding)."""
+    usd = [round(int(p) * int(fx_rate_e6) / 1_000_000) for p in parts]
+    rest = int(total_usd_minor) - sum(usd)
+    # a rounding remainder is at most half a minor unit per part (plus one)
+    if abs(rest) > len(parts):
+        return None
+    if usd:
+        k = max(range(len(parts)), key=lambda i: (abs(int(parts[i])), -i))
+        usd[k] += rest
+    return usd
+
+
+class AllocationIn(BaseModel):
+    """One allocation in a propose_allocations tool call (the model never cites a policy)."""
+
+    model_config = ConfigDict(extra="forbid")
+    basis: str
+    basis_ref: str
+    category_code: str
+    rulebook_entry_id: str
+    amount_usd_minor: int
+
+
+def validate_allocations(tools: AgentTools, session: AnalystSession, work_item_id: int,
+                         allocations: Sequence[dict], reason: str, evidence_refs: Sequence[str]) -> str | None:
+    """The propose_allocations guard: one decision, this item, code-side allocation checks,
+    evidence only from this item's own read, no policies, no adjustments, human-named categories."""
+    if session.decision is not None:
+        return "this work item already has a decision in this run; stop"
+    if int(work_item_id) != session.work_item_id:
+        return f"you may only act on work item {session.work_item_id} in this run"
+    if session.line is None:
+        return "read_item first"
+    for a in allocations:
+        if a.get("policy_id") is not None:
+            return "model allocations never cite a policy_id"
+        entry = next((e for e in tools.rulebook() if e["id"] == a.get("rulebook_entry_id")), None)
+        if entry is not None and entry.get("treatment") == "ADJUSTMENT":
+            return (f"{a.get('category_code')} is an ADJUSTMENT whose cap effect a human must name; ask instead of "
+                    f"allocating to it")
+        if session.requires_category and a.get("category_code") not in (session.requires_category,):
+            return f"this line requires {session.requires_category} or a question"
+        if session.allowed_categories is not None and a.get("category_code") not in session.allowed_categories \
+                and not (a.get("basis") == "cap_limit_excess" and a.get("category_code") == "RELEVANT"):
+            named = ", ".join(sorted(session.allowed_categories)) or "no category"
+            return f"the human named {named}; {a.get('category_code')} was not named"
+    problems = allocation_problems(tools, work_item_id=session.work_item_id, period_key=session.period_key,
+                                   line=session.line, bill_lines=session.bill_lines, allocations=allocations,
+                                   item_amount=session.item_amount)
+    if problems:
+        return "; ".join(problems)
     refs = [str(r) for r in evidence_refs or [] if str(r).strip()]
     if not refs:
         return "evidence_refs is empty: a proposal without evidence is a plug. Cite source row ids or ask"
@@ -718,6 +950,49 @@ def _bt_propose_classification(tools: AgentTools, session: AnalystSession | None
     return beta_tool(propose_classification, strict=True)
 
 
+def _bt_propose_allocations(tools: AgentTools, session: AnalystSession | None):
+    def propose_allocations(work_item_id: int, allocations: list[AllocationIn], reason: str,
+                            evidence_refs: list[str]) -> str:
+        """Propose splitting ONE work item's line across categories. A human approves it later; you cannot.
+
+        Use this only when the line's parts genuinely belong to different categories (e.g. an
+        invoice whose bill lines are canteen catering, a sponsor dinner and an offsite lunch).
+        Amounts are USD minor units and must sum EXACTLY to the work item's amount_usd_minor.
+        Bases: "bill_line" (basis_ref = a bill line id of THIS item; use each once and cover every
+        bill line), "share" (basis_ref = "<department_id>:<share as decimal>", only for NON_F1 or
+        HERITAGE and their RELEVANT complement: apportioning anything else is not permitted),
+        "cap_limit_excess" (category RELEVANT, basis_ref = the limited category code, for the part of
+        a capped exclusion above its remaining limit). No adjustments, no policy ids, no article
+        numbers. Call this at most once per item; if you are not sure, call ask instead.
+
+        Args:
+            work_item_id: the work item id.
+            allocations: the split, at least two parts.
+            reason: one or two sentences a controller can check, without article numbers.
+            evidence_refs: ids of the evidence rows of this work item (gl line, bill lines, precedents).
+        """
+        allocs = [a.model_dump() if hasattr(a, "model_dump") else dict(a) for a in allocations]
+        for a in allocs:
+            a.setdefault("policy_id", None)
+            a.setdefault("cap_effect_usd_minor", None)
+        if session is not None:
+            err = validate_allocations(tools, session, work_item_id, allocs, reason, evidence_refs)
+            if err:
+                tools.rec.record("note", "propose_allocations:llm:rejected_by_guard", {"error": err},
+                                 work_item_id=int(work_item_id))
+                raise ToolError(err)
+        _llm_decision(tools, session, "propose_allocations", work_item_id,
+                      {"allocations": allocs, "reason": reason, "evidence_refs": list(evidence_refs),
+                       "proposal_source": "llm"})
+        res = tools.propose_allocations(int(work_item_id), allocs, reason, list(evidence_refs), "llm")
+        if session is not None:
+            session.decision = {"action": "propose_allocations", "allocations": allocs, "reason": reason,
+                                "evidence_refs": list(evidence_refs), "proposal_source": "llm", "result": res}
+        return _dump(res)
+
+    return beta_tool(propose_allocations, strict=True)
+
+
 def _bt_ask(tools: AgentTools, session: AnalystSession | None):
     def ask(work_item_id: int, question: str) -> str:
         """Ask the human controller a question about a work item instead of guessing (moves it to NEEDS_INFO).
@@ -785,6 +1060,7 @@ _FACTORIES: dict[str, Callable[[AgentTools, AnalystSession | None], Any]] = {
     "search_precedents": _bt_search_precedents,
     "search_rulebook": _bt_search_rulebook,
     "propose_classification": _bt_propose_classification,
+    "propose_allocations": _bt_propose_allocations,
     "ask": _bt_ask,
     "propose_policy": _bt_propose_policy,
 }

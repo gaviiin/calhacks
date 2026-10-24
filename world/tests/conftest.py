@@ -56,3 +56,8 @@ def answer_key(out_dir) -> list[dict]:
 @pytest.fixture(scope="session")
 def truth(out_dir) -> list[dict]:
     return read_csv(out_dir / "truth_2026.csv")
+
+
+@pytest.fixture(scope="session")
+def allocations(out_dir) -> list[dict]:
+    return read_csv(out_dir / "truth_2026_allocations.csv")

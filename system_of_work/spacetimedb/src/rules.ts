@@ -202,7 +202,24 @@ export const PATTERN_KEYS = [
   'related_party',
   'min_amount_usd_minor',
   'max_amount_usd_minor',
+  // Tier 1 (SCHEMA section 11.2). description_regex matches bill line descriptions under the
+  // same rules as memo_regex; entity and erp_category_code are exact matches on the gl line.
+  'description_regex',
+  'entity',
+  'erp_category_code',
 ] as const;
+
+// ---------- Tier 1: allocations (SCHEMA section 11.1) ----------
+
+// proposeAllocations writes this marker into proposed_category_code / proposed_rulebook_entry_id;
+// the split itself lives in the allocation table. post records it as posted_treatment.
+export const ALLOCATED = 'ALLOCATED';
+export const ALLOCATION_BASES = ['bill_line', 'share', 'cap_limit', 'cap_limit_excess'] as const;
+// Categories that may be apportioned by a department share (D5.1.1.h.c, e.ii); RELEVANT is
+// allowed on a share basis only as the complement of one of these. Everything else must be
+// Directly Attributable, so a share basis is denied as apportionment_not_permitted.
+export const APPORTIONABLE: readonly string[] = ['NON_F1', 'HERITAGE'];
+export const RELEVANT_CATEGORY = 'RELEVANT';
 
 // The standing-approval job: may approve only under a policy with autonomy GRANTED.
 export const AUTONOMOUS_ROLE: Role = 'auto_approver';

@@ -7,8 +7,9 @@ from agents.tools import (ALLOWLISTS, CAP_ANALYST_TOOLS, FORBIDDEN_TOOLS, POLICY
 
 
 def test_allowlists_are_exactly_schema_section_7():
+    # SCHEMA §7 plus propose_allocations (§11.1: the analyst may split a line across categories)
     assert CAP_ANALYST_TOOLS == ("list_queue", "read_item", "search_policies", "search_precedents",
-                                 "search_rulebook", "propose_classification", "ask")
+                                 "search_rulebook", "propose_classification", "propose_allocations", "ask")
     assert POLICY_LEARNER_TOOLS == ("search_policies", "search_precedents", "search_rulebook", "propose_policy")
     assert set(ALLOWLISTS) == {"cap_analyst", "policy_learner"}
 
@@ -33,6 +34,8 @@ def test_built_tool_lists_match_allowlists(stdb, actors):
         assert d["strict"] is True
         s = d["input_schema"]
         assert s["additionalProperties"] is False and set(s["required"]) == set(s["properties"])
+        for sub in (s.get("$defs") or {}).values():  # nested objects are strict too
+            assert sub["additionalProperties"] is False and set(sub["required"]) == set(sub["properties"])
     with pytest.raises(KeyError):
         build_beta_tools("gateway", t)
 

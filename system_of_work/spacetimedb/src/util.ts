@@ -198,6 +198,9 @@ export type Pattern = {
   related_party?: boolean;
   min_amount_usd_minor?: bigint;
   max_amount_usd_minor?: bigint;
+  description_regex?: string;
+  entity?: string;
+  erp_category_code?: string;
 };
 
 // ---- memo matching (SCHEMA section 10, defect 11; mirrored by the agents' Python matcher
@@ -322,7 +325,18 @@ function memoRegexSyntaxError(src: string): string | undefined {
 
 // NFKC-normalises the source, enforces the shared rules, and compiles it with the `i` flag
 // and without `u` (ASCII \d \w \b semantics). Throws SenderError with the reason.
+// Compiled regexes by source (no `g` flag, so test() is stateless). Refused sources are not cached.
+const REGEX_CACHE = new Map<string, RegExp>();
+
 export function compileMemoRegex(src: string): RegExp {
+  const hit = REGEX_CACHE.get(src);
+  if (hit) return hit;
+  const re = compileMemoRegexUncached(src);
+  if (REGEX_CACHE.size < 4096) REGEX_CACHE.set(src, re);
+  return re;
+}
+
+function compileMemoRegexUncached(src: string): RegExp {
   const body = nfkc(src);
   if (codePointLength(body) > MEMO_REGEX_MAX_CODE_POINTS) {
     throw new SenderError(`memo_regex is longer than ${MEMO_REGEX_MAX_CODE_POINTS} characters`);
@@ -375,6 +389,9 @@ export function parsePattern(text: string): Pattern {
       case 'account_code':
       case 'department_id':
       case 'memo_regex':
+      case 'description_regex':
+      case 'entity':
+      case 'erp_category_code':
         if (typeof v !== 'string') throw new SenderError(`pattern.${key} must be a string`);
         out[key] = v;
         break;
@@ -391,11 +408,13 @@ export function parsePattern(text: string): Pattern {
   if (Object.keys(out).length === 0) {
     throw new SenderError('pattern must have at least one non-null key (an empty pattern would match every line)');
   }
-  if (out.memo_regex !== undefined) {
+  for (const key of ['memo_regex', 'description_regex'] as const) {
+    const src = out[key];
+    if (src === undefined) continue;
     try {
-      compileMemoRegex(out.memo_regex);
+      compileMemoRegex(src);
     } catch (e) {
-      throw new SenderError(`pattern.memo_regex ${JSON.stringify(out.memo_regex)}: ${e instanceof Error ? e.message : String(e)}`);
+      throw new SenderError(`pattern.${key} ${JSON.stringify(src)}: ${e instanceof Error ? e.message : String(e)}`);
     }
   }
   return out;
@@ -408,6 +427,12 @@ export type PatternSubject = {
   memo: string;
   amountUsdMinor: bigint;
   relatedParty?: boolean; // undefined when the vendor is unknown
+  entity: string;
+  erpCategoryCode: string;
+  // Bill line descriptions description_regex must match, every one of them: the one bill line
+  // of an allocation, or all bill lines of the gl line for a whole-line resolution. Empty
+  // (a line with no bill lines) never matches a description_regex.
+  descriptions: readonly string[];
 };
 
 // Returns the keys that fail to match (empty = match). Mirrors the agents' Python matcher.
@@ -420,6 +445,12 @@ export function patternMismatches(p: Pattern, s: PatternSubject): string[] {
   if (p.related_party !== undefined && s.relatedParty !== p.related_party) bad.push('related_party');
   if (p.min_amount_usd_minor !== undefined && s.amountUsdMinor < p.min_amount_usd_minor) bad.push('min_amount_usd_minor');
   if (p.max_amount_usd_minor !== undefined && s.amountUsdMinor > p.max_amount_usd_minor) bad.push('max_amount_usd_minor');
+  if (p.description_regex !== undefined) {
+    const src = p.description_regex;
+    if (s.descriptions.length === 0 || !s.descriptions.every(d => memoRegexMatches(src, d))) bad.push('description_regex');
+  }
+  if (p.entity !== undefined && s.entity !== p.entity) bad.push('entity');
+  if (p.erp_category_code !== undefined && s.erpCategoryCode !== p.erp_category_code) bad.push('erp_category_code');
   return bad;
 }
 

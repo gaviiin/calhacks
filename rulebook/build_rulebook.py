@@ -240,6 +240,14 @@ CAP_LIMITS = {
     ("ISS22", "STAFF_ENTERTAINMENT"): 100_000_000,  # USD 1,000,000
     ("SECD-ISS07", "BCDR"): 150_000_000,  # USD 1,500,000
     ("SECD-ISS07", "ADJ_UNUSED_CAP_CARRYFORWARD"): 200_000_000,  # USD 2,000,000
+    # Employee Bonus Costs: excluded up to the lower of 20% of Total Fixed Employee Remuneration and
+    # the Excluded Bonus Maximum (USD 12m; USD 14.5m for a title or an improvement on the previous
+    # three years). Only the USD 12m limb is modelled: for a team with ~GBP 100m of fixed pay the 20%
+    # limb is far above it, and the 14.5m limb is known only at season end.
+    ("SECD-ISS07", "BONUS"): 1_200_000_000,  # USD 12,000,000
+    # PU_SUPPLY deliberately has no limit here: Section A states the maximum price in euros and its
+    # extracted text still shows an unresolved tracked change ("22 20 million euros"). A USD figure
+    # would be invented, so P34-style lines are asked about until limits can carry a currency.
 }
 
 

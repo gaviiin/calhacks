@@ -48,7 +48,7 @@ def test_clock_and_sources(client):
 
 def test_reference_and_history_visible_from_start(client, recs):
     for src in ("account", "department", "vendor", "contract", "history_2025_gl_line", "history_2025_cap_classification",
-                "history_2025_approval"):
+                "history_2025_approval", "history_2025_bill_line", "history_2025_bill_line_classification"):
         got, _ = drain(client, src)
         assert len(got) == len(recs[src]), src
     issues, _ = drain(client, "rulebook_issue")
@@ -66,6 +66,20 @@ def test_day_one_first_item_is_the_demo_invoice(client):
     assert first["record"]["id"] == "gl-000001" and first["record"]["erp_category_code"] == "MARKETING"
     bl = client.get("/records/bill_line/bl-00001-3").json()
     assert bl["gl_line_id"] == "gl-000001" and bl["amount_minor"] == 720_000
+
+
+def test_serves_2025_bill_lines_and_their_classifications(client, recs):
+    bls, end = drain(client, "history_2025_bill_line", limit=700)
+    assert end == len(bls) == len(recs["history_2025_bill_line"]) > 2000
+    assert [x["cursor"] for x in bls] == list(range(1, len(bls) + 1))
+    cls, _ = drain(client, "history_2025_bill_line_classification", limit=5000)
+    by_bl = {c["record"]["bill_line_id"]: c["record"] for c in cls}
+    assert set(by_bl) == {b["record"]["id"] for b in bls}
+    mixed = next(b["record"] for b in bls if "Sponsor dinner" in b["record"]["description"])
+    assert client.get(f"/records/history_2025_bill_line/{mixed['id']}").json() == mixed
+    c = client.get(f"/records/history_2025_bill_line_classification/{by_bl[mixed['id']]['id']}").json()
+    assert c["category_code"] == "MARKETING" and c["amount_minor"] == mixed["amount_minor"]
+    assert client.get("/sources").json()[-2:] == ["history_2025_bill_line", "history_2025_bill_line_classification"]
 
 
 def test_pagination_and_visibility_prefix(client):
