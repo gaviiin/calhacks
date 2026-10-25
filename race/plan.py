@@ -91,8 +91,10 @@ def _entry_components(e: Entry, inc: Incident, state) -> list[dict]:
                 parts = ["chassis_repair" if p == "chassis" else p for p in parts]
         if not parts:
             return [{"part": "", "label": "crash damage parts", "account": expense, "recognition": e.recognition, "amount_cents": amount}]
-        # the entry is the effect's expected cost: each part's share is its probability times its price
-        w = {p: max(float((alloc.get("chassis" if p == "chassis_repair" else p) or {}).get("p") or 1.0), 0.05) * (_mid(p) or 1) for p in parts}
+        # the entry's amount split by each part's price-book mid: every component then sits at the same ratio to what
+        # its part has cost before, so a booking above the team's history is caught part by part, and a
+        # probability-weighted booking below it passes (race/history.py's one-sided guard)
+        w = {p: _mid(p) or 1 for p in parts}
         total = sum(w.values()) or 1
         out = []
         left = amount
