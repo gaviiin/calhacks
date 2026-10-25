@@ -1,116 +1,450 @@
+/* CFO view: four instruments (cost, books, prize, cap), the queue, then the close. Kit tokens only. */
+
 .cfo {
   display: grid;
-  gap: 12px;
+  gap: 16px;
 }
 
-.cfo-tiles {
+.cfo-grid {
   display: grid;
-  grid-template-columns: repeat(5, minmax(0, 1fr));
-  gap: 8px;
-  margin: 0;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 16px;
 }
 
-.cfo-tiles > div {
-  padding: 12px;
-  border: 1px solid var(--line);
-  background: var(--panel);
+.cfo-grid > .k-panel {
+  display: grid;
+  align-content: start;
+  gap: 14px;
+  min-width: 0;
 }
 
-.cfo-tiles dt {
+.cfo-grid > .k-panel > .k-panel-head {
+  margin-bottom: 0;
+}
+
+/* weekend cost band: 0 to high, the band shaded, the mid a navy tick */
+.cfo-band {
+  display: grid;
+  gap: 4px;
+}
+
+.cfo-band-track {
+  position: relative;
+  height: 12px;
+  border-radius: 3px;
+  background: var(--line-soft);
+}
+
+.cfo-band-range {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  border-radius: 3px;
+  background: rgba(0, 163, 224, 0.28);
+}
+
+.cfo-band-mid {
+  position: absolute;
+  top: -3px;
+  bottom: -3px;
+  width: 3px;
+  margin-left: -1.5px;
+  border-radius: 1px;
+  background: var(--navy);
+}
+
+.cfo-band-scale {
+  position: relative;
+  height: 16px;
   color: var(--muted);
-  font-size: 12px;
+  font-size: 11px;
 }
 
-.cfo-tiles dd {
-  margin: 2px 0 0;
+.cfo-band-scale span {
+  position: absolute;
+  transform: translateX(-50%);
+  white-space: nowrap;
 }
 
-.cfo-big {
-  font-size: 24px;
-  font-weight: 600;
-  font-variant-numeric: tabular-nums;
+.cfo-band-scale span:first-child {
+  transform: none;
 }
 
-.cfo-list,
-.cfo-posted {
-  display: grid;
-  gap: 6px;
-  margin: 8px 0 0;
-  padding: 0;
-  list-style: none;
+.cfo-band-scale span:last-child {
+  transform: translateX(-100%);
 }
 
-.cfo-list li {
-  display: grid;
-  grid-template-columns: 130px minmax(0, 1fr) 90px auto;
-  align-items: center;
-  gap: 10px;
-  padding: 8px 10px;
-  border-left: 3px solid var(--hold);
-  background: var(--panel-2);
-}
-
-.cfo-kind {
-  color: var(--hold);
-  font: 600 12px var(--mono);
-  text-transform: uppercase;
-}
-
-.cfo-act {
-  display: flex;
-  flex-wrap: wrap;
-  gap: 6px;
-}
-
-.cfo-facets {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
-  gap: 10px;
-  margin-top: 8px;
-}
-
-.cfo-facet h3 {
-  margin: 0 0 6px;
-  font: 700 14px var(--display);
-  text-transform: uppercase;
-}
-
-.cfo-facet ul {
+/* the books legend: label, amount, count */
+.cfo-legend {
   display: grid;
   gap: 4px;
   margin: 0;
   padding: 0;
   list-style: none;
-}
-
-.cfo-facet li {
-  display: grid;
-  grid-template-columns: minmax(0, 1.6fr) minmax(40px, 1fr) 48px;
-  gap: 8px;
-  align-items: center;
   font-size: 13px;
 }
 
-.cfo-bar {
-  height: 8px;
-  background: var(--line-soft);
+.cfo-legend li {
+  display: grid;
+  grid-template-columns: 14px minmax(0, 1fr) auto 28px;
+  align-items: center;
+  gap: 4px;
+  color: var(--steel);
 }
 
-.cfo-bar span {
-  display: block;
-  height: 100%;
-  background: var(--lime);
+.cfo-legend b {
+  color: var(--navy);
+  font-weight: 600;
+}
+
+.cfo-legend .muted {
+  font-size: 11px;
+  text-align: right;
+}
+
+.cfo-more summary {
+  cursor: pointer;
+  color: var(--steel);
+  font: 600 12px var(--body);
+}
+
+.cfo-more summary .mono {
+  margin-left: 4px;
+  color: var(--navy);
+}
+
+.cfo-posted {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
 }
 
 .cfo-posted li {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: baseline;
+}
+
+.cfo-ellipsis {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* prize money: P(target) figure beside its line over the weekend */
+.cfo-odds-line {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 12px;
+  padding-top: 12px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.cfo-spark {
+  display: block;
+  width: 100%;
+  height: 40px;
+  overflow: visible;
+}
+
+.cfo-spark-line {
+  fill: none;
+  stroke: var(--navy);
+  stroke-width: 1.75;
+  stroke-linejoin: round;
+}
+
+.cfo-spark-base {
+  stroke: var(--s1);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  vector-effect: non-scaling-stroke;
+}
+
+.cfo-spark-dot {
+  fill: var(--navy);
+}
+
+.cfo-attr {
+  display: grid;
+  gap: 6px;
+}
+
+.cfo-attr-row {
+  display: grid;
+  grid-template-columns: 84px minmax(0, 1fr) 64px;
+  align-items: center;
+  gap: 8px;
+  font-size: 12px;
+}
+
+.cfo-attr-label {
+  color: var(--steel);
+}
+
+.cfo-attr-track {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--line-soft);
+}
+
+.cfo-attr-fill {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+}
+
+.cfo-attr-v {
+  font-size: 12px;
+  font-weight: 600;
+  text-align: right;
+}
+
+/* the queue: one row per thing to decide */
+.cfo-rows {
+  display: grid;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.cfo-rows li {
+  display: grid;
+  grid-template-columns: 92px minmax(0, 1fr) 150px 72px 176px;
+  align-items: center;
+  gap: 12px;
+  min-height: 48px;
+  padding: 6px 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.cfo-rows li:first-child {
+  border-top: 0;
+}
+
+.cfo-rows li > .k-pill {
+  justify-self: start;
+}
+
+.cfo-what {
+  display: grid;
+  min-width: 0;
+}
+
+.cfo-what b {
+  overflow: hidden;
+  color: var(--ink);
+  font-weight: 600;
+  font-size: 13px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cfo-meta {
+  overflow: hidden;
+  color: var(--muted);
+  font-size: 12px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.cfo-who {
+  color: var(--steel);
+  font-size: 12px;
+}
+
+.cfo-amt {
+  color: var(--navy);
+  font-size: 13px;
+  font-weight: 600;
+  text-align: right;
+}
+
+.cfo-act {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  gap: 6px;
+}
+
+.cfo-rows li.cfo-empty {
+  display: block;
+  min-height: 0;
   font-size: 13px;
 }
 
-@media (max-width: 900px) {
-  .cfo-tiles {
+.cfo-queue > .cfo-more {
+  margin-top: 8px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.cfo-rows--others {
+  margin-top: 6px;
+}
+
+.cfo-rows--others li {
+  min-height: 40px;
+}
+
+.cfo-rows--others .cfo-what b {
+  font-weight: 500;
+  color: var(--steel);
+}
+
+/* the close: a one-line summary; the briefs open on demand */
+.cfo-briefs > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  cursor: pointer;
+  color: var(--ink);
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.cfo-briefs > summary::-webkit-details-marker {
+  display: none;
+}
+
+.cfo-briefs > summary > span:first-child::before {
+  content: '';
+  display: inline-block;
+  width: 0;
+  height: 0;
+  margin-right: 8px;
+  border-top: 4px solid transparent;
+  border-bottom: 4px solid transparent;
+  border-left: 6px solid var(--steel);
+  vertical-align: 1px;
+  transition: transform 0.15s var(--ease);
+}
+
+.cfo-briefs[open] > summary > span:first-child::before {
+  transform: rotate(90deg);
+}
+
+.cfo-briefs > summary .mono {
+  font-size: 12px;
+  font-weight: 400;
+}
+
+.cfo-close-body {
+  margin-top: 12px;
+}
+
+/* the figures and the approval already sit above; inside, the close is its hash, the true-up and the briefs */
+.cfo-close-body .close-totals,
+.cfo-close-body .close-status,
+.cfo-close-body .close-seal > .small {
+  display: none;
+}
+
+.cfo-close-body .close-tabs {
+  margin-top: 12px;
+}
+
+.cfo-basis {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.cfo-basis summary {
+  cursor: pointer;
+  font-weight: 600;
+}
+
+.cfo-basis ul {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding-left: 16px;
+}
+
+.cfo-skel {
+  display: grid;
+  gap: 8px;
+}
+
+.cfo-skel span {
+  height: 12px;
+  border-radius: 3px;
+  background: linear-gradient(90deg, var(--line-soft), var(--panel-2), var(--line-soft));
+  background-size: 200% 100%;
+  animation: cfo-skel 1.4s ease-in-out infinite;
+}
+
+.cfo-skel span:first-child {
+  width: 60%;
+  height: 24px;
+}
+
+@keyframes cfo-skel {
+  to {
+    background-position: -200% 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .cfo-skel span {
+    animation: none;
+  }
+}
+
+@media (max-width: 1200px) {
+  .cfo-grid {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
-  .cfo-list li {
-    grid-template-columns: 1fr;
+}
+
+@media (max-width: 900px) {
+  .cfo-rows li {
+    grid-template-columns: 80px minmax(0, 1fr) auto;
+    grid-template-areas:
+      'pill what amt'
+      'pill who act';
+    gap: 4px 10px;
+    padding: 10px 0;
+  }
+  .cfo-rows li > .k-pill {
+    grid-area: pill;
+    align-self: start;
+  }
+  .cfo-rows li > .cfo-what {
+    grid-area: what;
+  }
+  .cfo-rows li > .cfo-who {
+    grid-area: who;
+  }
+  .cfo-rows li > .cfo-amt {
+    grid-area: amt;
+  }
+  .cfo-rows li > .cfo-act {
+    grid-area: act;
+  }
+}
+
+@media (max-width: 640px) {
+  .cfo-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .cfo-rows li {
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      'pill amt'
+      'what what'
+      'who act';
+    gap: 2px 10px;
+    padding: 8px 0;
+  }
+  .cfo-rows--others li .cfo-act {
+    display: none;
   }
 }

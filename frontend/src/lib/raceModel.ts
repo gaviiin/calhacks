@@ -322,7 +322,8 @@ export function runningOrder(cars: readonly CarState[]): CarState[] {
     .sort((a, b) => (CAR_ORDER[a.status] ?? 0) - (CAR_ORDER[b.status] ?? 0) || (a.position || 99) - (b.position || 99) || a.driverNumber - b.driverNumber);
 }
 
-export const live = (e: RaceEffects) => e.status !== 'corrected';
+// Every line counts: a corrected line arrives (from the race bridge) carrying the band the person booked.
+export const live = (_e: RaceEffects) => true;
 
 function sumMid(effects: readonly RaceEffects[], kind: string): { low: bigint; mid: bigint; high: bigint; n: number } {
   let low = 0n;
