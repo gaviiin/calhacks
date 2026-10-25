@@ -17,6 +17,7 @@ dependencies = [
   "pypdf>=5",
   "paho-mqtt>=2.1.0",
   "typesafe-sdk>=0.7.5",
+  "numpy>=2.5.4",
 ]
 
 [dependency-groups]
