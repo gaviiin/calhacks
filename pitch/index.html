@@ -1,0 +1,653 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
+    <title>Anneal: the autonomous race accountant</title>
+    <meta name="description" content="Anneal keeps a Formula 1 team's books in step with the car. Every part has a life, a spare count and a cap status; a crash becomes balanced entries, a response plan and a cap forecast in about a millisecond." />
+    <meta name="theme-color" content="#ffffff" />
+    <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Archivo:ital,wdth,wght@0,62..125,300..900;1,62..125,300..900&family=JetBrains+Mono:wght@400;500;700&display=swap" rel="stylesheet" />
+    <link rel="stylesheet" href="/src/styles.css" />
+  </head>
+  <body>
+    <!--
+      THESIS: The car is the ledger. The page opens on the car itself, drawn the way the dashboard draws it, and makes the visitor live one crash, from 315 km/h to the paperwork to the garage, before a single claim. It refuses the SaaS hero (headline, screenshot, logo strip) and the dark neon F1 poster.
+      OWN-WORLD: White paper, Atlassian blue construction lines (#0052CC, #0747A6), garage greys (#F4F5F7, #DFE1E6, #6B778C). Blueprint hairlines, blue-and-white kerb stripes, timing-tower rows, race-control capitals, Archivo expanded italic for livery lettering, JetBrains Mono only for measured figures. Red appears only for the red flag and destroyed parts.
+      STORY: A crash costs seconds on track and weeks in the books. Anneal follows one crash through the team, proves it on the São Paulo replay, shows how each part is engineered, then the tracks, the difference and the stack.
+      FIRST VIEWPORT: The ANNEAL wordmark at full width over the blueprint car at speed on a streaming grid, telemetry readout top right, a scroll cue and "Watch the demo" in the nav.
+      FORM: Pinned by the brief (Elfie's pitch format, racing, white/blue/grey, crash scroll into the garage); no concept roll. Seed key: brief-pinned.
+      FINISH: unreviewed and undocumented is unfinished; this build ends with the finish review, the verdict, and DESIGN.md
+    -->
+    <a class="skip" href="#problem">Skip the crash</a>
+
+    <header class="nav" id="nav">
+      <a class="nav-mark" href="#top" aria-label="Anneal, back to the top">
+        <svg viewBox="0 0 40 24" aria-hidden="true"><path d="M2 22 L14 2 H22 L10 22 Z" /><path d="M16 22 L28 2 H36 L24 22 Z" opacity=".45" /></svg>
+        <span>ANNEAL</span>
+      </a>
+      <nav aria-label="Sections">
+        <a href="#problem">Problem</a>
+        <a href="#method">Method</a>
+        <a href="#numbers">Numbers</a>
+        <a href="#demo">Demo</a>
+        <a href="#features">Engineering</a>
+        <a href="#tracks">Tracks</a>
+        <a href="#stack">Stack</a>
+      </nav>
+      <a class="btn btn-solid nav-cta" href="#demo">Watch the demo</a>
+    </header>
+
+    <main id="top">
+      <!-- ================================================================ the crash, then the garage -->
+      <section class="hero" id="hero" aria-label="One crash at Interlagos, then the garage">
+        <div class="hero-pin">
+          <canvas id="crash" aria-hidden="true"></canvas>
+          <div class="veil" aria-hidden="true"></div>
+          <div class="flash" aria-hidden="true"></div>
+
+          <div class="hud" aria-hidden="true">
+            <div class="hud-row hud-head"><span>INTERLAGOS · Q</span><span class="hud-car">23 ALB</span></div>
+            <div class="hud-speed"><b data-hud="speed">315</b><i>km/h</i></div>
+            <div class="hud-bars">
+              <label>THR<span><i data-hud="thr"></i></span></label>
+              <label>BRK<span><i data-hud="brk"></i></span></label>
+            </div>
+            <div class="hud-row"><span>GEAR <b data-hud="gear">8</b></span><span data-hud="clock">11:57:16.6</span></div>
+            <div class="hud-flag" data-hud="flag">TRACK CLEAR</div>
+          </div>
+
+          <div class="cap cap-title" data-cap="title">
+            <h1 class="wordmark">ANNEAL</h1>
+            <p class="lede">The autonomous race accountant. It keeps the books in step with the car.</p>
+            <p class="cue"><span class="cue-line"></span>Scroll to run the lap</p>
+          </div>
+          <div class="cap cap-left" data-cap="lap">
+            <p class="cap-big">Interlagos, qualifying.<br />Car 23 at 315&nbsp;km/h.</p>
+            <p class="cap-small">São Paulo Grand Prix, 3 November 2024. Timing and telemetry are real, from OpenF1.</p>
+          </div>
+          <div class="cap cap-left" data-cap="hit">
+            <p class="cap-huge">315<span class="arrow">→</span><span data-hud="speed2">0</span></p>
+            <p class="cap-small">km/h, in under a second. The car stops at 11:57:19.</p>
+          </div>
+          <div class="cap cap-left" data-cap="flag">
+            <p class="cap-big">Red flag, nine seconds later.</p>
+            <p class="cap-small">The telemetry saw the car stop before race control said a word. Finance will hear about it in five weeks, as invoices.</p>
+          </div>
+          <div class="chaos" aria-hidden="true"></div>
+          <div class="cap cap-center" data-cap="chaos">
+            <p class="cap-big">Then the paperwork starts.</p>
+            <p class="cap-small">Nine parts destroyed. A spare tub to build against a three-and-a-half-hour clock. Freight to Las Vegas. A cost cap with no room. Engineers, logistics and finance each keep their own version of one crash, and finance hears last.</p>
+          </div>
+          <div class="cap cap-center" data-cap="one">
+            <p class="cap-huge cap-blue">Anneal keeps one.</p>
+          </div>
+
+          <svg class="tag-lines" aria-hidden="true"></svg>
+          <div class="tags" aria-hidden="true"></div>
+          <div class="cap cap-garage" data-cap="garage">
+            <h2 class="display">The car is the ledger.</h2>
+            <p>Every part on every car has a condition, a life left, a spare count and a cap status. A lap uses life, a kerb strike uses more, a crash ends it. Anneal turns each change into the books in about a millisecond, and asks a person only when the call is theirs.</p>
+            <div class="row-actions">
+              <a class="btn btn-solid" href="#method">Follow one crash</a>
+              <a class="btn" href="#demo">Watch the demo</a>
+            </div>
+            <p class="fine">Albon's car after his São Paulo qualifying crash, from the replay. Prices are the desk's stated assumptions.</p>
+          </div>
+
+          <ol class="rail" aria-hidden="true">
+            <li data-rail="0"><span>Lap</span></li>
+            <li data-rail="1"><span>Crash</span></li>
+            <li data-rail="2"><span>Paperwork</span></li>
+            <li data-rail="3"><span>Garage</span></li>
+          </ol>
+          <p class="nogl" hidden>Your browser has no WebGL2, so the car is not drawn. Everything else on the page works.</p>
+        </div>
+      </section>
+
+      <!-- ================================================================ the problem -->
+      <section class="section" id="problem">
+        <div class="wrap">
+          <h2 class="display">A crash costs seconds on track and weeks in the books.</h2>
+          <p class="sub">Every team keeps its books against the cost cap, and crashes are the biggest swing in its season. Williams, 2024:</p>
+
+          <ol class="rc" aria-label="What 2024 cost Williams, as race control would read it">
+            <li><time>2024</time><p>Williams crash damage estimated at €13.84m, the most of any team.</p><cite>PlanetF1</cite></li>
+            <li><time>2024</time><p>The FIA rejects Williams' request to exclude crash costs from a season's tenth major crash onward.</p><cite>GPblog</cite></li>
+            <li><time>Nov 2024</time><p>Vowles: Mexico and Brazil cost "more than three, less than ten" million dollars.</p><cite>Formula1.com</cite></li>
+            <li><time>Nov 2024</time><p>Vowles: the team will "take a little bit away from next year's cost cap".</p><cite>Formula1.com</cite></li>
+            <li class="rc-flag"><time>3 Nov 2024</time><p>São Paulo: three crashes on one Sunday, a car that does not start, no points. About $4m.</p><cite>Auto Motor und Sport via RacingNews365</cite></li>
+            <li><time>FIA FR 2.3</time><p>2024 cap: $135m for 21 races plus $1.8m for each race above 21. $140.4m for 24, before indexation.</p><cite>Financial Regulations, Issue 22</cite></li>
+          </ol>
+
+          <div class="lanes" aria-label="When each department learns about one crash">
+            <div class="lanes-head">
+              <h3>Who knows what, and when</h3>
+              <p>One crash, three departments, three clocks. Today each keeps its own version.</p>
+            </div>
+            <div class="lanes-axis" aria-hidden="true">
+              <span style="--x:0">1 s</span><span style="--x:.18">1 min</span><span style="--x:.36">1 h</span><span style="--x:.54">1 day</span><span style="--x:.72">1 week</span><span style="--x:.92">5 weeks</span>
+            </div>
+            <div class="lane"><b>Engineers</b><span class="lane-bar" style="--a:0;--b:.08"><i>telemetry: the car stopped</i></span></div>
+            <div class="lane"><b>Logistics</b><span class="lane-bar" style="--a:.3;--b:.6"><i>spares, rebuild, freight to the next race</i></span></div>
+            <div class="lane"><b>Finance</b><span class="lane-bar lane-late" style="--a:.8;--b:.98"><i>invoices, then the cap</i></span></div>
+            <div class="lane lane-us"><b>Anneal</b><span class="lane-bar" style="--a:0;--b:.03"><i>all three, about 1 ms after the data</i></span></div>
+          </div>
+        </div>
+      </section>
+
+      <div class="kerb" aria-hidden="true"></div>
+
+      <!-- ================================================================ the method -->
+      <section class="section" id="method">
+        <div class="wrap">
+          <h2 class="display">One crash, followed through the team.</h2>
+          <p class="sub">Albon's qualifying crash, step by step, the way Anneal runs it. Code and agents do the work; a person touches it three times.</p>
+        </div>
+        <div class="wrap method">
+          <ol class="steps" aria-label="The eight steps">
+            <li data-step="0"><span class="step-n">1</span><div><b>Seen</b><em>the agent · 11:57:19</em></div></li>
+            <li data-step="1"><span class="step-n">2</span><div><b>Hardware</b><em>the agent, Jev · +1 ms</em></div></li>
+            <li data-step="2"><span class="step-n">3</span><div><b>Engineering call</b><em>Chief Mechanic, Team Principal</em></div></li>
+            <li data-step="3"><span class="step-n">4</span><div><b>Race call</b><em>Head of Strategy</em></div></li>
+            <li data-step="4"><span class="step-n">5</span><div><b>Next steps</b><em>owners by role</em></div></li>
+            <li data-step="5"><span class="step-n">6</span><div><b>Books</b><em>the agent; Chief of Staff, Head of Cost Cap</em></div></li>
+            <li data-step="6"><span class="step-n">7</span><div><b>Season</b><em>the agent; CFO</em></div></li>
+            <li data-step="7"><span class="step-n">8</span><div><b>Seal and true-up</b><em>CFO, Sunday night</em></div></li>
+          </ol>
+
+          <div class="panels">
+            <article class="panel" data-panel="0">
+              <h3>Seen</h3>
+              <p>Telemetry sees car 23 go from 315 to 0 km/h. A tripwire in code, not a model: over 100 km/h to under 25 with the brake on, or telemetry frozen on OpenF1's sentinel values. Race control never announces a retirement, so the desk does not wait for it.</p>
+              <figure class="art art-trace">
+                <svg viewBox="0 0 520 200" role="img" aria-label="Speed trace: 315 km/h falling to zero at 11:57:19, red flag at 11:57:28">
+                  <g class="grid"><path d="M40 20 H500 M40 70 H500 M40 120 H500 M40 170 H500" /></g>
+                  <text x="34" y="24" class="ax" text-anchor="end">300</text><text x="34" y="124" class="ax" text-anchor="end">100</text><text x="34" y="174" class="ax" text-anchor="end">0</text>
+                  <path class="trace" d="M40 30 C80 26 110 34 140 28 S190 22 214 24 L226 26 C232 70 236 140 244 170 L500 170" />
+                  <path class="trip" d="M40 120 H500" />
+                  <line class="mark" x1="236" y1="12" x2="236" y2="186" /><text x="232" y="16" class="lbl" text-anchor="end">11:57:19 stopped</text>
+                  <line class="mark mark-red" x1="410" y1="12" x2="410" y2="186" /><text x="414" y="16" class="lbl lbl-red">red flag +9 s</text>
+                  <text x="496" y="114" class="ax" text-anchor="end">tripwire 100 km/h</text>
+                </svg>
+              </figure>
+            </article>
+
+            <article class="panel" data-panel="1">
+              <h3>Hardware</h3>
+              <p>Jev reads the impact and the parts it likely hit, each with a probability, in about a hundred milliseconds. Likely parts are marked damaged at once and replaced when the garage confirms. The power unit was not hit, but it now runs out before the season ends, past its allocation: a grid penalty, found the moment it happened.</p>
+              <figure class="art">
+                <table class="ptable">
+                  <thead><tr><th>Part</th><th>P(hit)</th><th class="num">Mid</th></tr></thead>
+                  <tbody data-hits></tbody>
+                </table>
+                <div class="life">
+                  <div class="life-head"><b>Power unit, car 23</b><span>runs out: Abu Dhabi · allocation 4 of 4 used</span></div>
+                  <div class="life-bar"><i style="--w:.92"></i><span class="life-mark" style="--x:1">end of life</span></div>
+                  <p class="life-note">Grid penalty risk. Wear is never booked (Art. 3.1(o) excludes depreciation); it moves the race when the replacement is fitted, and fitting is when its cost counts.</p>
+                </div>
+              </figure>
+            </article>
+
+            <article class="panel" data-panel="2">
+              <h3>Engineering call</h3>
+              <p>The garage confirms heavy damage in one click. The Team Principal sees each way out, priced side by side and checked against the clock. No recommendation: the call is theirs.</p>
+              <figure class="art">
+                <div class="options">
+                  <div class="opt opt-no"><b>Repair, start from the grid</b><span>The survival cell is gone</span><em>not possible</em></div>
+                  <div class="opt opt-no"><b>Build the spare tub, start from the pit lane</b><span>About 13 h of work · 3 h 30 m to the start · $1.08m</span><em>does not fit the clock</em></div>
+                  <div class="opt opt-pick"><b>Withdraw</b><span>No further cost tonight · 0 points</span><em>chosen by the Team Principal</em></div>
+                </div>
+              </figure>
+            </article>
+
+            <article class="panel" data-panel="3">
+              <h3>Race call</h3>
+              <p>None for car 23: it does not start. When Colapinto crashes in the race, the strategist gets stay out, pit now, the other compound or the same stop under green, each priced in positions, points, prize money and cap. The agent marks what the team actually did, and recommends nothing.</p>
+              <figure class="art">
+                <table class="ptable ptable-opts">
+                  <thead><tr><th>Option, car 43 under the safety car</th><th>Priced in</th></tr></thead>
+                  <tbody>
+                    <tr><td>Stay out</td><td>positions · points · prize · cap</td></tr>
+                    <tr class="taken"><td>Pit now <em>taken, lap 30</em></td><td>positions · points · prize · cap</td></tr>
+                    <tr><td>Pit, other compound</td><td>positions · points · prize · cap</td></tr>
+                    <tr><td>Same stop under green</td><td>positions · points · prize · cap</td></tr>
+                  </tbody>
+                </table>
+              </figure>
+            </article>
+
+            <article class="panel" data-panel="4">
+              <h3>Next steps</h3>
+              <p>Execution follows the choice. Internal, reversible steps run on their own; anything outward or irreversible waits for its owner, and the module refuses anything else.</p>
+              <figure class="art">
+                <ul class="checks">
+                  <li><i class="st st-wait"></i><b>Notice to the Stewards: car 23 will not start</b><span>waits for the Sporting Director to send it</span></li>
+                  <li><i class="st st-off"></i><b>Parc fermé change list</b><span>cancelled: the car is withdrawn</span></li>
+                  <li><i class="st st-auto"></i><b>Spares reserved at the track and at Grove</b><span>done by the agent</span></li>
+                  <li><i class="st st-auto"></i><b>Factory work orders: tub, floor, gearbox</b><span>raised, Grove</span></li>
+                  <li><i class="st st-wait"></i><b>Air freight against the Las Vegas cut-off</b><span>waits for the Head of Logistics</span></li>
+                  <li><i class="st st-auto"></i><b>Power unit and gearbox checks</b><span>raised for the engineers</span></li>
+                </ul>
+              </figure>
+            </article>
+
+            <article class="panel" data-panel="5">
+              <h3>Books</h3>
+              <p>Balanced entries, each saying when the cap counts it. The response plan names each line's closest case in the team's own history: the Chief of Staff approves the plan once, every line with a precedent posts on its own whatever its size, and a line the team has never seen waits for the Head of Cost Cap.</p>
+              <figure class="art">
+                <table class="ptable journal">
+                  <thead><tr><th>Account</th><th class="num">Dr</th><th class="num">Cr</th><th>Cap</th></tr></thead>
+                  <tbody>
+                    <tr><td>6050 Crash damage: floor, wings, corners</td><td class="num">654,050</td><td></td><td><span class="chip chip-ok">precedent 0.93</span></td></tr>
+                    <tr><td class="ind">1400 Inventory: race spares</td><td></td><td class="num">654,050</td><td>on first use</td></tr>
+                    <tr><td>6050 Crash damage: survival cell</td><td class="num">1,079,500</td><td></td><td><span class="chip chip-wait">no precedent: Head of Cost Cap</span></td></tr>
+                    <tr><td class="ind">2100 Accrued: race costs</td><td></td><td class="num">1,079,500</td><td>2024, when fitted</td></tr>
+                    <tr><td>5200 Repair labour, car 23</td><td class="num">139,700</td><td></td><td><span class="chip chip-ok">precedent 0.91</span></td></tr>
+                    <tr><td class="ind">2100 Accrued: race costs</td><td></td><td class="num">139,700</td><td>2024</td></tr>
+                  </tbody>
+                </table>
+                <p class="fine">Price-book mids in USD. Posting through the ERP gateway, which accepts only what the database authorized.</p>
+              </figure>
+            </article>
+
+            <article class="panel" data-panel="6">
+              <h3>Season</h3>
+              <p>Ten thousand seasons re-run after every change, with the same random draws each time, so a change between two runs is the evidence and not noise. The engineers and the CFO see the same numbers tonight, not next week.</p>
+              <figure class="art">
+                <div class="odds">
+                  <div class="odds-row"><span>Before the weekend</span><b style="--w:.72">72%</b></div>
+                  <div class="odds-row"><span>Albon withdraws</span><b style="--w:.54">54%</b></div>
+                  <div class="odds-row"><span>Chequered flag</span><b style="--w:0">0%</b></div>
+                </div>
+                <p class="odds-cap">Chance of holding P8 in the constructors'. Expected prize money: <b>−$6.1m</b>.</p>
+              </figure>
+            </article>
+
+            <article class="panel" data-panel="7">
+              <h3>Seal and true-up</h3>
+              <p>Race-day finance is provisional, and Anneal says so. On Sunday night the weekend is sealed under one Merkle root, with a brief for each role that cites the row behind every figure; a check rejects any number the snapshot does not hold, and nothing goes out until the CFO approves. Weeks later the true-up compares the seal with the actuals and recalibrates the price book.</p>
+              <figure class="art seal">
+                <div><span>Sealed Sunday night</span><b>$3.92m</b></div>
+                <div><span>Reported weeks later</span><b>"nearly $4m"</b></div>
+                <code>one sha256 Merkle root over every sealed row · RFC 6962 leaves · re-verified on load</code>
+              </figure>
+            </article>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================ numbers -->
+      <section class="section section-grey" id="numbers">
+        <div class="wrap">
+          <h2 class="display">The São Paulo replay, timed.</h2>
+          <p class="sub">Williams at the 2024 São Paulo Grand Prix, replayed from real timing, telemetry and race control.</p>
+          <div class="tower" role="table" aria-label="Proof figures from the São Paulo 2024 replay">
+            <div class="tower-row tower-head" role="row"><span role="columnheader">Pos</span><span role="columnheader">Measure</span><span role="columnheader">Result</span><span role="columnheader">Note</span></div>
+            <div class="tower-row" role="row"><span role="cell">1</span><span role="cell">Events processed</span><span role="cell"><b data-count="2549">2,549</b></span><span role="cell">each committed in about 1 ms, 11 ms at worst</span></div>
+            <div class="tower-row" role="row"><span role="cell">2</span><span role="cell">Crash seen, before the red flag</span><span role="cell"><b>9–26 s</b></span><span role="cell">from telemetry, three crashes</span></div>
+            <div class="tower-row" role="row"><span role="cell">3</span><span role="cell">Parts kept current</span><span role="cell"><b data-count="22">22</b></span><span role="cell">11 per car, under a millisecond per event</span></div>
+            <div class="tower-row" role="row"><span role="cell">4</span><span role="cell">Parts replaced and booked when fitted</span><span role="cell"><b data-count="18">18</b></span><span role="cell">across three crashes</span></div>
+            <div class="tower-row" role="row"><span role="cell">5</span><span role="cell">Grid penalty risks found</span><span role="cell"><b data-count="2">2</b></span><span role="cell">power units past their allocation</span></div>
+            <div class="tower-row" role="row"><span role="cell">6</span><span role="cell">Replacements due by wear before Abu Dhabi</span><span role="cell"><b>$1.2m</b></span><span role="cell">4 parts, into the 2024 cap</span></div>
+            <div class="tower-row" role="row"><span role="cell">7</span><span role="cell">Seasons re-run after every change</span><span role="cell"><b data-count="10000">10,000</b></span><span role="cell">in about 80 ms</span></div>
+            <div class="tower-row" role="row"><span role="cell">8</span><span role="cell">Times a person touched it</span><span role="cell"><b data-count="5">5</b></span><span role="cell">2 damage answers, 2 Team Principal calls, 1 approval per incident's books</span></div>
+            <div class="tower-row tower-win" role="row"><span role="cell">9</span><span role="cell">Weekend crash cost, sealed Sunday night</span><span role="cell"><b>$3.92m</b></span><span role="cell">against "nearly $4m" reported weeks later</span></div>
+          </div>
+          <div class="services">
+            <h3>On the last demo run, every service live</h3>
+            <ul>
+              <li><b>OpenF1</b><span>REST, responses cached</span></li>
+              <li><b>SpacetimeDB</b><span>2,927 reducer calls, 0 refused</span></li>
+              <li><b>Jev</b><span>117 decisions, mean 114 ms</span></li>
+              <li><b>Claude</b><span>4 repair plans, 4 of 4 briefs</span></li>
+              <li><b>ERP</b><span>3 entries posted, 7 held for review</span></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================ demo -->
+      <section class="section" id="demo">
+        <div class="wrap demo">
+          <div class="demo-copy">
+            <h2 class="display">Demo time.</h2>
+            <p class="sub">This page is the pitch. The demo runs live: São Paulo 2024 replayed from OpenF1, the parts wearing lap by lap, the books moving in SpacetimeDB, seated as the CFO.</p>
+            <ol class="beats">
+              <li><time>0:00</time>Garage, the strip on Albon's crash</li>
+              <li><time>0:20</time>Seen: telemetry, nine seconds before the red flag</li>
+              <li><time>0:35</time>Hardware: nine parts, and a power unit heading for a grid penalty</li>
+              <li><time>1:00</time>Start or withdraw, priced side by side</li>
+              <li><time>1:30</time>The books kept themselves; one click approves the race crash</li>
+              <li><time>2:20</time>Ten thousand seasons: P8 from 72% to 0%</li>
+              <li><time>2:40</time>Sealed at $3.92m; the press said nearly $4m</li>
+            </ol>
+          </div>
+          <figure class="screen">
+            <div class="screen-bar"><i></i><i></i><i></i><span>anneal · Car · seated as CFO</span></div>
+            <img src="/home-1440.jpg" alt="The Anneal dashboard: the car drawn as a blueprint with life, condition and cap lenses, the parts ledger beside it, and the money, spares, season and the agent's trail below" loading="lazy" width="1440" height="900" />
+          </figure>
+        </div>
+        <div class="wrap">
+          <div class="run">
+            <p>Run it yourself</p>
+            <pre><code><span>make stdb-start</span>          <em># SpacetimeDB on :3000</em>
+<span>make api</span>                 <em># the ERP and systems of record</em>
+<span>make dashboard</span>           <em># :5173, the car is the home screen</em>
+<span>make race-demo</span>           <em># São Paulo 2024 live: Jev, Claude, OpenF1, the ERP (OFFLINE=1 for none)</em></code></pre>
+          </div>
+        </div>
+      </section>
+
+      <div class="kerb" aria-hidden="true"></div>
+
+      <!-- ================================================================ features -->
+      <section class="section" id="features">
+        <div class="wrap">
+          <h2 class="display">Every feature, and why it is built this way.</h2>
+          <p class="sub">F1 is a strange accounting world: the asset races, breaks and is rebuilt overnight, and the regulator counts a cost the day a part is fitted. Each piece is engineered for that.</p>
+          <div class="feat" data-feat>
+            <div class="feat-list" role="tablist" aria-label="Features" aria-orientation="vertical"></div>
+            <div class="feat-body" role="tabpanel" aria-live="polite"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================ the learner -->
+      <section class="section section-ink" id="learner">
+        <div class="wrap">
+          <h2 class="display">Inside the hardware process learner.</h2>
+          <p class="sub">Anneal learns how this team runs its car from what the team did before. Nothing is configured: everything it does on its own, it earned from evidence, and a person can take it back.</p>
+
+          <div class="learn">
+            <div class="learn-block">
+              <h3>Match an event against the team's own history</h3>
+              <p>Every past session becomes a case with a small feature vector. A new event takes its seven nearest cases. When at least three score 0.85 or more and 80% of them agree, their outcome is the protocol and it books the money on its own authority, naming the cases. These are the 93 real cases São Paulo learns from: Williams' 2024 races before it, and two press-sourced crashes.</p>
+              <div class="seg" role="radiogroup" aria-label="Event to match" data-events></div>
+              <div class="match">
+                <div class="match-list" data-matches></div>
+                <div class="match-verdict" data-verdict></div>
+              </div>
+              <table class="weights" aria-label="Similarity weights">
+                <tr><th>kind</th><th>stewards' words</th><th>retired in 2 laps</th><th>pitted after</th><th>track status</th><th>damage likely</th><th>tyre</th></tr>
+                <tr><td>0.30</td><td>0.20</td><td>0.18</td><td>0.10</td><td>0.08</td><td>0.08</td><td>0.06</td></tr>
+              </table>
+            </div>
+
+            <div class="learn-block">
+              <h3>Earn a licence</h3>
+              <p>A policy decides without a person only when its record says it can. With n cases of which k ended the way it says, the lower bound of the 90% Wilson interval must clear 0.75, with at least five cases. A policy below that is a shadow: it watches, and its effects are drawn dashed.</p>
+              <div class="licence">
+                <div class="seg" role="radiogroup" aria-label="Policy" data-policies></div>
+                <div class="sliders">
+                  <label>Cases <output data-out="n">12</output><input type="range" min="1" max="60" value="12" data-in="n" /></label>
+                  <label>Agreed <output data-out="k">12</output><input type="range" min="0" max="60" value="12" data-in="k" /></label>
+                </div>
+                <svg class="wilson" viewBox="0 0 520 120" role="img" aria-label="Wilson lower bound against the 0.75 licence line">
+                  <path class="wl-track" d="M20 60 H500" />
+                  <line class="wl-gate" x1="380" x2="380" y1="24" y2="96" />
+                  <text class="wl-lbl" x="380" y="18" text-anchor="middle">0.75 licence</text>
+                  <rect class="wl-ci" data-ci x="20" y="52" width="10" height="16" rx="2" />
+                  <circle class="wl-dot" data-dot cx="20" cy="60" r="7" />
+                  <text class="wl-lbl" x="20" y="114">0</text><text class="wl-lbl" x="500" y="114" text-anchor="end">1</text>
+                </svg>
+                <div class="licence-out" data-licence></div>
+              </div>
+            </div>
+
+            <div class="learn-block learn-loop">
+              <h3>The loop</h3>
+              <ol class="loop">
+                <li><b>History</b><span>The team's 2024 sessions, normalised the same way the live tape is. Each era learns only from races before it, so a replay never matches its own future.</span></li>
+                <li><b>Cases and policies</b><span>Groups with enough cases become Ripple-Down Rule policies with their cases as precedents. Numbers come from code; Claude only reviews whether a draft generalises.</span></li>
+                <li><b>Response plan</b><span>After a crash, every hardware operation and entry is a line with its closest precedent. Lines at 0.8 or above execute once the Chief of Staff approves the plan; a line with none waits for the Head of Cost Cap.</span></li>
+                <li><b>Correction</b><span>A person's answer becomes a stored case carrying the band they booked. Three alike corrections, or a policy contradicted more than 20% of the time, and the learner drafts a child rule.</span></li>
+              </ol>
+              <p class="formula">life used = laps × km × (1.15 in qualifying) ÷ part life + Σ Jev severity share × P(part hit)</p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================ cap forecast -->
+      <section class="section" id="cap">
+        <div class="wrap">
+          <h2 class="display">How the cap is forecast.</h2>
+          <p class="sub">After every change, the desk re-runs the year to 31 December ten thousand times and reports the chance of each overspend outcome. Probabilities, not advice: what to cut or move is the Head of Cost Cap's call.</p>
+          <div class="capfc">
+            <div class="schedule" aria-label="The year-end schedule">
+              <div class="sch-row"><span></span><b>Relevant costs booked before the weekend</b><em>assumption calibrated to Vowles</em><i data-sch="before">$114.6m</i></div>
+              <div class="sch-row"><span>+</span><b>This weekend's cap-relevant cost</b><em>the ledger's entries</em><i data-sch="weekend">$3.92m</i></div>
+              <div class="sch-row"><span>+</span><b>The rest of the year's plan</b><em>run rate to 31 Dec; payroll 55% ±1%, the rest ±4%</em><i data-sch="plan">$22.3m</i></div>
+              <div class="sch-row"><span>+</span><b>Crash damage in the races still to run</b><em>Poisson per race × capsim's severity mix</em><i data-sch="crash">~$0.6m</i></div>
+              <div class="sch-row"><span>−</span><b>Sprint adjustments</b><em>Art. 4.1(l): $300k × 6 sprints</em><i>$1.8m</i></div>
+              <div class="sch-row sch-total"><span>=</span><b>Year-end Relevant Costs</b><em>against $140.4m (Issue 22, Art. 2.3(a)(iii))</em><i data-sch="p50">$139.4m</i></div>
+            </div>
+            <div class="sim">
+              <div class="sim-head">
+                <div><span>P(overspend)</span><b data-sim="over">—</b></div>
+                <div><span>P(material, 5% or more)</span><b data-sim="material">—</b></div>
+                <div><span>P50 headroom</span><b data-sim="head">—</b></div>
+              </div>
+              <svg class="hist" viewBox="0 0 560 220" role="img" aria-label="Distribution of year-end relevant costs against the cap" data-hist></svg>
+              <div class="sliders">
+                <label>This weekend's crash cost <output data-out="w">$3.92m</output><input type="range" min="0" max="9" step="0.01" value="3.92" data-in="w" /></label>
+                <label>Crashes per race, rest of year <output data-out="r">0.38</output><input type="range" min="0" max="1.5" step="0.01" value="0.38" data-in="r" /></label>
+                <label>Races left <output data-out="l">3</output><input type="range" min="0" max="12" step="1" value="3" data-in="l" /></label>
+              </div>
+              <p class="fine" data-sim="timing">10,000 seasons in your browser.</p>
+            </div>
+          </div>
+          <p class="fine wide">A JavaScript copy of <code>race/cap_forecast.py</code> with the same model and inputs. The pre-weekend figure is an assumption set so São Paulo's damage pushes the year-end P90 a few hundred thousand dollars over the cap, consistent with Vowles in November 2024; it is not a Williams figure. A Minor Overspend is under 5% (Art. 8.10), Material 5% or more (Art. 8.12).</p>
+        </div>
+      </section>
+
+      <!-- ================================================================ system -->
+      <section class="section section-grey" id="system">
+        <div class="wrap">
+          <h2 class="display">How it fits together.</h2>
+          <p class="sub">One event, left to right: read, decided by what was learned first, applied to the car and the books, and committed through one door.</p>
+          <div class="flow" data-flow>
+            <svg class="flow-wires" aria-hidden="true"></svg>
+            <div class="flow-col">
+              <h3>Sources</h3>
+              <div class="node" data-node="openf1"><b>OpenF1</b><span>timing, telemetry, race control</span></div>
+              <div class="node" data-node="jolpica"><b>Jolpica</b><span>results, standings</span></div>
+              <div class="node" data-node="fia"><b>FIA documents</b><span>Apify actor, 200 captured</span></div>
+              <div class="node" data-node="history"><b>Team history</b><span>2024 sessions, press cases</span></div>
+            </div>
+            <div class="flow-col">
+              <h3>Read</h3>
+              <div class="node" data-node="normalize"><b>RaceEvent</b><span>normalise, telemetry tripwire</span></div>
+            </div>
+            <div class="flow-col">
+              <h3>Decide, learned first</h3>
+              <div class="node" data-node="policy"><b>Policies</b><span>Ripple-Down Rules, licensed</span></div>
+              <div class="node" data-node="precedent"><b>Precedents</b><span>the team did this before</span></div>
+              <div class="node" data-node="jev"><b>Jev</b><span>System One, 70–500 ms</span></div>
+              <div class="node" data-node="claude"><b>Claude</b><span>System Two: the repair and money plan</span></div>
+            </div>
+            <div class="flow-col">
+              <h3>Apply</h3>
+              <div class="node" data-node="life"><b>Part life</b><span>condition, life, spares</span></div>
+              <div class="node" data-node="plan"><b>Response plan</b><span>operations, owners, precedent per line</span></div>
+              <div class="node" data-node="ledger"><b>Ledger</b><span>balanced, cap timing per line</span></div>
+              <div class="node" data-node="sim"><b>Season and cap</b><span>10,000 runs after every change</span></div>
+            </div>
+            <div class="flow-col">
+              <h3>One door</h3>
+              <div class="node node-door" data-node="stdb"><b>pit-wall</b><span>SpacetimeDB: gate, audit row, seats, timers</span></div>
+            </div>
+            <div class="flow-col">
+              <h3>Out</h3>
+              <div class="node" data-node="erp"><b>ERP</b><span>accepts only what pit-wall authorized</span></div>
+              <div class="node" data-node="dash"><b>Dashboard</b><span>live subscriptions, a view per role</span></div>
+              <div class="node" data-node="notify"><b>People</b><span>Slack, email, Teams, SMS</span></div>
+              <div class="node" data-node="seal"><b>The seal</b><span>Merkle root, briefs, true-up</span></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================ tracks -->
+      <section class="section" id="tracks">
+        <div class="wrap">
+          <div class="tracks-head">
+            <h2 class="display">Pick a track.</h2>
+            <div class="seg seg-lg" role="tablist" aria-label="Track" data-tracks>
+              <button role="tab" aria-selected="true" data-track="hyphenate">Hyphenate</button>
+              <button role="tab" aria-selected="false" data-track="stdb">SpacetimeDB</button>
+            </div>
+          </div>
+
+          <div class="track" data-track-panel="hyphenate">
+            <p class="track-lede">Hyphenate agents learn how a company closes its books.<br /><b>Anneal agents learn how a team runs its car.</b></p>
+            <div class="track-grid">
+              <div class="qa">
+                <h3>The four day-one questions</h3>
+                <dl>
+                  <dt>World</dt><dd>Where does it act? In the team's systems of record, through one door: the ERP accepts a race entry only when pit-wall authorized it, so an agent holding the gateway key still cannot post around the rule.</dd>
+                  <dt>Time</dt><dd>What does it remember next quarter? Precedents and licensed policies learned from the team's own sessions and every correction, kept in eras so a replay never learns from its own future.</dd>
+                  <dt>Team</dt><dd>Who does it work with? People by role: Chief Mechanic, Team Principal, Sporting Director, Head of Strategy, Chief of Staff, Head of Cost Cap, CFO. Seats are bound to identities; agents are refused every person's decision.</dd>
+                  <dt>Limits</dt><dd>What may it do, and can it prove why? The rules live in the database: one gate, one audit row per decision, refusals committed rather than thrown. Racing calls are priced, never recommended.</dd>
+                </dl>
+              </div>
+              <div class="qa">
+                <h3>Your judging questions</h3>
+                <dl>
+                  <dt>Real enough?</dt><dd>Real OpenF1 timing, telemetry and race control, real 2024 results, the real Financial Regulations. A messy corner with an answer key: the seal against what the press reported.</dd>
+                  <dt>Hire it?</dt><dd>It fills the race accountant's seat: 2,549 events, five touches by people, three crashes booked, sealed and briefed.</dd>
+                  <dt>Something new?</dt><dd>The learned object is the mechanical process, not the money rules. Autonomy is a licence from a Wilson bound. Plans are gated by precedent, with no amount thresholds. Wear moves the forecast, never the books.</dd>
+                  <dt>Wow?</dt><dd>A 315 km/h crash costed in a millisecond, nine seconds before the red flag, and the cap re-forecast before the car is back in the garage.</dd>
+                </dl>
+              </div>
+            </div>
+            <div class="sor">
+              <div><h4>Systems of record</h4><p>OpenF1, Jolpica, FIA documents, the ERP journal, spares stores, freight. Anneal integrates with them and never replaces them.</p></div>
+              <div class="sor-mid"><h4>The gateway</h4><p>pit-wall decides; the ERP checks it. 403 if not authorized, 503 if pit-wall cannot be asked.</p></div>
+              <div><h4>System of work</h4><p>Part life, incidents, response plans, questions, entries, seats, the audit trail. Agents and people share it.</p></div>
+            </div>
+          </div>
+
+          <div class="track" data-track-panel="stdb" hidden>
+            <p class="track-lede">pit-wall is the backend, not a store.<br /><b>The rules that must hold no matter which process misbehaves live in the module.</b></p>
+            <div class="track-grid">
+              <ul class="stdb">
+                <li><b>One door, one audit row</b><span>Every decision that moves money or speaks for a person goes through <code>gate()</code>: the caller is resolved from the connection's identity, never from an argument; the change applies or is refused; exactly one <code>race_audit</code> row lands in the same transaction. A refusal is committed, not thrown.</span></li>
+                <li><b>The database authorizes postings</b><span>The desk asks with <code>request_race_posting</code>; the module answers authorized, or held for a named role, from the entry, the estimate behind it and the response plan's precedent. A sign-off or a plan approval re-runs the decision in the same transaction.</span></li>
+                <li><b>People are seats</b><span><code>grant_seat</code> binds an identity to a role and a name. The publisher's identity runs the agents and never counts as a person; the person who signed an estimate off cannot also approve its posting.</span></li>
+                <li><b>The database keeps time</b><span>A question's deadline is a scheduled reducer: when it comes due the module applies the stated default, even with no agent running. The replay's pace maps race time to the wall clock.</span></li>
+                <li><b>Measured inside the transaction</b><span><code>race_latency</code> is timed from desk read to commit inside the reducer; <code>race_online</code> is kept by the connect and disconnect hooks. Every view shows both.</span></li>
+                <li><b>Every view, the same rows</b><span>Each role's view is a live subscription to the same tables, so the engineers and the CFO can never disagree about what happened.</span></li>
+              </ul>
+              <div class="stdb-side">
+                <div class="stdb-figs">
+                  <div><b>34</b><span>tables</span></div>
+                  <div><b>40</b><span>reducers</span></div>
+                  <div><b>2,927</b><span>calls on the last run</span></div>
+                  <div><b>0</b><span>refused on that run</span></div>
+                  <div><b>~1 ms</b><span>per commit</span></div>
+                  <div><b>132</b><span>module tests</span></div>
+                </div>
+                <pre class="code"><code><em>// spacetimedb/src/index.ts: who must look at an entry</em>
+<span class="k">const</span> { plan, line } = planLineFor(ctx, entry);
+<span class="k">const</span> precedented = line?.status === <span class="s">'precedent'</span>
+  &amp;&amp; line.precedent.similarity &gt;= PRECEDENT_MIN;
+<span class="k">if</span> (!plan) need(<span class="s">'chief_of_staff'</span>, <span class="s">'no response plan yet'</span>);
+<span class="k">else if</span> (plan.status === <span class="s">'draft'</span>)
+  need(<span class="s">'chief_of_staff'</span>, <span class="s">'the plan waits for the chief of staff'</span>);
+<span class="k">if</span> (line &amp;&amp; !precedented)
+  need(<span class="s">'head_of_cost_cap'</span>, <span class="s">"no entry like it in the team's history"</span>);
+<em>// no amount threshold: only the history decides</em></code></pre>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <div class="kerb" aria-hidden="true"></div>
+
+      <!-- ================================================================ different -->
+      <section class="section" id="different">
+        <div class="wrap">
+          <h2 class="display">How we are different.</h2>
+          <div class="compare-wrap">
+            <table class="compare">
+              <thead>
+                <tr><th></th><th>Spreadsheets and invoices, today</th><th>Telemetry and engineering tools</th><th>Accounting agents</th><th class="us">Anneal</th></tr>
+              </thead>
+              <tbody>
+                <tr><th>Sees the crash</th><td>as an invoice, weeks later</td><td>at once, with no money attached</td><td>when the invoice lands</td><td class="us">9–26 s before the red flag, costed in ~1 ms</td></tr>
+                <tr><th>Knows each part's life</th><td>a sheet per department</td><td>yes, with no cap</td><td>no</td><td class="us">yes, with the race it runs out and the cap year it lands in</td></tr>
+                <tr><th>Books the entries</th><td>by hand, after the fact</td><td>no</td><td>from documents</td><td class="us">from the event: balanced, cap timing per line</td></tr>
+                <tr><th>Decides on its own</th><td>no</td><td>no</td><td>configured rules, amount thresholds</td><td class="us">licensed from the team's own history; precedent per line</td></tr>
+                <tr><th>Racing calls</th><td>no</td><td>engineering only</td><td>no</td><td class="us">priced in positions, points, prize and cap; never recommended</td></tr>
+                <tr><th>Proves it</th><td>email threads</td><td>logs</td><td>logs</td><td class="us">one audit row per decision, refusals included; a Merkle root per weekend</td></tr>
+              </tbody>
+            </table>
+          </div>
+
+          <div class="unique">
+            <div class="unique-lead">
+              <h3>What nobody else built</h3>
+              <p>The car is the ledger: the learned object is how a team swaps, builds and ships parts, and money follows the hardware.</p>
+            </div>
+            <ul>
+              <li><b>Wear moves the forecast, not the books</b><span>The cap excludes depreciation, so life sets when a part is fitted, and fitting is when its cost counts.</span></li>
+              <li><b>Crashes seen before race control</b><span>A telemetry tripwire, because OpenF1 never announces a retirement.</span></li>
+              <li><b>Autonomy as a licence</b><span>A 90% Wilson bound over the policy's own record; 3 of 3 is still a shadow.</span></li>
+              <li><b>No amount thresholds</b><span>History decides who looks at a line, not its size: a tub the team has never built waits; a wing it replaces monthly does not.</span></li>
+              <li><b>Grid penalties as money</b><span>A power unit heading past its allocation is found the moment a crash makes it likely.</span></li>
+              <li><b>Ask only when it pays</b><span>A person is asked when a wrong call would cost more than the question, with a deadline the database enforces.</span></li>
+              <li><b>Priced, never recommended</b><span>Repair, spare tub or withdraw; stay out or pit: every option in positions, points, prize and cap, the choice left to its owner.</span></li>
+              <li><b>Sealed and trued up</b><span>A Merkle root on Sunday night, briefs that cite every row, and a true-up that recalibrates the price book.</span></li>
+            </ul>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================ stack -->
+      <section class="section section-grey" id="stack">
+        <div class="wrap">
+          <h2 class="display">Every API and service we used.</h2>
+          <div class="marquee" aria-hidden="true"><div class="marquee-track" data-marquee></div></div>
+          <div class="stack-tools">
+            <input type="search" placeholder="Search the stack" aria-label="Search the stack" data-stack-q />
+            <div class="seg" role="radiogroup" aria-label="Category" data-stack-cats></div>
+            <span class="stack-count" data-stack-count></span>
+          </div>
+          <ul class="stack-list" data-stack></ul>
+          <div class="tests">
+            <div><b>516</b><span>Python tests</span></div>
+            <div><b>132</b><span>SpacetimeDB module tests</span></div>
+            <div><b>15 of 15</b><span>red-team probes denied and logged</span></div>
+            <div><b>0</b><span>postings around the gate</span></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ================================================================ close -->
+      <section class="close" id="close">
+        <div class="wrap close-inner">
+          <h2 class="display">F1 is the showcase.</h2>
+          <p class="sub">Aviation, rail, fleets and heavy equipment ask the same three questions: life left, spares on hand, when it hits the books. Today they keep the answers in three systems too.</p>
+          <div class="row-actions">
+            <a class="btn btn-solid" href="https://github.com/gaviiin/calhacks">Read the code</a>
+            <a class="btn" href="#top">Run the lap again</a>
+          </div>
+          <ul class="team" aria-label="Team">
+            <li>Gavin Zhou</li>
+            <li>Varun Sanjeev</li>
+            <li>Arnav Singhal</li>
+          </ul>
+          <p class="disclaimer">Built at Cal Hacks 13.0. Not affiliated with Williams Racing or the FIA. Timing, telemetry, race control and results are real (OpenF1, Jolpica); money is press estimates and stated assumptions, each with its source in the repository.</p>
+        </div>
+        <div class="chequer" aria-hidden="true"></div>
+      </section>
+    </main>
+
+    <script type="module" src="/src/main.ts"></script>
+  </body>
+</html>
