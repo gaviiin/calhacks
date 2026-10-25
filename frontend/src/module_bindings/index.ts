@@ -37,6 +37,7 @@ import {
 import AnswerRaceQuestionReducer from "./answer_race_question_reducer";
 import ApplyRaceAnswerReducer from "./apply_race_answer_reducer";
 import ApproveRaceCloseReducer from "./approve_race_close_reducer";
+import ApproveRacePlanReducer from "./approve_race_plan_reducer";
 import AskRaceQuestionReducer from "./ask_race_question_reducer";
 import ChooseRaceActionOptionReducer from "./choose_race_action_option_reducer";
 import ConfirmRaceEffectReducer from "./confirm_race_effect_reducer";
@@ -59,6 +60,7 @@ import RecordRaceEventReducer from "./record_race_event_reducer";
 import RecordRaceHealthReducer from "./record_race_health_reducer";
 import RecordRaceOptionsReducer from "./record_race_options_reducer";
 import RecordRacePartLifeReducer from "./record_race_part_life_reducer";
+import RecordRacePlanReducer from "./record_race_plan_reducer";
 import RecordRacePostingReducer from "./record_race_posting_reducer";
 import RecordRaceSimReducer from "./record_race_sim_reducer";
 import RequestRacePostingReducer from "./request_race_posting_reducer";
@@ -96,6 +98,7 @@ import RaceLatencyRow from "./race_latency_table";
 import RaceOnlineRow from "./race_online_table";
 import RaceOptionsRow from "./race_options_table";
 import RacePartLifeRow from "./race_part_life_table";
+import RacePlansRow from "./race_plans_table";
 import RacePoliciesRow from "./race_policies_table";
 import RacePostingsRow from "./race_postings_table";
 import RacePrecedentsRow from "./race_precedents_table";
@@ -387,6 +390,20 @@ const tablesSchema = __schema({
       { name: 'race_part_life_part_key_key', constraint: 'unique', columns: ['partKey'] },
     ],
   }, RacePartLifeRow),
+  racePlans: __table({
+    name: 'race_plans',
+    indexes: [
+      { accessor: 'incidentKey', name: 'race_plans_incident_key_idx_btree', algorithm: 'btree', columns: [
+        'incidentKey',
+      ] },
+      { accessor: 'planKey', name: 'race_plans_plan_key_idx_btree', algorithm: 'btree', columns: [
+        'planKey',
+      ] },
+    ],
+    constraints: [
+      { name: 'race_plans_plan_key_key', constraint: 'unique', columns: ['planKey'] },
+    ],
+  }, RacePlansRow),
   racePolicies: __table({
     name: 'race_policies',
     indexes: [
@@ -508,6 +525,7 @@ const reducersSchema = __reducers(
   __reducerSchema("answer_race_question", AnswerRaceQuestionReducer),
   __reducerSchema("apply_race_answer", ApplyRaceAnswerReducer),
   __reducerSchema("approve_race_close", ApproveRaceCloseReducer),
+  __reducerSchema("approve_race_plan", ApproveRacePlanReducer),
   __reducerSchema("ask_race_question", AskRaceQuestionReducer),
   __reducerSchema("choose_race_action_option", ChooseRaceActionOptionReducer),
   __reducerSchema("confirm_race_effect", ConfirmRaceEffectReducer),
@@ -530,6 +548,7 @@ const reducersSchema = __reducers(
   __reducerSchema("record_race_health", RecordRaceHealthReducer),
   __reducerSchema("record_race_options", RecordRaceOptionsReducer),
   __reducerSchema("record_race_part_life", RecordRacePartLifeReducer),
+  __reducerSchema("record_race_plan", RecordRacePlanReducer),
   __reducerSchema("record_race_posting", RecordRacePostingReducer),
   __reducerSchema("record_race_sim", RecordRaceSimReducer),
   __reducerSchema("request_race_posting", RequestRacePostingReducer),

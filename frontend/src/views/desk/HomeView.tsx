@@ -94,6 +94,7 @@ function Home({ nav, meeting }: { nav: (h: string) => void; meeting: number | nu
 // ------------------------------------------------------------------------------------------ alert rail
 
 const RAIL: { kind: Alert['kind']; word: [string, string]; icon: ReactNode }[] = [
+  { kind: 'plan', word: ['plan to approve', 'plans to approve'], icon: <IconPerson size={12} /> },
   { kind: 'held', word: ['to approve', 'to approve'], icon: <IconPerson size={12} /> },
   { kind: 'question', word: ['question', 'questions'], icon: <IconQuestion size={12} /> },
   { kind: 'decision', word: ['decision', 'decisions'], icon: <IconPerson size={12} /> },
@@ -116,7 +117,7 @@ function AlertRail({ alerts, go, open }: { alerts: Alert[]; go: (tab: string, an
           const n = g.kind === 'refused' || g.kind === 'close' ? null : g.items.length;
           return (
             <span key={g.kind} className="rail-item" onMouseEnter={() => setPeek(g.kind)} onMouseLeave={() => setPeek(null)}>
-              <button type="button" className={`g-alert g-alert--${tone}`} onClick={() => (g.kind === 'held' || g.kind === 'close' || g.kind === 'unsure' ? document.getElementById('needs-you')?.scrollIntoView({ behavior: 'smooth', block: 'center' }) : open({ kind: 'alerts', id: g.kind }))}>
+              <button type="button" className={`g-alert g-alert--${tone}`} onClick={() => (g.kind === 'plan' && g.items.length === 1 ? open({ kind: 'plan', id: g.items[0]!.key.slice(5) }) : g.kind === 'held' || g.kind === 'close' || g.kind === 'unsure' || g.kind === 'plan' ? document.getElementById('needs-you')?.scrollIntoView({ behavior: 'smooth', block: 'center' }) : open({ kind: 'alerts', id: g.kind }))}>
                 {g.icon}
                 {n !== null ? <b className="mono">{n}</b> : null}
                 <span>{g.items.length === 1 ? g.word[0] : g.word[1]}</span>
@@ -370,7 +371,7 @@ function AgentPanel({ desk, open, go }: { desk: Desk; open: (t: SheetTarget) => 
         <h3>
           Needs you <span className="mono">{waiting}</span>
         </h3>
-        <WaitingRows held={desk.held} />
+        <WaitingRows held={desk.held} plans={desk.plans} onOpenPlan={(key) => open({ kind: 'plan', id: key })} />
       </div>
       <div className="stream-head">
         <div className="gseg" role="radiogroup" aria-label="Show">
@@ -632,8 +633,6 @@ function OrderPanel({ desk }: { desk: Desk }) {
 function ProofPanel({ desk, go }: { desk: Desk; go: (tab: string) => void }) {
   const p = desk.proof;
   const r = desk.race.rules;
-  const autoMax = Number(r?.autoPostMaxCents ?? 25_000_000n);
-  const cfo = Number(r?.cfoCents ?? 100_000_000n);
   const log = (ms: number | null) => (ms === null ? 0 : Math.log10(Math.max(ms, 1) + 1));
   const LOGMAX = Math.log10(51);
   return (
@@ -657,18 +656,18 @@ function ProofPanel({ desk, go }: { desk: Desk; go: (tab: string) => void }) {
         <Shares parts={[{ tone: 'navy', value: p.decisions - p.refused, label: 'allowed' }, { tone: 'bad', value: p.refused, label: 'refused' }]} height={8} />
         <span className="mono proof-v">{p.decisions}</span>
       </div>
-      <ul className="rules">
-        <li title="The desk posts on its own only under this amount">
-          <IconAgent size={11} /> <span className="mono">&lt; {usdShort(autoMax)}</span> auto
+      <ul className="rules" title="The posting rule pit-wall enforces: no amount threshold; the chief of staff approves the response plan, a line with a precedent in the team's history posts on its own, a line with none waits for the Head of Cost Cap">
+        <li title="The chief of staff approves the team's reaction to an incident as a whole before anything executes or posts">
+          <IconPerson size={11} /> plan: Chief of Staff
         </li>
-        <li title="From this amount the Head of Cost Cap decides">
-          <IconPerson size={11} /> <span className="mono">≥ {usdShort(autoMax)}</span> HCC
+        <li title="A line whose closest case in the team's history scores at least 0.80 executes and posts on its own, whatever its amount">
+          <IconAgent size={11} /> precedent <span className="mono">≥ 0.80</span> posts alone
         </li>
-        <li title="From this amount the CFO decides">
-          <IconPerson size={11} /> <span className="mono">≥ {usdShort(cfo)}</span> CFO
+        <li title="A line with no case close enough (or a familiar part at an unfamiliar price) waits for the Head of Cost Cap">
+          <IconPerson size={11} /> novel: HCC
         </li>
-        <li title={r?.modelMayPostAlone ? 'Estimates from Jev or the forecast agent may post alone' : 'An estimate that is only Jev’s or the forecast agent’s needs a person’s sign-off'}>
-          <IconLive size={11} /> model alone: {r?.modelMayPostAlone ? 'yes' : 'no'}
+        <li title={r?.modelMayPostAlone ? 'Estimates from Jev or the forecast agent may post alone' : 'An estimate that is only Jev’s and has no precedent needs a person’s sign-off'}>
+          <IconLive size={11} /> Jev unsure: a person
         </li>
       </ul>
       {p.names.length ? (

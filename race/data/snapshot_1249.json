@@ -1,13 +1,78 @@
 {
-  "_note": "The São Paulo 2024 demo snapshot: the replay stops a few minutes after Colapinto's race crash (16:36:55 UTC, red flag 16:37:22) is confirmed in the garage. The decisions people made before that point are replayed from what the team actually did (Albon did not start; Colapinto was repaired and started; he pitted under the safety car on lap 30, which is in the OpenF1 data). Each is labelled 'replayed' so nobody mistakes it for a live person.",
+  "_note": "The São Paulo 2024 demo snapshot: the replay stops a few minutes after Colapinto's race crash (16:36:55 UTC, red flag 16:37:22) is confirmed in the garage. The decisions people made before that point are replayed from what the team actually did (Albon did not start; Colapinto was repaired and started; he pitted under the safety car on lap 30, which is in the OpenF1 data). Each is labelled 'replayed' so nobody mistakes it for a live person. The chief of staff's approval of each incident's response plan is replayed too (the plan gate came before amount thresholds went); the CFO's later approval covers the lines with no precedent in the team's history.",
   "until": "2024-11-03T16:44:00Z",
   "decisions": [
-    {"at": "2024-11-03T11:05:00Z", "kind": "answer", "incident": "1249-9627-43-1", "pick": "moderate", "by": "Chief Mechanic (replayed)", "why": "Colapinto's car was repaired and started the race"},
-    {"at": "2024-11-03T12:20:00Z", "kind": "answer", "incident": "1249-9627-23-1", "pick": "heavy", "by": "Chief Mechanic (replayed)", "why": "Albon's chassis could not be readied for the start"},
-    {"at": "2024-11-03T13:30:00Z", "kind": "choose", "incident": "1249-9627-43-1", "pick": "repair", "by": "Team Principal (replayed)", "why": "Colapinto started the race"},
-    {"at": "2024-11-03T13:35:00Z", "kind": "choose", "incident": "1249-9627-23-1", "pick": "withdraw", "by": "Team Principal (replayed)", "why": "Albon did not start"},
-    {"at": "2024-11-03T14:00:00Z", "kind": "approve_books", "incident": "1249-9627-43-1", "pick": "approve", "by": "CFO (replayed)", "why": "the morning's books, signed off between the sessions"},
-    {"at": "2024-11-03T14:05:00Z", "kind": "approve_books", "incident": "1249-9627-23-1", "pick": "approve", "by": "CFO (replayed)", "why": "the morning's books, signed off between the sessions"},
-    {"at": "2024-11-03T16:42:00Z", "kind": "answer", "incident": "1249-9636-43-2", "pick": "heavy", "by": "Chief Mechanic (replayed)", "why": "the garage confirms the damage from the 188 km/h impact"}
+    {
+      "at": "2024-11-03T11:05:00Z",
+      "kind": "answer",
+      "incident": "1249-9627-43-1",
+      "pick": "moderate",
+      "by": "Chief Mechanic (replayed)",
+      "why": "Colapinto's car was repaired and started the race"
+    },
+    {
+      "at": "2024-11-03T12:20:00Z",
+      "kind": "answer",
+      "incident": "1249-9627-23-1",
+      "pick": "heavy",
+      "by": "Chief Mechanic (replayed)",
+      "why": "Albon's chassis could not be readied for the start"
+    },
+    {
+      "at": "2024-11-03T13:30:00Z",
+      "kind": "choose",
+      "incident": "1249-9627-43-1",
+      "pick": "repair",
+      "by": "Team Principal (replayed)",
+      "why": "Colapinto started the race"
+    },
+    {
+      "at": "2024-11-03T13:35:00Z",
+      "kind": "choose",
+      "incident": "1249-9627-23-1",
+      "pick": "withdraw",
+      "by": "Team Principal (replayed)",
+      "why": "Albon did not start"
+    },
+    {
+      "at": "2024-11-03T13:40:00Z",
+      "kind": "approve_plan",
+      "incident": "1249-9627-43-1",
+      "pick": "approve",
+      "by": "Chief of Staff (replayed)",
+      "why": "the reaction to Colapinto's qualifying crash: repair from spares at track, rebuilds at Grove"
+    },
+    {
+      "at": "2024-11-03T13:45:00Z",
+      "kind": "approve_plan",
+      "incident": "1249-9627-23-1",
+      "pick": "approve",
+      "by": "Chief of Staff (replayed)",
+      "why": "the reaction to Albon's crash: withdraw, the tub to Grove, spares reserved for Las Vegas"
+    },
+    {
+      "at": "2024-11-03T14:00:00Z",
+      "kind": "approve_books",
+      "incident": "1249-9627-43-1",
+      "pick": "approve",
+      "by": "CFO (replayed)",
+      "why": "the morning's books, signed off between the sessions"
+    },
+    {
+      "at": "2024-11-03T14:05:00Z",
+      "kind": "approve_books",
+      "incident": "1249-9627-23-1",
+      "pick": "approve",
+      "by": "CFO (replayed)",
+      "why": "the morning's books, signed off between the sessions"
+    },
+    {
+      "at": "2024-11-03T16:42:00Z",
+      "kind": "answer",
+      "incident": "1249-9636-43-2",
+      "pick": "heavy",
+      "by": "Chief Mechanic (replayed)",
+      "why": "the garage confirms the damage from the 188 km/h impact"
+    }
   ]
 }

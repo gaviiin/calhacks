@@ -13,7 +13,7 @@ import threading
 import httpx
 
 from finance.spacetime_mirror import cli_token
-from race.events import Action, Close, Effect, Entry, Incident, OptionSet, Posting, Question, RaceEvent, SimRun, now_iso
+from race.events import Action, Close, Effect, Entry, Incident, OptionSet, Plan, Posting, Question, RaceEvent, SimRun, now_iso
 
 
 class RaceSink:
@@ -102,6 +102,10 @@ class RaceSink:
 
     def posting(self, p: Posting) -> bool:
         return self.call("record_race_posting", [p.wire()])
+
+    def plan(self, p: Plan) -> bool:
+        """The desk's response plan for an incident (every version); only a person approves it."""
+        return self.call("record_race_plan", [p.wire()])
 
     def request_posting(self, entry_key: str, at: str) -> dict | None:
         """Ask pit-wall to authorize an entry; return its decision row (status authorized | held, review_role, reason)."""

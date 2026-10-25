@@ -32,6 +32,8 @@ def apply_due(state, sink, script: dict | None, now: str) -> list[str]:
             ok = _answer(state, sink, d)
         elif d["kind"] == "choose":
             ok = _choose(state, sink, d)
+        elif d["kind"] == "approve_plan":
+            ok = _approve_plan(state, sink, d)
         elif d["kind"] == "approve_books":
             ok = _approve_books(state, sink, d)
         else:
@@ -79,6 +81,20 @@ def _choose(state, sink, d: dict) -> bool:
         a.status = "approved"
         a.detail = {**a.detail, "chosen": d["pick"], "chosen_by": d["by"], "chosen_at": d["at"]}
     return ok
+
+
+def _approve_plan(state, sink, d: dict) -> bool:
+    """The chief of staff approves the team's reaction to the incident as a whole, the way the team did; the desk then
+    executes and posts every line with a precedent and keeps the novel ones for the Head of Cost Cap."""
+    plan = (getattr(state, "plans", {}) or {}).get(d["incident"])
+    if plan is None:
+        return d["at"] < (state.now or "") and d["incident"] not in state.incidents  # no plan yet: try again on a later event
+    if plan.status != "draft":
+        return True
+    if sink is None or getattr(sink, "disabled", True):
+        plan.status, plan.approved_by, plan.approved_at = "approved", d["by"], d["at"]
+        return True
+    return sink.call("approve_race_plan", [plan.plan_key, "approved", d["by"], d["at"]])
 
 
 def _approve_books(state, sink, d: dict) -> bool:

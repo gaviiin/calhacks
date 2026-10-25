@@ -9,7 +9,7 @@ let nextConn = 1n;
 function principal(sub: string) {
   return TestAuth.fromJwtPayload(JSON.stringify({ iss: 'https://pit-wall.test', sub }), new ConnectionId(nextConn++));
 }
-type Who = 'owner' | 'race' | 'head' | 'stranger';
+type Who = 'owner' | 'race' | 'head' | 'stranger' | 'cos';
 
 const KEY_A = 'a'.repeat(64);
 const KEY_B = 'b'.repeat(64);
@@ -23,6 +23,7 @@ function makeDesk() {
     race: principal('race'),
     head: principal('head'),
     stranger: principal('stranger'),
+    cos: principal('cos'),
   };
   type C = Parameters<Parameters<typeof h.withReducerTx>[1]>[0];
   const as = <T>(who: Who, fn: (ctx: C) => T): T => h.withReducerTx(auth[who], fn);
@@ -30,6 +31,7 @@ function makeDesk() {
   as('owner', ctx => mod.init(ctx));
   const raceId = as('race', ctx => ctx.sender);
   const headId = as('head', ctx => ctx.sender);
+  const cosId = as('cos', ctx => ctx.sender);
   as('owner', ctx => mod.setWriter(ctx, { who: raceId, role: 'race' }));
   as('owner', ctx => mod.setWriter(ctx, { who: headId, role: 'race_head' }));
 
@@ -49,7 +51,7 @@ function makeDesk() {
   });
   // The refusal is committed, not thrown: the newest audit row says what happened.
   const lastAudit = () => [...h.db.raceAudit.iter()].sort((a, b) => Number(a.auditId - b.auditId)).at(-1)!;
-  return { h, as, event, state, effect, lastAudit, ids: { raceId, headId } };
+  return { h, as, event, state, effect, lastAudit, ids: { raceId, headId, cosId } };
 }
 
 // ---------------------------------------------------------------- tests
@@ -325,6 +327,7 @@ describe('the money gate', () => {
     const ccId = d.as('stranger', ctx => ctx.sender); // a second person: the head of cost cap
     d.as('owner', ctx => mod.grantSeat(ctx, { who: d.ids.headId, role: 'race_head', name: 'Morgan Hale' }));
     d.as('owner', ctx => mod.grantSeat(ctx, { who: ccId, role: 'head_of_cost_cap', name: 'Priya Shah' }));
+    d.as('owner', ctx => mod.grantSeat(ctx, { who: d.ids.cosId, role: 'chief_of_staff', name: 'Sam Reyes' }));
     d.as('race', ctx => mod.recordRaceEvent(ctx, { event: d.event(), state: undefined }));
     const entry = (key: string, effectKey: string, amountCents: bigint, recognition = 'incurred') => {
       const e = { entryKey: key, incidentKey: 'i', effectKey, memo: 'crash parts', effectiveDate: '2024-11-03', recognition, capRelevant: true,
@@ -332,42 +335,80 @@ describe('the money gate', () => {
       d.as('race', ctx => mod.postRaceEntry(ctx, { entry: e, lines: [{ account: '6050', debitCents: amountCents, creditCents: 0n, memo: '' }, { account: '2100', debitCents: 0n, creditCents: amountCents, memo: '' }] }));
     };
     const posting = (key: string) => d.h.db.racePostings.entryKey.find(key)!;
-    return { ...d, entry, posting };
+    d.as('race', ctx => mod.upsertRaceIncident(ctx, { incident: { incidentKey: 'i', meetingKey: 1249, sessionKey: 9636, driverNumber: 43, teamName: 'Williams', firstSeenAt: AT,
+      status: 'confirmed', version: 1, beliefJson: '{}', evidenceJson: '[]', updatedAt: AT, cause: 'stop' } }));
+    // the desk's response plan: each entry line names its closest case in the team's history, or none
+    const plan = (lines: { ref: string; status: 'precedent' | 'novel'; similarity?: number; why?: string }[], status = 'draft') =>
+      d.as('race', ctx => mod.recordRacePlan(ctx, { plan: { planKey: 'i', incidentKey: 'i', version: 1, status, summary: 'the plan', precedented: lines.filter(l => l.status === 'precedent').length,
+        novel: lines.filter(l => l.status === 'novel').length, approvedBy: '', approvedAt: '', updatedAt: AT,
+        linesJson: JSON.stringify(lines.map(l => ({ ref: l.ref, kind: 'entry', label: l.ref, amountCents: 0, status: l.status, why: l.why ?? '',
+          precedent: l.status === 'precedent' ? { caseId: 'history-1', similarity: l.similarity ?? 0.93 } : null }))) } }));
+    const approve = (by = 'x', who: Who = 'cos') => d.as(who, ctx => mod.approveRacePlan(ctx, { planKey: 'i', status: 'approved', by, at: AT }));
+    return { ...d, entry, posting, plan, approve };
   }
 
-  it('authorizes a small entry a granted policy decided, and holds one that is only Jev\'s estimate', () => {
+  it('posts on precedent once the chief of staff approves the plan; holds a novel line for the head of cost cap, whatever the amounts', () => {
     const d = desk();
     d.as('race', ctx => mod.recordRaceEffects(ctx, { eventKey: KEY_A, effects: [
       d.effect(0, { decidedBy: 'policy:p1', status: 'autonomous' }),
       d.effect(1, { decidedBy: 'jev', status: 'autonomous' }),
     ] }));
-    d.entry('pol', `${KEY_A}:0`, 9_000_000n);
-    d.entry('jev', `${KEY_A}:1`, 9_000_000n);
-    d.as('race', ctx => mod.requestRacePosting(ctx, { entryKey: 'pol', at: AT }));
-    d.as('race', ctx => mod.requestRacePosting(ctx, { entryKey: 'jev', at: AT }));
-    expect(d.posting('pol')).toMatchObject({ status: 'authorized', reviewRole: '' });
-    expect(d.posting('jev')).toMatchObject({ status: 'held', reviewRole: 'controller' });
-    expect(d.posting('jev').reason).toMatch(/Jev's alone: a person signs it off/);
+    d.entry('wing', `${KEY_A}:0`, 9_000_000n);
+    d.entry('tub', `${KEY_A}:1`, 120_000_000n); // $1.2m: no threshold, only the history decides
+    d.entry('jevline', `${KEY_A}:1`, 300_000_000n); // $3m on Jev's own estimate, with a precedent
+    d.as('race', ctx => mod.requestRacePosting(ctx, { entryKey: 'wing', at: AT }));
+    expect(d.posting('wing')).toMatchObject({ status: 'held', reviewRole: 'chief_of_staff' });
+    expect(d.posting('wing').reason).toMatch(/no response plan for this incident yet/);
+    d.plan([{ ref: 'wing', status: 'precedent' }, { ref: 'tub', status: 'novel', why: 'the team has never built a monocoque mid-season' }, { ref: 'jevline', status: 'precedent', similarity: 0.91 }]);
+    d.as('race', ctx => mod.requestRacePosting(ctx, { entryKey: 'tub', at: AT }));
+    d.as('race', ctx => mod.requestRacePosting(ctx, { entryKey: 'jevline', at: AT }));
+    expect(d.posting('wing')).toMatchObject({ status: 'held', reviewRole: 'chief_of_staff' });
+    expect(d.posting('wing').reason).toMatch(/waits for the chief of staff/);
+    // a seat that is not the chief of staff is refused; an agent is refused
+    d.as('stranger', ctx => mod.approveRacePlan(ctx, { planKey: 'i', status: 'approved', by: 'x', at: AT }));
+    expect(d.lastAudit()).toMatchObject({ action: 'plan_approved', allowed: false });
+    expect(d.lastAudit().reason).toMatch(/head of cost cap does not approve a response plan/);
+    d.as('race', ctx => mod.approveRacePlan(ctx, { planKey: 'i', status: 'approved', by: 'agent', at: AT }));
+    expect(d.lastAudit()).toMatchObject({ action: 'plan_approved', allowed: false });
+    d.approve();
+    expect(d.lastAudit()).toMatchObject({ action: 'plan_approved', allowed: true, name: 'Sam Reyes' });
+    // the precedented lines are released in the same transaction, the novel one waits for the head of cost cap
+    expect(d.posting('wing')).toMatchObject({ status: 'authorized', reviewRole: '' });
+    expect(d.posting('wing').reason).toMatch(/on precedent history-1 \(similarity 0.93\)/);
+    expect(d.posting('jevline')).toMatchObject({ status: 'authorized' });
+    expect(d.posting('tub')).toMatchObject({ status: 'held', reviewRole: 'head_of_cost_cap' });
+    expect(d.posting('tub').reason).toMatch(/no entry like it in the team's history: the team has never built a monocoque/);
     // the desk cannot post the held one, whatever it claims
-    const held = d.posting('jev'); // read outside the transaction
+    const held = d.posting('tub');
     d.as('race', ctx => mod.recordRacePosting(ctx, { posting: { ...held, status: 'posted', erpEntryId: 'JE-9', by: 'desk', at: AT } }));
-    expect(d.posting('jev').status).toBe('held');
+    expect(d.posting('tub').status).toBe('held');
     expect(d.lastAudit()).toMatchObject({ action: 'record_posted', allowed: false });
-    // a person's sign-off releases it in the same transaction
-    d.as('head', ctx => mod.confirmRaceEffect(ctx, { effectKey: `${KEY_A}:1`, reason: 'garage agrees', by: 'x', at: T2 }));
-    expect(d.posting('jev')).toMatchObject({ status: 'authorized' });
-    expect(d.posting('jev').reason).toMatch(/after Morgan Hale's sign-off/);
-    const ok = d.posting('jev');
-    d.as('race', ctx => mod.recordRacePosting(ctx, { posting: { ...ok, status: 'posted', erpEntryId: 'JE-9', by: 'desk', at: T2 } }));
-    expect(d.posting('jev')).toMatchObject({ status: 'posted', erpEntryId: 'JE-9' });
+    const ok = d.posting('wing');
+    d.as('race', ctx => mod.recordRacePosting(ctx, { posting: { ...ok, status: 'posted', erpEntryId: 'JE-1', by: 'desk', at: AT } }));
+    expect(d.posting('wing')).toMatchObject({ status: 'posted', erpEntryId: 'JE-1' });
   });
 
-  it('holds a material entry for the head of cost cap; a junior seat and the agent are refused, and the signer cannot approve', () => {
+  it('a plan the desk sends as approved is a draft; an approval stands across versions; the desk never approves', () => {
+    const d = desk();
+    d.plan([{ ref: 'e', status: 'precedent' }], 'approved');
+    expect(d.h.db.racePlans.planKey.find('i')).toMatchObject({ status: 'draft', approvedBy: '' });
+    d.approve();
+    expect(d.h.db.racePlans.planKey.find('i')).toMatchObject({ status: 'approved', approvedBy: 'Sam Reyes' });
+    d.plan([{ ref: 'e', status: 'precedent' }, { ref: 'f', status: 'novel' }]);
+    expect(d.h.db.racePlans.planKey.find('i')).toMatchObject({ status: 'approved', approvedBy: 'Sam Reyes', novel: 1 });
+    d.approve();
+    expect(d.lastAudit()).toMatchObject({ action: 'plan_approved', allowed: false, reason: 'the plan is approved, not a draft' });
+  });
+
+  it('holds an estimate that is only Jev\'s when nothing like it is on the record; the signer cannot also approve its posting', () => {
     const d = desk();
     d.as('race', ctx => mod.recordRaceEffects(ctx, { eventKey: KEY_A, effects: [d.effect(0, { decidedBy: 'jev', status: 'needs_person' })] }));
     d.entry('big', `${KEY_A}:0`, 40_000_000n);
+    d.plan([{ ref: 'big', status: 'novel', why: 'no case like it' }]);
+    d.approve();
     d.as('race', ctx => mod.requestRacePosting(ctx, { entryKey: 'big', at: AT }));
     expect(d.posting('big')).toMatchObject({ status: 'held', reviewRole: 'head_of_cost_cap' });
+    expect(d.posting('big').reason).toMatch(/Jev was unsure/);
     d.as('race', ctx => mod.decideRacePosting(ctx, { entryKey: 'big', status: 'approved', by: 'agent', at: AT }));
     expect(d.lastAudit()).toMatchObject({ allowed: false, reason: 'only a person decides this; an agent identity is refused' });
     d.as('owner', ctx => mod.decideRacePosting(ctx, { entryKey: 'big', status: 'approved', by: 'publisher', at: AT }));
@@ -376,22 +417,27 @@ describe('the money gate', () => {
     expect(d.lastAudit().reason).toMatch(/held for the head of cost cap; a race head cannot decide it/);
     // Priya signs off the estimate, so Priya may not also approve its posting
     d.as('stranger', ctx => mod.confirmRaceEffect(ctx, { effectKey: `${KEY_A}:0`, reason: 'seen the floor', by: 'x', at: T2 }));
-    expect(d.posting('big').status).toBe('held'); // still material
+    expect(d.posting('big').status).toBe('held'); // still novel
+    expect(d.posting('big').reason).toMatch(/no entry like it/);
     d.as('stranger', ctx => mod.decideRacePosting(ctx, { entryKey: 'big', status: 'approved', by: 'x', at: T2 }));
     expect(d.lastAudit().reason).toMatch(/Priya Shah signed off the estimate behind this entry; a second person must approve/);
     expect(d.posting('big').status).toBe('held');
   });
 
-  it('in a demo replay, the desk records the team\'s documented approval of held books, tagged replayed', () => {
+  it('in a demo replay, the desk records the team\'s documented plan approval and held-books approval, tagged replayed', () => {
     const d = desk();
     d.as('race', ctx => mod.recordRaceEffects(ctx, { eventKey: KEY_A, effects: [d.effect(0, { decidedBy: 'policy:p1', status: 'autonomous' })] }));
     d.entry('big', `${KEY_A}:0`, 40_000_000n);
-    d.as('race', ctx => mod.requestRacePosting(ctx, { entryKey: 'big', at: AT }));
-    d.as('race', ctx => mod.decideRacePosting(ctx, { entryKey: 'big', status: 'approved', by: 'CFO (replayed)', at: AT }));
-    expect(d.posting('big').status).toBe('held'); // replay mode is off
+    d.plan([{ ref: 'big', status: 'novel' }]);
+    d.as('race', ctx => mod.approveRacePlan(ctx, { planKey: 'i', status: 'approved', by: 'Chief of Staff (replayed)', at: AT }));
+    expect(d.h.db.racePlans.planKey.find('i')?.status).toBe('draft'); // replay mode is off
     d.as('owner', ctx => mod.setReplayDecisions(ctx, { allowed: true }));
-    d.as('race', ctx => mod.decideRacePosting(ctx, { entryKey: 'big', status: 'approved', by: 'CFO', at: AT }));
-    expect(d.posting('big').status).toBe('held'); // not tagged replayed
+    d.as('race', ctx => mod.approveRacePlan(ctx, { planKey: 'i', status: 'approved', by: 'Chief of Staff', at: AT }));
+    expect(d.h.db.racePlans.planKey.find('i')?.status).toBe('draft'); // not tagged replayed
+    d.as('race', ctx => mod.approveRacePlan(ctx, { planKey: 'i', status: 'approved', by: 'Chief of Staff (replayed)', at: AT }));
+    expect(d.h.db.racePlans.planKey.find('i')).toMatchObject({ status: 'approved', approvedBy: 'Chief of Staff (replayed)' });
+    d.as('race', ctx => mod.requestRacePosting(ctx, { entryKey: 'big', at: AT }));
+    expect(d.posting('big')).toMatchObject({ status: 'held', reviewRole: 'head_of_cost_cap' });
     d.as('race', ctx => mod.decideRacePosting(ctx, { entryKey: 'big', status: 'approved', by: 'CFO (replayed)', at: AT }));
     expect(d.posting('big')).toMatchObject({ status: 'approved', by: 'CFO (replayed)' });
   });
@@ -401,13 +447,15 @@ describe('the money gate', () => {
     d.as('race', ctx => mod.recordRaceEffects(ctx, { eventKey: KEY_A, effects: [d.effect(0, { decidedBy: 'policy:p1', status: 'autonomous' })] }));
     d.entry('big', `${KEY_A}:0`, 40_000_000n);
     d.entry('big:adj', `${KEY_A}:0`, 9_000_000n);
+    d.entry('small', `${KEY_A}:0`, 9_000_000n);
+    d.entry('small:adj', `${KEY_A}:0`, 1_000_000n);
+    d.plan([{ ref: 'big', status: 'novel' }, { ref: 'big:adj', status: 'precedent' }, { ref: 'small', status: 'precedent' }, { ref: 'small:adj', status: 'precedent' }]);
+    d.approve();
     d.as('race', ctx => mod.requestRacePosting(ctx, { entryKey: 'big', at: AT }));
     d.as('race', ctx => mod.requestRacePosting(ctx, { entryKey: 'big:adj', at: AT }));
     expect(d.posting('big')).toMatchObject({ status: 'held', reviewRole: 'head_of_cost_cap' });
     expect(d.posting('big:adj')).toMatchObject({ status: 'held', reviewRole: 'head_of_cost_cap' });
     expect(d.posting('big:adj').reason).toMatch(/adjusts an entry not in the ERP yet \(held, for the head of cost cap\)/);
-    d.entry('small', `${KEY_A}:0`, 9_000_000n);
-    d.entry('small:adj', `${KEY_A}:0`, 1_000_000n);
     d.as('race', ctx => mod.requestRacePosting(ctx, { entryKey: 'small', at: AT }));
     const ok = d.posting('small');
     d.as('race', ctx => mod.recordRacePosting(ctx, { posting: { ...ok, status: 'posted', erpEntryId: 'JE-1', by: 'desk', at: AT } }));
@@ -419,6 +467,8 @@ describe('the money gate', () => {
     const d = desk();
     d.as('race', ctx => mod.recordRaceEffects(ctx, { eventKey: KEY_A, effects: [d.effect(0, { status: 'needs_person' }), d.effect(1, { status: 'needs_person' })] }));
     d.entry('e0', `${KEY_A}:0`, 9_000_000n);
+    d.plan([{ ref: 'e0', status: 'precedent' }]);
+    d.approve();
     d.as('race', ctx => mod.requestRacePosting(ctx, { entryKey: 'e0', at: AT }));
     const q = { questionKey: 'q1', incidentKey: 'i', kind: 'damage', prompt: 'A or B?', optionsJson: '[]', routeRole: 'chief_mechanic', expectedLossCents: 5n,
       deadlineAt: '', effectKeys: `${KEY_A}:0`, defaultOption: 'a', status: 'open', answerJson: '', answeredBy: '', createdAt: AT };

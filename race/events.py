@@ -369,6 +369,49 @@ class OptionSet:
                 "trigger": self.trigger, "options_json": _j(self.options)[:8192]}
 
 
+PLAN_STATUSES = ("draft", "approved", "rejected")
+
+
+@dataclass
+class Plan:
+    """The team's reaction to an incident as the desk drafted it: the hardware operations and the financial entries that
+    follow, each line with its closest case in the team's own history (race/history.py) or none. The chief of staff
+    approves the plan as a whole; then a line with a precedent executes and posts on its own, whatever its amount, and a
+    line with none waits for the Head of Cost Cap. Lines: {"ref", "kind", "label", "amount_cents", "status", "why",
+    "precedent": {"case_id", "similarity", "summary"} | None, "components": [...]}."""
+
+    plan_key: str  # the incident key
+    incident_key: str
+    version: int
+    lines: list[dict]
+    summary: str
+    status: str = "draft"
+    approved_by: str = ""
+    approved_at: str = ""
+    updated_at: str = ""
+
+    def __post_init__(self) -> None:
+        if self.status not in PLAN_STATUSES:
+            raise ValueError(f"unknown plan status {self.status!r}")
+        self.updated_at = canonical(self.updated_at) if self.updated_at else now_iso()
+
+    @property
+    def precedented(self) -> int:
+        return sum(1 for x in self.lines if x.get("status") == "precedent")
+
+    @property
+    def novel(self) -> int:
+        return sum(1 for x in self.lines if x.get("status") == "novel")
+
+    def line(self, ref: str) -> dict | None:
+        return next((x for x in self.lines if x.get("ref") == ref), None)
+
+    def wire(self) -> dict:
+        return {"plan_key": self.plan_key, "incident_key": self.incident_key, "version": self.version, "status": self.status,
+                "summary": self.summary[:1024], "lines_json": _j(self.lines)[:65536], "precedented": self.precedented, "novel": self.novel,
+                "approved_by": self.approved_by, "approved_at": self.approved_at, "updated_at": self.updated_at}
+
+
 POSTING_STATUSES = ("authorized", "posted", "held", "approved", "rejected", "failed")
 
 

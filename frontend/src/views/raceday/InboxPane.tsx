@@ -81,6 +81,29 @@ export function RaceInboxPane({ item }: { item: RaceInbox }) {
       </aside>
     );
   }
+  if (item.type === 'plan') {
+    const p = race.plans.find((x) => x.planKey === item.plan.planKey) ?? item.plan;
+    return (
+      <aside className="why">
+        <h2>Race day: the response plan</h2>
+        <p>{p.summary}</p>
+        <p className="muted small">
+          {p.precedented} lines on precedent post on their own once approved; {p.novel} novel wait for the Head of Cost Cap.
+        </p>
+        {p.status === 'draft' ? (
+          <span style={{ display: 'inline-flex', gap: 8 }}>
+            <ActButton label="Approve the plan" primary run={(by, at) => race.approvePlan({ planKey: p.planKey, status: 'approved', by, at })} />
+            <ActButton label="Reject" run={(by, at) => race.approvePlan({ planKey: p.planKey, status: 'rejected', by, at })} />
+          </span>
+        ) : (
+          <p>Status: {p.status}{p.approvedBy ? ` by ${p.approvedBy}` : ''}.</p>
+        )}
+        <p className="muted">
+          The lines are on the <a href="#/">Car</a> page, under Agent.
+        </p>
+      </aside>
+    );
+  }
   const c = race.closes.find((x) => x.closeKey === item.close.closeKey) ?? item.close;
   return (
     <aside className="why">

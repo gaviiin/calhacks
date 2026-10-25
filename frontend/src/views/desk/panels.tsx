@@ -8,7 +8,7 @@ import { carLabel } from '../../lib/raceModel';
 import { ActButton, clock, roleLabel } from '../raceday/shared';
 import { Pill, type Tone } from '../roles/kit';
 import { Dots, LifeBar } from './charts';
-import { type Alert, type DeskCar, type DeskPart, type HeldGroup, type TrailItem } from './model';
+import { type Alert, type DeskCar, type DeskPart, type HeldGroup, type PlanView, type TrailItem } from './model';
 
 // The desk's panels: each draws one reading of the model. Words are labels; the sentence lives in the title.
 
@@ -84,6 +84,7 @@ export function PartsHead({ showCar }: { showCar?: boolean }) {
 // ------------------------------------------------------------------------------------------ alerts
 
 const ALERT_ICON: Record<Alert['kind'], ReactNode> = {
+  plan: <IconPerson size={13} />,
   penalty: <IconDenied size={13} />,
   damaged: <IconDenied size={13} />,
   nospare: <IconWaiting size={13} />,
@@ -141,15 +142,48 @@ export function HeldRow({ g }: { g: HeldGroup }) {
   );
 }
 
-export function WaitingRows({ held }: { held: HeldGroup[] }) {
+/** The response plan, one card: the chief of staff approves the team's reaction to an incident as a whole. */
+export function PlanCard({ p, onOpen }: { p: PlanView; onOpen?: () => void }) {
+  const race = useRace();
+  const draft = p.plan.status === 'draft';
+  return (
+    <li className={`dk-wait dk-plan ${draft ? '' : 'dk-plan--done'}`}>
+      <Pill tone={draft ? 'wait' : p.plan.status === 'approved' ? 'ok' : 'bad'}>{draft ? 'Plan' : p.plan.status === 'approved' ? 'Approved' : 'Rejected'}</Pill>
+      <span className="dk-wait-what" role={onOpen ? 'button' : undefined} tabIndex={onOpen ? 0 : undefined} onClick={onOpen} onKeyDown={(e) => (e.key === 'Enter' && onOpen ? onOpen() : null)} title={p.plan.summary}>
+        <b>Response plan · {p.label}</b>
+        <span>
+          {p.operations} ops · {p.entries} entries · <span className="dk-plan-prec">{p.plan.precedented} on precedent</span>
+          {p.plan.novel ? <span className="dk-plan-novel"> · {p.plan.novel} novel</span> : null} · Chief of Staff
+        </span>
+      </span>
+      <span className="dk-wait-amt mono">{p.amountCents ? usdShort(p.amountCents) : ''}</span>
+      <span className="dk-wait-act">
+        {draft ? (
+          <>
+            <ActButton label="Approve plan" busyLabel="Approving…" primary title="Approve the reaction as a whole: every line with a precedent then executes and posts on its own; novel lines wait for the Head of Cost Cap" run={(by, at) => race.approvePlan({ planKey: p.plan.planKey, status: 'approved', by, at })} />
+            <ActButton label="Reject" busyLabel="Rejecting…" title="Nothing executes or posts" run={(by, at) => race.approvePlan({ planKey: p.plan.planKey, status: 'rejected', by, at })} />
+          </>
+        ) : (
+          <span className="mono muted small">{p.plan.approvedBy}</span>
+        )}
+      </span>
+    </li>
+  );
+}
+
+export function WaitingRows({ held, plans = [], onOpenPlan }: { held: HeldGroup[]; plans?: PlanView[]; onOpenPlan?: (key: string) => void }) {
   const race = useRace();
   const unsure = race.effects.filter((e) => e.status === 'needs_person');
   const close = race.closes.reduce<(typeof race.closes)[number] | null>((b, c) => (!b || c.closedAt > b.closedAt ? c : b), null);
   const decisions = race.actions.filter((a) => a.status === 'awaiting_approval' && (a.kind === 'withdraw_car' || a.outward));
   const openQs = race.questions.filter((q) => q.status === 'open');
-  const mine = held.length + unsure.length + (close?.status === 'draft' ? 1 : 0);
+  const drafts = plans.filter((p) => p.plan.status === 'draft');
+  const mine = held.length + unsure.length + drafts.length + (close?.status === 'draft' ? 1 : 0);
   return (
     <ul className="dk-waits">
+      {drafts.map((p) => (
+        <PlanCard key={p.plan.planKey} p={p} onOpen={onOpenPlan ? () => onOpenPlan(p.plan.planKey) : undefined} />
+      ))}
       {close?.status === 'draft' && (
         <li className="dk-wait">
           <Pill tone="wait">Draft</Pill>
