@@ -14,6 +14,25 @@ OpenF1 (replay of a past session | live MQTT) -> race/normalize.py -> RaceEvent
    -> race/policy_learner.py   onboarding from 2025-26 history; children from corrections and Jev contradictions
 ```
 
+## The race-day flow (race/weekend.py)
+
+`make race-demo` replays a whole weekend (São Paulo 2024: qualifying 9627, then the race 9636) and runs seven stages
+after every event, each its own module writing its own pit-wall table:
+
+| Stage | Module | Table | Decides |
+|---|---|---|---|
+| 1 Detect | `telemetry.py` (in `normalize.py`) | `race_events` (`car_stopped`) | code: 100+ km/h to under 25 with the brake on, or telemetry frozen on OpenF1's sentinel values |
+| 2 Log | `incidents.py` | `race_incidents`, `race_beliefs` | code; a person's answer assesses |
+| 3 Respond | `logistics.py` | `race_actions` | the playbook; outward or irreversible actions wait for their owner (the module refuses anything else) |
+| 4 Account | `ledger.py` | `race_entries`, `race_entry_lines` | code; balanced, with when the cap counts each line |
+| 5 Ask | `questions.py` | `race_questions` | a person, when expected loss tops `RACE_ASK_PRICE_USD` or Jev is below `RACE_ASK_FLOOR` |
+| 6 Re-plan | `season_sim.py`, `cap_forecast.py` | `race_sims` | code (numpy, 10,000 seasons, one seed per weekend) |
+| 7 Close | `close.py`, later `trueup.py` | `race_closes` | Claude drafts, a check rejects any figure not in the snapshot; the CFO approves |
+
+Learning has eras (`policy_learner.ERAS`): São Paulo 2024 learns only from Williams' 2024 races before it
+(`make race-onboard-2024`, store `data/precedents_2024.jsonl`, policies `race-y2024-*`) plus two press-sourced practice
+crashes, so a replay never matches its own future. Every assumption is in `data/williams_2024.json` with its basis.
+
 ## Run
 
 ```bash

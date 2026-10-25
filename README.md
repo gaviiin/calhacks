@@ -1,11 +1,34 @@
 # Pit Wall
 
-The finance desk of a Formula 1 constructor, built for the Hyphenate track at Cal Hacks 13.0. Two AI seats do the work and people approve what matters:
+Race-day finance for a Formula 1 team, built for the Hyphenate track at Cal Hacks 13.0. The demo replays Williams at the 2024 São Paulo Grand Prix: three crashes on one Sunday, a car that did not start, no points, and a fall from P8 to P9 in the constructors' championship. Pit Wall takes the weekend from the moment a car stops to the CFO's brief, in seven stages:
+
+| Stage | What happens on São Paulo 2024 | Speed |
+|---|---|---|
+| 1 Detect | A telemetry tripwire on OpenF1 `car_data` sees each Williams car stop (Albon in Q3: 315 to 0 km/h at 11:57:19), 9-26 s before the red flag; race control never names Colapinto's race crash | about 1 s of data |
+| 2 Log | One incident per crash, its belief versioned as evidence arrives (suspected, corroborated by the red flag, confirmed out, assessed by a person); Albon's qualifying crash carries into the race as "did not start" | under 1 ms |
+| 3 Respond | The playbook learned from Williams' 2024 races reserves spares, raises work orders against the Las Vegas freight cut-off, drafts the FIA paperwork, and prices withdrawing Albon (13 h to build the spare tub against 3.5 h to the start). Anything outward-facing waits for its owner | under 1 ms |
+| 4 Account | Balanced provisional entries saying when the cap counts each: a spare when fitted, a destroyed part already counted when first used, a fine never | under 10 ms |
+| 5 Ask | The chief mechanic is asked only when a wrong call would cost more than the question, as a choice between two crashes the team has lived through; one click settles the lines and teaches the desk | under 1 ms |
+| 6 Re-plan | 10,000 seasons after every change: Williams' chance of P8 falls from 72% to 0%, expected prize money by $6.1m, almost all of it from Alpine's double podium rather than our crashes; the 2025 wind-tunnel allowance; a $400k deferral of Nov-Dec development to stay under the 2024 cap | about 75 ms |
+| 7 Close | The weekend sealed under one Merkle root, briefs for the CFO, Head of Cost Cap, Technical Director and Team Principal citing the row behind each figure; nothing goes out until the CFO approves. Weeks later the true-up: sealed $3.92m against the nearly $4m reported | under 1 min with Claude |
+
+```bash
+make stdb-start                  # SpacetimeDB on :3000 (another terminal)
+make race-publish race-grant     # pit-wall with the race-day tables
+make dashboard                   # :5173, Race day is the home page
+make race-demo                   # São Paulo 2024 at demo pace (OFFLINE=1 for no Jev or Claude)
+```
+
+The dashboard has four tabs: **Race day** (the flow), **Inbox** (what waits for a person), **Books** (where the entries land: race entries, the cost cap desk, the revenue desk), **Audit** (the log and the FIA evidence). Not affiliated with Williams Racing: timing, telemetry and results are real (OpenF1, Jolpica); money is press estimates and stated assumptions, each with its source in `race/data/`. The race desk's details are in [race/README.md](race/README.md).
+
+## The books behind race day
+
+The two desks behind **Books** are where race day's entries land, and they keep their own story. Two AI seats do the work and people approve what matters:
 
 - the **revenue accountant** books sponsor fees, performance bonuses and prize money from real F1 results and real FIA documents, through one write path a deterministic kernel re-checks (K1 to K12);
 - the **cost cap analyst** classifies every cost line under the FIA Financial Regulations against the $215m cap, under house policies a Policy Learner drafted from last year's books and the Head of Cost Cap approved.
 
-Both report to the same people (Dana Okafor, Controller; Priya Raman, CFO; Morgan Hale, Head of Cost Cap) and share one evidence feed and one dashboard. The team is Meridian Racing, a fictional constructor whose on-track results are Mercedes' real 2023 and 2024 results.
+Both report to the same people (Dana Okafor, Controller; Priya Raman, CFO; Morgan Hale, Head of Cost Cap) and share one evidence feed and one dashboard. The team behind these desks is Meridian Racing, a fictional constructor whose on-track results are Mercedes' real 2023 and 2024 results.
 
 **Seats line:** fills the revenue accountant seat, the cost cap analyst seat and the policy desk beside it; does the accounting itself and brings people only what it cannot settle, then remembers what they decide.
 
