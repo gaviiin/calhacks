@@ -107,3 +107,33 @@ export const IconLive = (p: P) => (
     <path d="M4.2 4.2a5.4 5.4 0 000 7.6M11.8 4.2a5.4 5.4 0 010 7.6" />
   </Svg>
 );
+
+export const IconPlay = (p: P) => (
+  <Svg {...p}>
+    <path d="M4.5 3v10l8-5z" />
+  </Svg>
+);
+
+export const IconPlug = (p: P) => (
+  <Svg {...p}>
+    <path d="M5 2v4M11 2v4M3.5 6h9v2.5a4.5 4.5 0 0 1-9 0zM8 13v2" />
+  </Svg>
+);
+
+export const IconUpload = (p: P) => (
+  <Svg {...p}>
+    <path d="M8 11V3M4.5 6.5L8 3l3.5 3.5M3 13h10" />
+  </Svg>
+);
+
+export const IconChart = (p: P) => (
+  <Svg {...p}>
+    <path d="M2.5 13.5h11M4 10l3-3.5 2.5 2L12 4.5" />
+  </Svg>
+);
+
+export const IconMail = (p: P) => (
+  <Svg {...p}>
+    <path d="M2.5 4h11v8.5h-11zM2.5 4.5L8 9l5.5-4.5" />
+  </Svg>
+);

@@ -4,6 +4,8 @@ import { Shell, useSeatStatus, type View } from './components/Shell';
 import { useCostCap } from './lib/costcap';
 import { useRevenue } from './lib/revenue';
 import { AuditView } from './views/AuditView';
+import { ConnectView } from './views/ConnectView';
+import { RiskView } from './views/RiskView';
 import { CostCapView } from './views/CostCapView';
 import { EvidenceView } from './views/EvidenceView';
 import { InboxView } from './views/InboxView';
@@ -19,7 +21,7 @@ interface Route {
 
 function parse(hash: string): Route {
   const [, view = '', ...rest] = hash.replace(/^#/, '').split('/');
-  const known: View[] = ['inbox', 'cost-cap', 'revenue', 'evidence', 'audit'];
+  const known: View[] = ['inbox', 'cost-cap', 'risk', 'revenue', 'evidence', 'audit', 'connect'];
   return { view: (known as string[]).includes(view) ? (view as View) : 'overview', arg: rest.join('/') || null };
 }
 
@@ -56,7 +58,7 @@ export default function App() {
       </a>
       <Shell view={route.view} go={(v) => nav(v === 'overview' ? '/' : `/${v}`)} inboxCount={inbox.length} status={status} />
       <main id="main" className="page">
-        {!cc.ready && route.view !== 'revenue' && route.view !== 'evidence' ? (
+        {!cc.ready && route.view !== 'revenue' && route.view !== 'evidence' && route.view !== 'connect' ? (
           <p className="muted loading">Connecting to the cost cap desk on SpacetimeDB…</p>
         ) : route.view === 'overview' ? (
           <Overview inbox={inbox} status={status} toAudit={(a, b) => nav(`/audit/${Math.floor(a)}-${Math.ceil(b)}`)} />
@@ -64,6 +66,10 @@ export default function App() {
           <InboxView inbox={inbox} selected={route.arg} select={(k) => nav(`/inbox/${k}`)} status={status} />
         ) : route.view === 'cost-cap' ? (
           <CostCapView status={status} inbox={inbox} />
+        ) : route.view === 'risk' ? (
+          <RiskView />
+        ) : route.view === 'connect' ? (
+          <ConnectView />
         ) : route.view === 'revenue' ? (
           <RevenueView />
         ) : route.view === 'evidence' ? (

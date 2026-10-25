@@ -2,11 +2,15 @@ import { useMemo } from 'react';
 import { OPEN_STATES, proposedCapEffect, useCostCap } from '../lib/costcap';
 import { usdShort } from '../lib/format';
 
+import { Figure } from './Figure';
+import { REG } from '../lib/caprisk';
+
 // Relevant Costs against the cap on one track. Lime is what a person approved and the gateway
 // posted; steel is what the agents proposed and nobody has posted yet; the outline is still to
 // classify. The run rate is labelled for what it is: January times twelve.
 
-const MATERIAL_BREACH = 1.05; // FIA: an overspend of 5% or more is a Material Overspend Breach
+/** FIA 2026 D10.3.3: Relevant Costs 2% or more over the cap is a Material Overspend Breach. */
+const MATERIAL_BREACH = 1 + REG.minorBelow;
 
 export function useCapFigures() {
   const cc = useCostCap();
@@ -46,7 +50,7 @@ export function CapTrack() {
       <div className="captrack-head">
         <h2 id="captrack-h">Cost cap 2026</h2>
         <p className="captrack-statement">
-          <strong>{usdShort(f.posted)}</strong> of Relevant Costs posted against a <strong>{usdShort(f.cap)}</strong> cap.{' '}
+          <Figure value={f.posted} format={usdShort} className="figure" /> of Relevant Costs posted against a <strong>{usdShort(f.cap)}</strong> cap.{' '}
           {f.runRate > 0 && (
             <span className={over > 0 ? 'tone-alert' : 'tone-ok'}>
               At {monthLabel}'s pace the year lands at {usdShort(f.runRate)},{' '}
@@ -67,8 +71,8 @@ export function CapTrack() {
         <span className="track-line track-line--cap" style={{ left: x(f.cap) }}>
           <b>cap {usdShort(f.cap)}</b>
         </span>
-        <span className="track-line track-line--breach" style={{ left: x(f.cap * MATERIAL_BREACH) }}>
-          <b>+5% breach</b>
+        <span className="track-line track-line--breach" style={{ left: x(f.cap * MATERIAL_BREACH) }} title={`Material Overspend Breach from 2% over the cap (FIA ${REG.articles.material})`}>
+          <b>+2% material breach</b>
         </span>
         {f.runRate > 0 && (
           <span className={`track-runrate ${over > 0 ? 'track-runrate--over' : ''}`} style={{ left: x(f.runRate) }}>
@@ -89,19 +93,25 @@ export function CapTrack() {
           <dt>
             <span className="key key--posted" /> Posted, approved by a person
           </dt>
-          <dd>{usdShort(f.posted)}</dd>
+          <dd>
+            <Figure value={f.posted} format={usdShort} />
+          </dd>
         </div>
         <div>
           <dt>
             <span className="key key--proposed" /> Proposed by the agents, not posted
           </dt>
-          <dd>{usdShort(f.proposed)}</dd>
+          <dd>
+            <Figure value={f.proposed} format={usdShort} />
+          </dd>
         </div>
         <div>
           <dt>
             <span className="key key--unclassified" /> Still to classify ({f.unclassifiedLines} lines)
           </dt>
-          <dd>{usdShort(f.unclassified)}</dd>
+          <dd>
+            <Figure value={f.unclassified} format={usdShort} />
+          </dd>
         </div>
       </dl>
     </section>
