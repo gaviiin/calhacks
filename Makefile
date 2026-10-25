@@ -16,7 +16,7 @@ AGENT_MODE := $(if $(OFFLINE),--offline,)
         analyst standing review-items gateway redteam score cost-cap-run \
         revenue-api revenue-sim revenue-demo evidence-publish evidence-replay \
         race-publish race-grant race-fixtures race-replay race-tape race-live race-onboard race-learn race-review-policies race-test \
-        race-weekend race-demo race-onboard-2024
+        race-weekend race-demo race-onboard-2024 race-reset
 
 # ---------------------------------------------------------------- shared
 
@@ -158,10 +158,17 @@ race-weekend:     ## replay a whole weekend through the race-day flow (RACE_MEET
 
 race-demo:        ## the demo: São Paulo 2024 from just before Colapinto's qualifying crash, Jev asks below 0.65, then the close
 	RACE_ASK_FLOOR=0.65 $(ENV) uv run python -m race.weekend --meeting 1249 --pace $(or $(RACE_PACE),40) --max-sleep 3 \
-		--from 9627=2024-11-03T10:37:30Z --from 9636=2024-11-03T16:33:00Z $(if $(OFFLINE),--offline,) --linger 180
+		--from 9627=2024-11-03T10:37:30Z --from 9636=2024-11-03T16:28:00Z $(if $(OFFLINE),--offline,) --linger 180
 
 race-onboard-2024: ## learn Williams' 2024 races before São Paulo (its own precedent store and race-y2024- policies; no hindsight)
 	$(ENV) uv run python -m race.policy_learner --onboard --era 2024 $(if $(OFFLINE),--offline,)
+
+race-reset:       ## a clean pit-wall for the demo: wipe it, reload the FIA evidence, grant roles, relearn 2024 (BROWSER_ID=<hex> seats the dashboard)
+	$(MAKE) evidence-publish evidence-replay
+	uv run python scripts/race_grant.py
+	$(if $(BROWSER_ID),uv run python scripts/race_grant.py --role race_head --identity $(BROWSER_ID),@echo "  (pass BROWSER_ID=<hex> to let the dashboard decide: the hex is in the error a refused click shows)")
+	$(ENV) uv run python -m race.policy_learner --onboard --era 2024 --offline
+	$(MAKE) bindings
 
 race-test:        ## race desk tests: pytest race/tests + the module's vitest
 	uv run pytest -q race/tests
