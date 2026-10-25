@@ -86,6 +86,14 @@ def _accuracy() -> dict | None:
     }
 
 
+def _at_hire() -> dict | None:
+    """The simulated team's records (race/team_records.py): accuracy before and after the desk reads them."""
+    from race import team_records
+
+    path = team_records.OUT
+    return json.loads(path.read_text()) if path.exists() else None
+
+
 def build() -> dict:
     cases = era_precedents("2024").cases
     sessions = sorted({c.session_key for c in cases if c.source == "history"})
@@ -100,6 +108,7 @@ def build() -> dict:
         "operations": _operations(),
         "assumptions": _assumptions(),
         "accuracy": _accuracy(),
+        "at_hire": _at_hire(),
     }
     OUT.write_text(json.dumps(report, indent=1))
     return report

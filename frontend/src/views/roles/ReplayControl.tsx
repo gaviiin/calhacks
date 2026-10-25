@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
-import { IconPlay, IconRestart } from '../../components/icons';
+import { IconRestart } from '../../components/icons';
 import { useRace } from '../../lib/race';
 
-// Start the São Paulo replay from the page: the dev server runs `make race-demo` (or `make race-reset` first for a
-// clean slate) on this machine, and the views move as the rows land. Only the dev server offers it.
+// The demo's moments from the page: Lap 32 (`make race-snapshot`) or a clean slate (`make race-reset`), run by the dev
+// server on this machine. Replaying a crash is on the car itself (views/desk/CrashReplay.tsx). Only the dev server offers it.
 
 interface Job {
   target: string;
@@ -63,9 +63,6 @@ export function ReplayControl() {
               Lap 32 · listening
             </span>
           ) : null}
-          <button type="button" className="btn btn--small btn--primary" onClick={() => start('race-demo')}>
-            <IconPlay size={13} /> Replay São Paulo
-          </button>
           <button type="button" className="btn btn--small" onClick={() => start('race-snapshot')} title="A clean pit-wall, then the weekend up to a few minutes after Colapinto's lap-32 crash">
             Lap 32
           </button>

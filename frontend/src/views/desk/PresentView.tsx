@@ -1,14 +1,13 @@
 import { useMemo, useState, type ReactNode } from 'react';
-import type { CostId } from '../../blueprint/catalog';
 import { IconApproved, IconBolt, IconExternal } from '../../components/icons';
 import { usdShort } from '../../lib/format';
 import { RaceScope, latestMeeting, useRace, type RaceData } from '../../lib/race';
 import { sortTime } from '../../lib/raceModel';
 import { ActButton, parse } from '../raceday/shared';
-import { Hero, LENSES } from './Hero';
-import { useDesk, type Desk, type DeskCar, type DeskLens, type PlanView } from './model';
+import { useDesk, type Desk, type DeskCar, type PlanView } from './model';
 import { HeldRow } from './panels';
 import { SideSheet, type SheetTarget } from './Sheet';
+import { ReplayStage } from './CrashReplay';
 import './desk.css';
 import './present.css';
 
@@ -41,8 +40,6 @@ function Present({ nav }: { nav: (h: string) => void }) {
   const race = desk.race;
   const incidents = useMemo(() => race.incidents.slice().sort((a, b) => sortTime(a.firstSeenAt) - sortTime(b.firstSeenAt)), [race.incidents]);
   const [pick, setPick] = useState<string | null>(null);
-  const [lens, setLens] = useState<DeskLens>('condition');
-  const [hoverCost, setHoverCost] = useState<CostId | null>(null);
   const [sheet, setSheet] = useState<SheetTarget | null>(null);
 
   // the crash on screen: the one picked, else the latest whose plan waits, else the latest
@@ -67,16 +64,7 @@ function Present({ nav }: { nav: (h: string) => void }) {
         <Weekend desk={desk} nav={nav} />
       </div>
       <div className="pv-grid">
-        <section className="glass--dark hstage pv-stage" aria-label={`Car ${car.number}`}>
-          <div className="pv-lens gseg gseg--dark" role="radiogroup" aria-label="Lens">
-            {LENSES.map((l) => (
-              <button key={l.id} type="button" role="radio" aria-checked={lens === l.id} className={lens === l.id ? 'is-on' : ''} onClick={() => setLens(l.id)} title={l.title}>
-                {l.label}
-              </button>
-            ))}
-          </div>
-          <Hero car={car} lens={lens} highlightCost={hoverCost} onHoverCost={setHoverCost} />
-        </section>
+        <ReplayStage race={race} inc={inc} car={car} />
         <aside className="pv-side">
           {inc ? <Story desk={desk} inc={inc} car={car} /> : <NoCrash car={car} />}
           {inc ? <Call desk={desk} inc={inc} openPlan={(k) => setSheet({ kind: 'plan', id: k })} /> : null}

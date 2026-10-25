@@ -33,6 +33,7 @@
         <a href="#module">Module</a>
         <a href="#method">Method</a>
         <a href="#numbers">Numbers</a>
+        <a href="#accuracy">Accuracy</a>
         <a href="#demo">Demo</a>
         <a href="#features">Engineering</a>
         <a href="#tracks">Tracks</a>
@@ -334,6 +335,43 @@
         </div>
       </section>
 
+
+      <!-- ================================================================ accuracy at the time of hire -->
+      <section class="section" id="accuracy">
+        <div class="wrap">
+          <h2 class="display">Accuracy at the time of hire.</h2>
+          <p class="sub">Two tests. What it gets right from public data alone, and what a team's own records add on the day it is hired.</p>
+          <div class="acc">
+            <div class="acc-col">
+              <h3>From public data: Williams' real 2024 races</h3>
+              <p class="acc-lede">Each event decided only from the races before it, with nothing known after the event.</p>
+              <ul class="acc-figs">
+                <li><b>96%</b><span>of 93 events classified right; every routine event the learned rules decided, right</span></li>
+                <li><b>83%</b><span>of the 24 damage events; one season held too few crashes to learn damage (it covered 2)</span></li>
+                <li><b>88%</b><span>of the parts each crash destroyed reserved, 95% of their value, over 6 crashes</span></li>
+                <li><b>−6%</b><span>São Paulo's estimate against Auto Motor und Sport; the split between crashes is off (Albon +97%, Colapinto's race −40%)</span></li>
+              </ul>
+            </div>
+            <div class="acc-col acc-hire">
+              <h3>From the team's records: damage reports and work orders <em class="acc-sim">simulated</em></h3>
+              <p class="acc-lede">Two seasons of a team's records read at hire, then scored on a season it has not seen. Averaged over 20 simulated teams.</p>
+              <table class="acc-table">
+                <thead><tr><th></th><th>Public data</th><th>After hire</th></tr></thead>
+                <tbody>
+                  <tr><th>Repair hours error</th><td>23%</td><td><b>11%</b></td></tr>
+                  <tr><th>Lead time error</th><td>1.2 days</td><td><b>0.5 days</b></td></tr>
+                  <tr><th>Damage odds (Brier, lower is better)</th><td>0.140</td><td><b>0.108</b></td></tr>
+                  <tr><th>Parts reserved that were needed</th><td>58%</td><td><b>71%</b></td></tr>
+                  <tr><th>Season cost error, before the report</th><td>16%</td><td><b>14%</b></td></tr>
+                </tbody>
+              </table>
+              <p class="acc-key"><b>Once the engineer's report is in</b>, the season's cost lands within <b>2%</b> on the team's own prices, against 10% on the public price book.</p>
+            </div>
+          </div>
+          <p class="fine wide">The left column is measured on real OpenF1 data and press figures (<code>race/backtest.py</code>). The right column is simulated (<code>race/team_records.py</code>): a hidden team's own damage odds, prices, hours and lead times generate the records the desk learns from and the season it is tested on. It shows the learner recovers a team's own pattern from two seasons of records; it is not a measurement on Williams' records, which are not public. What no history can predict is which parts one crash happens to take: that is what the engineer's report settles.</p>
+        </div>
+      </section>
+
       <!-- ================================================================ demo -->
       <section class="section" id="demo">
         <div class="wrap demo">
@@ -342,10 +380,10 @@
             <p class="sub">This page is the pitch. The demo runs live: São Paulo 2024 replayed from OpenF1, one crash at a time, and one operator with full control of every call.</p>
             <ol class="beats">
               <li><time>0:00</time>The module for hardware assets, on one screen</li>
-              <li><time>0:25</time>Albon at 315 km/h: repairs, books, labour, a grid penalty, the cap</li>
-              <li><time>0:55</time>Colapinto's crash: one click approves the whole response</li>
-              <li><time>1:25</time>The car is the ledger: life, then when each part counts</li>
-              <li><time>1:45</time>Sealed at $3.92m; the press said nearly $4m</li>
+              <li><time>0:25</time>Replay Albon's crash: telemetry, race control, then the engineer's report lights the parts</li>
+              <li><time>0:55</time>Colapinto's crash: open the plan, edit it in plain words, approve once</li>
+              <li><time>1:25</time>Upload an engineer's report: the car redraws from what the garage found</li>
+              <li><time>1:45</time>Accuracy at hire: what public data taught, what the team's records add</li>
             </ol>
           </div>
           <figure class="screen">
@@ -621,6 +659,7 @@
               <li><b>Wear moves the forecast, not the books</b><span>The cap excludes depreciation, so life sets when a part is fitted, and fitting is when its cost counts.</span></li>
               <li><b>Crashes seen before race control</b><span>A telemetry tripwire, because OpenF1 never announces a retirement.</span></li>
               <li><b>Autonomy as a licence</b><span>A 90% Wilson bound over the policy's own record; 3 of 3 is still a shadow.</span></li>
+              <li><b>Replay a crash from the engineer's report</b><span>Every version of what the desk believed, on the car: the telemetry stop, race control, then the report, Jev's read approved by the Chief Mechanic or a report an engineer uploads.</span></li>
               <li><b>Edit the plan in plain words</b><span>"Hand carry the floor instead." The plan holds, the agent turns the words into operations, rebuilds the plan against the team's history and records what it did with each sentence; then it executes.</span></li>
               <li><b>No amount thresholds</b><span>History decides who looks at a line, not its size: the same part, booked the same way, at a price the team has paid before posts on its own; a familiar part at an unfamiliar price waits.</span></li>
               <li><b>Grid penalties as money</b><span>A power unit heading past its allocation is found the moment a crash makes it likely.</span></li>

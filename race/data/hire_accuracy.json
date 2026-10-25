@@ -1,0 +1,95 @@
+{
+ "simulated": true,
+ "what": "Accuracy at the time of hire: the desk scored on an unseen season, before and after reading two seasons of the team's damage reports and work orders.",
+ "teams": 20,
+ "train": {
+  "seasons": [
+   2022,
+   2023
+  ],
+  "incidents_per_team": 64
+ },
+ "test": {
+  "season": 2024,
+  "incidents_per_team": 30
+ },
+ "today": {
+  "parts_precision": 0.5826,
+  "parts_recall": 0.6976,
+  "parts_f1": 0.6341,
+  "brier": 0.1402,
+  "cost_error_per_crash_cents": 14337562.95,
+  "season_cost_error": 0.1605,
+  "hours_error": 0.2301,
+  "lead_error_days": 1.1637,
+  "incidents": 30.0
+ },
+ "after_hire": {
+  "parts_precision": 0.7055,
+  "parts_recall": 0.6303,
+  "parts_f1": 0.6622,
+  "brier": 0.1077,
+  "cost_error_per_crash_cents": 14749162.2331,
+  "season_cost_error": 0.142,
+  "hours_error": 0.1103,
+  "lead_error_days": 0.5206,
+  "incidents": 30.0
+ },
+ "with_report": {
+  "today": {
+   "parts_precision": 1.0,
+   "parts_recall": 1.0,
+   "parts_f1": 1.0,
+   "brier": 0.0,
+   "cost_error_per_crash_cents": 3673463.175,
+   "season_cost_error": 0.1013,
+   "hours_error": 0.2301,
+   "lead_error_days": 1.1637,
+   "incidents": 30.0
+  },
+  "after_hire": {
+   "parts_precision": 1.0,
+   "parts_recall": 1.0,
+   "parts_f1": 1.0,
+   "brier": 0.0,
+   "cost_error_per_crash_cents": 1454097.275,
+   "season_cost_error": 0.0235,
+   "hours_error": 0.1103,
+   "lead_error_days": 0.5206,
+   "incidents": 30.0
+  }
+ },
+ "curve": [
+  {
+   "incidents_learned": 0,
+   "parts_f1": 0.6341,
+   "brier": 0.1402,
+   "season_cost_error": 0.1605
+  },
+  {
+   "incidents_learned": 8,
+   "parts_f1": 0.5882,
+   "brier": 0.139,
+   "season_cost_error": 0.286
+  },
+  {
+   "incidents_learned": 16,
+   "parts_f1": 0.6238,
+   "brier": 0.1278,
+   "season_cost_error": 0.2605
+  },
+  {
+   "incidents_learned": 32,
+   "parts_f1": 0.6392,
+   "brier": 0.118,
+   "season_cost_error": 0.1633
+  },
+  {
+   "incidents_learned": 64,
+   "parts_f1": 0.6622,
+   "brier": 0.1077,
+   "season_cost_error": 0.142
+  }
+ ],
+ "caveat": "Simulated records from a hidden team model: this shows the learner recovers a team's own damage pattern and costs; it is not a measurement on Williams' records."
+}

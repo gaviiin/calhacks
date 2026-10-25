@@ -40,3 +40,25 @@ def test_the_onboarding_report_names_every_assumption_and_what_replaces_it():
     assert all(p["licensed"] == (p["cases"] >= 5 and p["lower_bound"] >= 0.75) for p in r["policies"])
     assert len(r["assumptions"]) >= 8 and all(a["replace_with"] for a in r["assumptions"])
     assert r["operations"]["crashes"] == 6
+
+
+def test_a_teams_records_teach_the_desk_its_hours_lead_times_and_prices():
+    from race import team_records
+
+    r = team_records.run(teams=6, write=False)
+    t, a = r["today"], r["after_hire"]
+    assert r["simulated"] and "not a measurement on Williams" in r["caveat"]
+    assert a["hours_error"] < t["hours_error"] and a["lead_error_days"] < t["lead_error_days"]
+    assert a["brier"] < t["brier"], "the damage odds learned from the team's reports are better calibrated than the template"
+    assert a["parts_precision"] > t["parts_precision"]
+    rt, ra = r["with_report"]["today"], r["with_report"]["after_hire"]
+    assert ra["season_cost_error"] < rt["season_cost_error"], "with the engineer's report, the team's own prices beat the book"
+    assert ra["season_cost_error"] < 0.05
+
+
+def test_the_simulated_team_never_loses_a_monocoque_to_a_light_brush():
+    from race import team_records
+
+    recs = team_records.simulate()
+    assert not any("chassis" in x["damage_report"]["parts"] for x in recs if x["band"] == "light")
+    assert all(x["work_orders"] for x in recs) and {x["season"] for x in recs} == {2022, 2023, 2024}

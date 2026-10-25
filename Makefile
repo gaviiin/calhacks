@@ -15,7 +15,7 @@ AGENT_MODE := $(if $(OFFLINE),--offline,)
         rulebook world api stdb-publish stdb-test bootstrap advance sync learner review-policies \
         analyst standing review-items gateway redteam score cost-cap-run \
         revenue-api revenue-sim revenue-demo evidence-publish evidence-replay \
-        race-publish race-grant race-backtest race-onboarding-report race-fixtures race-replay race-tape race-live race-onboard race-learn race-review-policies race-test \
+        race-publish race-grant race-backtest race-team-records race-onboarding-report race-fixtures race-replay race-tape race-live race-onboard race-learn race-review-policies race-test \
         race-weekend race-demo race-onboard-2024 race-reset race-snapshot
 
 # ---------------------------------------------------------------- shared
@@ -165,6 +165,9 @@ race-onboard-2024: ## learn Williams' 2024 races before São Paulo (its own prec
 
 race-backtest:    ## score the desk on Williams' 2024 races it had not seen: what happened, which parts, what it cost (race/data/backtest_2024.json)
 	uv run python -m race.backtest
+
+race-team-records: ## accuracy at the time of hire: simulated damage reports and work orders, learned from and tested on (race/data/hire_accuracy.json)
+	uv run python -m race.team_records
 
 race-onboarding-report: ## what the desk knows before its first race: rules, history, assumptions, accuracy (race/data/onboarding_report.json, the dashboard's Learned page)
 	uv run python -m race.onboarding_report

@@ -3258,3 +3258,126 @@ input[type='range']::-moz-range-thumb {
     border-top: 1px solid rgba(255, 255, 255, 0.2);
   }
 }
+
+/* ------------------------------------------------------------------ accuracy at the time of hire */
+
+.acc {
+  display: grid;
+  grid-template-columns: 1fr 1.1fr;
+  gap: 24px;
+  margin-top: 48px;
+}
+.acc-col {
+  padding: 28px;
+  border: 1px solid var(--g200);
+  border-radius: 16px;
+  background: var(--white);
+  box-shadow: var(--shadow-1);
+}
+.acc-hire {
+  border-color: var(--wash-2);
+  background: linear-gradient(180deg, var(--white), var(--wash) 260%);
+}
+.acc-col h3 {
+  font-size: 19px;
+}
+.acc-sim {
+  display: inline-block;
+  margin-left: 8px;
+  padding: 2px 8px;
+  border-radius: 5px;
+  background: var(--navy);
+  color: #fff;
+  font: 600 11px/1.4 var(--mono);
+  font-style: normal;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  vertical-align: 2px;
+}
+.acc-lede {
+  margin-top: 8px;
+  font-size: 14px;
+  color: var(--g700);
+}
+.acc-figs {
+  list-style: none;
+  margin: 20px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 0;
+}
+.acc-figs li {
+  display: grid;
+  grid-template-columns: 92px 1fr;
+  gap: 14px;
+  align-items: baseline;
+  padding: 14px 0;
+  border-top: 1px solid var(--g100);
+}
+.acc-figs b {
+  font: 700 30px/1 var(--mono);
+  color: var(--navy);
+  letter-spacing: -0.02em;
+}
+.acc-figs span {
+  font-size: 14.5px;
+  color: var(--g800);
+}
+.acc-table {
+  width: 100%;
+  margin-top: 18px;
+  border-collapse: collapse;
+  font-size: 14.5px;
+}
+.acc-table th,
+.acc-table td {
+  padding: 12px 0;
+  border-top: 1px solid var(--g100);
+  text-align: left;
+}
+.acc-table thead th {
+  border-top: 0;
+  padding-top: 0;
+  font: 600 11px/1 var(--display);
+  font-variation-settings: 'wdth' 85;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--g600);
+}
+.acc-table tbody th {
+  font-weight: 500;
+  color: var(--g800);
+}
+.acc-table td {
+  font-family: var(--mono);
+  color: var(--g600);
+  width: 110px;
+}
+.acc-table td b {
+  color: var(--blue);
+}
+.acc-key {
+  margin-top: 18px;
+  padding: 14px 16px;
+  border-radius: 12px;
+  background: var(--navy);
+  color: #fff;
+  font-size: 15px;
+}
+.acc-key b {
+  color: #b3d4ff;
+}
+@media (max-width: 900px) {
+  .acc {
+    grid-template-columns: 1fr;
+  }
+  .acc-figs li {
+    grid-template-columns: 70px 1fr;
+  }
+  .acc-figs b {
+    font-size: 22px;
+  }
+  .acc-table td {
+    width: 80px;
+  }
+}

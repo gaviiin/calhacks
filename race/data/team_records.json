@@ -1,0 +1,3538 @@
+{
+ "_note": "SIMULATED team records (race/team_records.py): a hidden team's damage reports and work orders, not Williams' data",
+ "seed": 1249,
+ "incidents": [
+  {
+   "incident": "2022-01",
+   "season": 2022,
+   "impact_kph": 120,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-001-front_wing",
+     "part": "front_wing",
+     "cost_cents": 13509973,
+     "hours": 0.8,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2022-001-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2709049,
+     "hours": 1.6,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2022-02",
+   "season": 2022,
+   "impact_kph": 116,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-002-front_wing",
+     "part": "front_wing",
+     "cost_cents": 10000172,
+     "hours": 1.0,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2022-002-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3939275,
+     "hours": 1.3,
+     "lead_days": 1
+    }
+   ]
+  },
+  {
+   "incident": "2022-03",
+   "season": 2022,
+   "impact_kph": 235,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "front_suspension",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-003-front_wing",
+     "part": "front_wing",
+     "cost_cents": 12451656,
+     "hours": 1.1,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2022-003-floor",
+     "part": "floor",
+     "cost_cents": 35876098,
+     "hours": 3.1,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2022-003-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 10276622,
+     "hours": 2.9,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2022-003-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2849901,
+     "hours": 1.3,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2022-04",
+   "season": 2022,
+   "impact_kph": 185,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "chassis",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-004-front_wing",
+     "part": "front_wing",
+     "cost_cents": 9739749,
+     "hours": 0.7,
+     "lead_days": 1
+    },
+    {
+     "order": "WO-2022-004-chassis",
+     "part": "chassis",
+     "cost_cents": 111041706,
+     "hours": 11.1,
+     "lead_days": 17
+    },
+    {
+     "order": "WO-2022-004-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2807389,
+     "hours": 1.3,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2022-05",
+   "season": 2022,
+   "impact_kph": 131,
+   "zone": "side",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "floor",
+     "rear_suspension",
+     "bodywork",
+     "brakes",
+     "electronics"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-005-floor",
+     "part": "floor",
+     "cost_cents": 37831358,
+     "hours": 2.7,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2022-005-rear_suspension",
+     "part": "rear_suspension",
+     "cost_cents": 7868130,
+     "hours": 2.5,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2022-005-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3279286,
+     "hours": 1.2,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2022-005-brakes",
+     "part": "brakes",
+     "cost_cents": 2460734,
+     "hours": 1.7,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2022-005-electronics",
+     "part": "electronics",
+     "cost_cents": 6647591,
+     "hours": 2.9,
+     "lead_days": 4
+    }
+   ]
+  },
+  {
+   "incident": "2022-06",
+   "season": 2022,
+   "impact_kph": 211,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-006-front_wing",
+     "part": "front_wing",
+     "cost_cents": 11282999,
+     "hours": 0.8,
+     "lead_days": 1
+    },
+    {
+     "order": "WO-2022-006-floor",
+     "part": "floor",
+     "cost_cents": 39295247,
+     "hours": 2.2,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2022-006-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3204722,
+     "hours": 1.1,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2022-07",
+   "season": 2022,
+   "impact_kph": 202,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "front_suspension"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-007-front_wing",
+     "part": "front_wing",
+     "cost_cents": 10250812,
+     "hours": 0.9,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2022-007-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 9234599,
+     "hours": 2.3,
+     "lead_days": 5
+    }
+   ]
+  },
+  {
+   "incident": "2022-08",
+   "season": 2022,
+   "impact_kph": 126,
+   "zone": "side",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "floor",
+     "front_suspension",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-008-floor",
+     "part": "floor",
+     "cost_cents": 38817555,
+     "hours": 2.7,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2022-008-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 10731213,
+     "hours": 2.8,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2022-008-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3047689,
+     "hours": 1.4,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2022-09",
+   "season": 2022,
+   "impact_kph": 264,
+   "zone": "front",
+   "band": "heavy",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "front_suspension",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-009-front_wing",
+     "part": "front_wing",
+     "cost_cents": 10396279,
+     "hours": 0.6,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2022-009-floor",
+     "part": "floor",
+     "cost_cents": 40911615,
+     "hours": 3.0,
+     "lead_days": 8
+    },
+    {
+     "order": "WO-2022-009-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 8411372,
+     "hours": 3.5,
+     "lead_days": 5
+    },
+    {
+     "order": "WO-2022-009-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3179380,
+     "hours": 1.3,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2022-10",
+   "season": 2022,
+   "impact_kph": 97,
+   "zone": "rear",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "rear_wing"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-010-rear_wing",
+     "part": "rear_wing",
+     "cost_cents": 6582899,
+     "hours": 1.3,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2022-11",
+   "season": 2022,
+   "impact_kph": 109,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "brakes"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-011-front_wing",
+     "part": "front_wing",
+     "cost_cents": 12014948,
+     "hours": 1.1,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2022-011-brakes",
+     "part": "brakes",
+     "cost_cents": 2631971,
+     "hours": 1.4,
+     "lead_days": 1
+    }
+   ]
+  },
+  {
+   "incident": "2022-12",
+   "season": 2022,
+   "impact_kph": 239,
+   "zone": "side",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "floor",
+     "front_suspension",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-012-floor",
+     "part": "floor",
+     "cost_cents": 35459183,
+     "hours": 2.0,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2022-012-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 8955960,
+     "hours": 2.8,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2022-012-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2916365,
+     "hours": 1.2,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2022-13",
+   "season": 2022,
+   "impact_kph": 277,
+   "zone": "rear",
+   "band": "heavy",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "floor",
+     "rear_wing",
+     "front_suspension",
+     "rear_suspension",
+     "gearbox",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-013-floor",
+     "part": "floor",
+     "cost_cents": 37936220,
+     "hours": 1.7,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2022-013-rear_wing",
+     "part": "rear_wing",
+     "cost_cents": 7343003,
+     "hours": 1.2,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2022-013-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 8892214,
+     "hours": 4.7,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2022-013-rear_suspension",
+     "part": "rear_suspension",
+     "cost_cents": 8619555,
+     "hours": 3.7,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2022-013-gearbox",
+     "part": "gearbox",
+     "cost_cents": 56770929,
+     "hours": 4.0,
+     "lead_days": 5
+    },
+    {
+     "order": "WO-2022-013-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3736823,
+     "hours": 1.7,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2022-14",
+   "season": 2022,
+   "impact_kph": 293,
+   "zone": "front",
+   "band": "heavy",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "rear_wing",
+     "rear_suspension",
+     "bodywork",
+     "electronics"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-014-front_wing",
+     "part": "front_wing",
+     "cost_cents": 10843058,
+     "hours": 0.8,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2022-014-floor",
+     "part": "floor",
+     "cost_cents": 42180229,
+     "hours": 2.8,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2022-014-rear_wing",
+     "part": "rear_wing",
+     "cost_cents": 6480352,
+     "hours": 1.3,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2022-014-rear_suspension",
+     "part": "rear_suspension",
+     "cost_cents": 9696062,
+     "hours": 3.3,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2022-014-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3157884,
+     "hours": 2.2,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2022-014-electronics",
+     "part": "electronics",
+     "cost_cents": 8168075,
+     "hours": 3.6,
+     "lead_days": 4
+    }
+   ]
+  },
+  {
+   "incident": "2022-15",
+   "season": 2022,
+   "impact_kph": 67,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-015-front_wing",
+     "part": "front_wing",
+     "cost_cents": 9790375,
+     "hours": 0.7,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2022-015-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2748230,
+     "hours": 1.6,
+     "lead_days": 1
+    }
+   ]
+  },
+  {
+   "incident": "2022-16",
+   "season": 2022,
+   "impact_kph": 93,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-016-front_wing",
+     "part": "front_wing",
+     "cost_cents": 11878747,
+     "hours": 1.0,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2022-17",
+   "season": 2022,
+   "impact_kph": 77,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-017-front_wing",
+     "part": "front_wing",
+     "cost_cents": 9014347,
+     "hours": 0.9,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2022-18",
+   "season": 2022,
+   "impact_kph": 196,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "chassis",
+     "bodywork",
+     "electronics"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-018-front_wing",
+     "part": "front_wing",
+     "cost_cents": 11963268,
+     "hours": 0.9,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2022-018-chassis",
+     "part": "chassis",
+     "cost_cents": 147732754,
+     "hours": 14.5,
+     "lead_days": 17
+    },
+    {
+     "order": "WO-2022-018-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3517602,
+     "hours": 1.3,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2022-018-electronics",
+     "part": "electronics",
+     "cost_cents": 6459082,
+     "hours": 2.4,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2022-19",
+   "season": 2022,
+   "impact_kph": 281,
+   "zone": "front",
+   "band": "heavy",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "front_suspension",
+     "chassis",
+     "bodywork",
+     "brakes",
+     "electronics"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-019-front_wing",
+     "part": "front_wing",
+     "cost_cents": 11397450,
+     "hours": 0.9,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2022-019-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 11108443,
+     "hours": 3.0,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2022-019-chassis",
+     "part": "chassis",
+     "cost_cents": 123052085,
+     "hours": 18.6,
+     "lead_days": 17
+    },
+    {
+     "order": "WO-2022-019-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3971752,
+     "hours": 1.3,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2022-019-brakes",
+     "part": "brakes",
+     "cost_cents": 2986844,
+     "hours": 1.2,
+     "lead_days": 1
+    },
+    {
+     "order": "WO-2022-019-electronics",
+     "part": "electronics",
+     "cost_cents": 6398889,
+     "hours": 4.3,
+     "lead_days": 5
+    }
+   ]
+  },
+  {
+   "incident": "2022-20",
+   "season": 2022,
+   "impact_kph": 288,
+   "zone": "front",
+   "band": "heavy",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "front_suspension",
+     "chassis",
+     "bodywork",
+     "electronics",
+     "power_unit"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-020-front_wing",
+     "part": "front_wing",
+     "cost_cents": 9589272,
+     "hours": 0.6,
+     "lead_days": 1
+    },
+    {
+     "order": "WO-2022-020-floor",
+     "part": "floor",
+     "cost_cents": 40211051,
+     "hours": 2.0,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2022-020-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 9509626,
+     "hours": 3.2,
+     "lead_days": 5
+    },
+    {
+     "order": "WO-2022-020-chassis",
+     "part": "chassis",
+     "cost_cents": 128357125,
+     "hours": 13.3,
+     "lead_days": 17
+    },
+    {
+     "order": "WO-2022-020-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3589757,
+     "hours": 1.4,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2022-020-electronics",
+     "part": "electronics",
+     "cost_cents": 5749976,
+     "hours": 3.3,
+     "lead_days": 4
+    },
+    {
+     "order": "WO-2022-020-power_unit",
+     "part": "power_unit",
+     "cost_cents": 57864738,
+     "hours": 4.0,
+     "lead_days": 11
+    }
+   ]
+  },
+  {
+   "incident": "2022-21",
+   "season": 2022,
+   "impact_kph": 78,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-021-front_wing",
+     "part": "front_wing",
+     "cost_cents": 11742056,
+     "hours": 0.9,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2022-021-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2687860,
+     "hours": 1.4,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2022-22",
+   "season": 2022,
+   "impact_kph": 224,
+   "zone": "rear",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "floor",
+     "rear_wing",
+     "rear_suspension",
+     "gearbox"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-022-floor",
+     "part": "floor",
+     "cost_cents": 39736098,
+     "hours": 2.0,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2022-022-rear_wing",
+     "part": "rear_wing",
+     "cost_cents": 10524495,
+     "hours": 1.5,
+     "lead_days": 4
+    },
+    {
+     "order": "WO-2022-022-rear_suspension",
+     "part": "rear_suspension",
+     "cost_cents": 9298328,
+     "hours": 4.7,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2022-022-gearbox",
+     "part": "gearbox",
+     "cost_cents": 62303003,
+     "hours": 5.2,
+     "lead_days": 6
+    }
+   ]
+  },
+  {
+   "incident": "2022-23",
+   "season": 2022,
+   "impact_kph": 139,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "bodywork",
+     "power_unit"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-023-front_wing",
+     "part": "front_wing",
+     "cost_cents": 9322722,
+     "hours": 0.9,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2022-023-floor",
+     "part": "floor",
+     "cost_cents": 43084166,
+     "hours": 2.4,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2022-023-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2946887,
+     "hours": 1.7,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2022-023-power_unit",
+     "part": "power_unit",
+     "cost_cents": 48397571,
+     "hours": 4.6,
+     "lead_days": 12
+    }
+   ]
+  },
+  {
+   "incident": "2022-24",
+   "season": 2022,
+   "impact_kph": 91,
+   "zone": "side",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-024-front_wing",
+     "part": "front_wing",
+     "cost_cents": 9200448,
+     "hours": 0.9,
+     "lead_days": 1
+    },
+    {
+     "order": "WO-2022-024-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3519484,
+     "hours": 2.2,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2022-25",
+   "season": 2022,
+   "impact_kph": 248,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "bodywork",
+     "electronics"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-025-front_wing",
+     "part": "front_wing",
+     "cost_cents": 9895837,
+     "hours": 0.7,
+     "lead_days": 1
+    },
+    {
+     "order": "WO-2022-025-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3678577,
+     "hours": 1.7,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2022-025-electronics",
+     "part": "electronics",
+     "cost_cents": 5142251,
+     "hours": 3.5,
+     "lead_days": 5
+    }
+   ]
+  },
+  {
+   "incident": "2022-26",
+   "season": 2022,
+   "impact_kph": 265,
+   "zone": "rear",
+   "band": "heavy",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "rear_wing",
+     "rear_suspension",
+     "gearbox",
+     "electronics"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-026-front_wing",
+     "part": "front_wing",
+     "cost_cents": 12518696,
+     "hours": 0.9,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2022-026-floor",
+     "part": "floor",
+     "cost_cents": 38116525,
+     "hours": 3.3,
+     "lead_days": 8
+    },
+    {
+     "order": "WO-2022-026-rear_wing",
+     "part": "rear_wing",
+     "cost_cents": 8405630,
+     "hours": 1.1,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2022-026-rear_suspension",
+     "part": "rear_suspension",
+     "cost_cents": 9018169,
+     "hours": 3.6,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2022-026-gearbox",
+     "part": "gearbox",
+     "cost_cents": 52097787,
+     "hours": 3.7,
+     "lead_days": 4
+    },
+    {
+     "order": "WO-2022-026-electronics",
+     "part": "electronics",
+     "cost_cents": 6491930,
+     "hours": 3.2,
+     "lead_days": 4
+    }
+   ]
+  },
+  {
+   "incident": "2022-27",
+   "season": 2022,
+   "impact_kph": 94,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-027-front_wing",
+     "part": "front_wing",
+     "cost_cents": 8539131,
+     "hours": 0.8,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2022-027-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2282955,
+     "hours": 1.5,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2022-28",
+   "season": 2022,
+   "impact_kph": 125,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "chassis"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-028-front_wing",
+     "part": "front_wing",
+     "cost_cents": 9399981,
+     "hours": 0.6,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2022-028-chassis",
+     "part": "chassis",
+     "cost_cents": 124369822,
+     "hours": 16.4,
+     "lead_days": 18
+    }
+   ]
+  },
+  {
+   "incident": "2022-29",
+   "season": 2022,
+   "impact_kph": 108,
+   "zone": "side",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-029-front_wing",
+     "part": "front_wing",
+     "cost_cents": 11403087,
+     "hours": 0.5,
+     "lead_days": 1
+    }
+   ]
+  },
+  {
+   "incident": "2022-30",
+   "season": 2022,
+   "impact_kph": 157,
+   "zone": "rear",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "rear_suspension",
+     "gearbox"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-030-rear_suspension",
+     "part": "rear_suspension",
+     "cost_cents": 8061202,
+     "hours": 3.1,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2022-030-gearbox",
+     "part": "gearbox",
+     "cost_cents": 56964860,
+     "hours": 3.2,
+     "lead_days": 5
+    }
+   ]
+  },
+  {
+   "incident": "2022-31",
+   "season": 2022,
+   "impact_kph": 78,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-031-front_wing",
+     "part": "front_wing",
+     "cost_cents": 9993875,
+     "hours": 0.8,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2022-32",
+   "season": 2022,
+   "impact_kph": 302,
+   "zone": "side",
+   "band": "heavy",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "front_suspension",
+     "gearbox",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2022-032-front_wing",
+     "part": "front_wing",
+     "cost_cents": 10936791,
+     "hours": 0.6,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2022-032-floor",
+     "part": "floor",
+     "cost_cents": 42097546,
+     "hours": 3.0,
+     "lead_days": 8
+    },
+    {
+     "order": "WO-2022-032-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 9398874,
+     "hours": 3.9,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2022-032-gearbox",
+     "part": "gearbox",
+     "cost_cents": 73857198,
+     "hours": 3.9,
+     "lead_days": 4
+    },
+    {
+     "order": "WO-2022-032-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3176108,
+     "hours": 1.9,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2023-01",
+   "season": 2023,
+   "impact_kph": 103,
+   "zone": "side",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-001-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2585441,
+     "hours": 1.6,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2023-02",
+   "season": 2023,
+   "impact_kph": 147,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "front_suspension",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-002-front_wing",
+     "part": "front_wing",
+     "cost_cents": 12704522,
+     "hours": 0.6,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2023-002-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 10715343,
+     "hours": 2.8,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2023-002-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2973047,
+     "hours": 2.0,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2023-03",
+   "season": 2023,
+   "impact_kph": 85,
+   "zone": "rear",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-003-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3158137,
+     "hours": 1.3,
+     "lead_days": 1
+    }
+   ]
+  },
+  {
+   "incident": "2023-04",
+   "season": 2023,
+   "impact_kph": 171,
+   "zone": "side",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "front_suspension",
+     "bodywork",
+     "electronics",
+     "power_unit"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-004-front_wing",
+     "part": "front_wing",
+     "cost_cents": 10866955,
+     "hours": 0.8,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2023-004-floor",
+     "part": "floor",
+     "cost_cents": 44284697,
+     "hours": 2.4,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2023-004-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 10147938,
+     "hours": 2.8,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2023-004-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3302412,
+     "hours": 1.4,
+     "lead_days": 1
+    },
+    {
+     "order": "WO-2023-004-electronics",
+     "part": "electronics",
+     "cost_cents": 6316272,
+     "hours": 3.2,
+     "lead_days": 5
+    },
+    {
+     "order": "WO-2023-004-power_unit",
+     "part": "power_unit",
+     "cost_cents": 57288481,
+     "hours": 3.4,
+     "lead_days": 12
+    }
+   ]
+  },
+  {
+   "incident": "2023-05",
+   "season": 2023,
+   "impact_kph": 83,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-005-front_wing",
+     "part": "front_wing",
+     "cost_cents": 11038503,
+     "hours": 0.9,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2023-005-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2937312,
+     "hours": 1.3,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2023-06",
+   "season": 2023,
+   "impact_kph": 283,
+   "zone": "front",
+   "band": "heavy",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "front_suspension",
+     "chassis",
+     "electronics"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-006-front_wing",
+     "part": "front_wing",
+     "cost_cents": 9685564,
+     "hours": 0.6,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2023-006-floor",
+     "part": "floor",
+     "cost_cents": 34846755,
+     "hours": 2.1,
+     "lead_days": 8
+    },
+    {
+     "order": "WO-2023-006-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 10236735,
+     "hours": 2.9,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2023-006-chassis",
+     "part": "chassis",
+     "cost_cents": 137877211,
+     "hours": 10.8,
+     "lead_days": 18
+    },
+    {
+     "order": "WO-2023-006-electronics",
+     "part": "electronics",
+     "cost_cents": 7285626,
+     "hours": 3.1,
+     "lead_days": 5
+    }
+   ]
+  },
+  {
+   "incident": "2023-07",
+   "season": 2023,
+   "impact_kph": 271,
+   "zone": "rear",
+   "band": "heavy",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "rear_wing",
+     "rear_suspension",
+     "gearbox",
+     "brakes",
+     "electronics"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-007-front_wing",
+     "part": "front_wing",
+     "cost_cents": 10497477,
+     "hours": 1.0,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2023-007-floor",
+     "part": "floor",
+     "cost_cents": 38800783,
+     "hours": 2.9,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2023-007-rear_wing",
+     "part": "rear_wing",
+     "cost_cents": 7295911,
+     "hours": 1.4,
+     "lead_days": 4
+    },
+    {
+     "order": "WO-2023-007-rear_suspension",
+     "part": "rear_suspension",
+     "cost_cents": 10909386,
+     "hours": 2.8,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2023-007-gearbox",
+     "part": "gearbox",
+     "cost_cents": 66251777,
+     "hours": 4.6,
+     "lead_days": 4
+    },
+    {
+     "order": "WO-2023-007-brakes",
+     "part": "brakes",
+     "cost_cents": 2686898,
+     "hours": 1.3,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2023-007-electronics",
+     "part": "electronics",
+     "cost_cents": 5604777,
+     "hours": 3.6,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2023-08",
+   "season": 2023,
+   "impact_kph": 112,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "brakes"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-008-front_wing",
+     "part": "front_wing",
+     "cost_cents": 9035857,
+     "hours": 1.2,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2023-008-brakes",
+     "part": "brakes",
+     "cost_cents": 3292606,
+     "hours": 1.1,
+     "lead_days": 1
+    }
+   ]
+  },
+  {
+   "incident": "2023-09",
+   "season": 2023,
+   "impact_kph": 146,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_suspension",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-009-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 9695638,
+     "hours": 3.3,
+     "lead_days": 5
+    },
+    {
+     "order": "WO-2023-009-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2886224,
+     "hours": 1.1,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2023-10",
+   "season": 2023,
+   "impact_kph": 129,
+   "zone": "side",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "floor",
+     "bodywork",
+     "electronics"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-010-floor",
+     "part": "floor",
+     "cost_cents": 35658037,
+     "hours": 2.2,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2023-010-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2706022,
+     "hours": 1.6,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2023-010-electronics",
+     "part": "electronics",
+     "cost_cents": 7390640,
+     "hours": 3.0,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2023-11",
+   "season": 2023,
+   "impact_kph": 122,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "bodywork",
+     "brakes"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-011-front_wing",
+     "part": "front_wing",
+     "cost_cents": 9748723,
+     "hours": 1.0,
+     "lead_days": 1
+    },
+    {
+     "order": "WO-2023-011-floor",
+     "part": "floor",
+     "cost_cents": 27722263,
+     "hours": 2.9,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2023-011-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3603617,
+     "hours": 1.5,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2023-011-brakes",
+     "part": "brakes",
+     "cost_cents": 2761879,
+     "hours": 1.0,
+     "lead_days": 1
+    }
+   ]
+  },
+  {
+   "incident": "2023-12",
+   "season": 2023,
+   "impact_kph": 215,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-012-front_wing",
+     "part": "front_wing",
+     "cost_cents": 9685785,
+     "hours": 0.6,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2023-012-floor",
+     "part": "floor",
+     "cost_cents": 42482424,
+     "hours": 2.6,
+     "lead_days": 7
+    }
+   ]
+  },
+  {
+   "incident": "2023-13",
+   "season": 2023,
+   "impact_kph": 62,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-013-front_wing",
+     "part": "front_wing",
+     "cost_cents": 9510825,
+     "hours": 0.8,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2023-14",
+   "season": 2023,
+   "impact_kph": 175,
+   "zone": "rear",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_suspension",
+     "rear_suspension",
+     "gearbox",
+     "bodywork",
+     "brakes",
+     "electronics"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-014-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 9507510,
+     "hours": 3.7,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2023-014-rear_suspension",
+     "part": "rear_suspension",
+     "cost_cents": 8221541,
+     "hours": 3.0,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2023-014-gearbox",
+     "part": "gearbox",
+     "cost_cents": 66856275,
+     "hours": 2.8,
+     "lead_days": 4
+    },
+    {
+     "order": "WO-2023-014-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3109744,
+     "hours": 1.3,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2023-014-brakes",
+     "part": "brakes",
+     "cost_cents": 3001906,
+     "hours": 1.1,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2023-014-electronics",
+     "part": "electronics",
+     "cost_cents": 7383103,
+     "hours": 3.0,
+     "lead_days": 4
+    }
+   ]
+  },
+  {
+   "incident": "2023-15",
+   "season": 2023,
+   "impact_kph": 127,
+   "zone": "rear",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "rear_wing",
+     "rear_suspension"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-015-rear_wing",
+     "part": "rear_wing",
+     "cost_cents": 6450618,
+     "hours": 1.3,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2023-015-rear_suspension",
+     "part": "rear_suspension",
+     "cost_cents": 9574913,
+     "hours": 4.1,
+     "lead_days": 6
+    }
+   ]
+  },
+  {
+   "incident": "2023-16",
+   "season": 2023,
+   "impact_kph": 96,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-016-front_wing",
+     "part": "front_wing",
+     "cost_cents": 10025470,
+     "hours": 0.9,
+     "lead_days": 1
+    }
+   ]
+  },
+  {
+   "incident": "2023-17",
+   "season": 2023,
+   "impact_kph": 243,
+   "zone": "side",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "floor",
+     "bodywork",
+     "power_unit"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-017-floor",
+     "part": "floor",
+     "cost_cents": 37722541,
+     "hours": 2.9,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2023-017-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3422403,
+     "hours": 1.6,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2023-017-power_unit",
+     "part": "power_unit",
+     "cost_cents": 60702175,
+     "hours": 4.0,
+     "lead_days": 11
+    }
+   ]
+  },
+  {
+   "incident": "2023-18",
+   "season": 2023,
+   "impact_kph": 113,
+   "zone": "rear",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "floor",
+     "rear_wing"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-018-floor",
+     "part": "floor",
+     "cost_cents": 51901861,
+     "hours": 1.8,
+     "lead_days": 8
+    },
+    {
+     "order": "WO-2023-018-rear_wing",
+     "part": "rear_wing",
+     "cost_cents": 7892019,
+     "hours": 1.1,
+     "lead_days": 4
+    }
+   ]
+  },
+  {
+   "incident": "2023-19",
+   "season": 2023,
+   "impact_kph": 78,
+   "zone": "side",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "front_suspension",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-019-front_wing",
+     "part": "front_wing",
+     "cost_cents": 11845452,
+     "hours": 0.9,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2023-019-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 10703492,
+     "hours": 3.1,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2023-019-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3276320,
+     "hours": 1.4,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2023-20",
+   "season": 2023,
+   "impact_kph": 71,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-020-front_wing",
+     "part": "front_wing",
+     "cost_cents": 11136232,
+     "hours": 0.8,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2023-21",
+   "season": 2023,
+   "impact_kph": 136,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "front_suspension",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-021-front_wing",
+     "part": "front_wing",
+     "cost_cents": 12008146,
+     "hours": 0.8,
+     "lead_days": 1
+    },
+    {
+     "order": "WO-2023-021-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 8829442,
+     "hours": 4.9,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2023-021-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2961734,
+     "hours": 1.5,
+     "lead_days": 1
+    }
+   ]
+  },
+  {
+   "incident": "2023-22",
+   "season": 2023,
+   "impact_kph": 246,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "front_suspension"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-022-front_wing",
+     "part": "front_wing",
+     "cost_cents": 11097774,
+     "hours": 0.8,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2023-022-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 7851518,
+     "hours": 3.0,
+     "lead_days": 6
+    }
+   ]
+  },
+  {
+   "incident": "2023-23",
+   "season": 2023,
+   "impact_kph": 260,
+   "zone": "front",
+   "band": "heavy",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "front_suspension",
+     "rear_suspension",
+     "chassis",
+     "brakes"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-023-front_wing",
+     "part": "front_wing",
+     "cost_cents": 8576809,
+     "hours": 0.8,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2023-023-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 9492321,
+     "hours": 2.8,
+     "lead_days": 5
+    },
+    {
+     "order": "WO-2023-023-rear_suspension",
+     "part": "rear_suspension",
+     "cost_cents": 9972282,
+     "hours": 4.4,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2023-023-chassis",
+     "part": "chassis",
+     "cost_cents": 133440935,
+     "hours": 15.4,
+     "lead_days": 18
+    },
+    {
+     "order": "WO-2023-023-brakes",
+     "part": "brakes",
+     "cost_cents": 2578434,
+     "hours": 1.2,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2023-24",
+   "season": 2023,
+   "impact_kph": 103,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-024-front_wing",
+     "part": "front_wing",
+     "cost_cents": 10297511,
+     "hours": 0.9,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2023-25",
+   "season": 2023,
+   "impact_kph": 79,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-025-front_wing",
+     "part": "front_wing",
+     "cost_cents": 7665558,
+     "hours": 1.1,
+     "lead_days": 1
+    },
+    {
+     "order": "WO-2023-025-floor",
+     "part": "floor",
+     "cost_cents": 41809968,
+     "hours": 2.4,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2023-025-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3553229,
+     "hours": 2.0,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2023-26",
+   "season": 2023,
+   "impact_kph": 159,
+   "zone": "side",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "floor",
+     "front_suspension",
+     "brakes"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-026-floor",
+     "part": "floor",
+     "cost_cents": 38955218,
+     "hours": 3.8,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2023-026-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 9085321,
+     "hours": 3.1,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2023-026-brakes",
+     "part": "brakes",
+     "cost_cents": 3128809,
+     "hours": 1.1,
+     "lead_days": 1
+    }
+   ]
+  },
+  {
+   "incident": "2023-27",
+   "season": 2023,
+   "impact_kph": 244,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "bodywork",
+     "brakes"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-027-front_wing",
+     "part": "front_wing",
+     "cost_cents": 9619790,
+     "hours": 0.7,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2023-027-floor",
+     "part": "floor",
+     "cost_cents": 37502710,
+     "hours": 1.8,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2023-027-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2914397,
+     "hours": 2.1,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2023-027-brakes",
+     "part": "brakes",
+     "cost_cents": 2998618,
+     "hours": 0.9,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2023-28",
+   "season": 2023,
+   "impact_kph": 295,
+   "zone": "front",
+   "band": "heavy",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "rear_wing",
+     "front_suspension",
+     "brakes",
+     "electronics"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-028-front_wing",
+     "part": "front_wing",
+     "cost_cents": 8223012,
+     "hours": 0.7,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2023-028-floor",
+     "part": "floor",
+     "cost_cents": 39040052,
+     "hours": 2.1,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2023-028-rear_wing",
+     "part": "rear_wing",
+     "cost_cents": 6821115,
+     "hours": 1.5,
+     "lead_days": 4
+    },
+    {
+     "order": "WO-2023-028-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 8773353,
+     "hours": 3.6,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2023-028-brakes",
+     "part": "brakes",
+     "cost_cents": 2595448,
+     "hours": 1.8,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2023-028-electronics",
+     "part": "electronics",
+     "cost_cents": 6792033,
+     "hours": 3.6,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2023-29",
+   "season": 2023,
+   "impact_kph": 262,
+   "zone": "rear",
+   "band": "heavy",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "rear_wing",
+     "rear_suspension",
+     "gearbox",
+     "bodywork",
+     "electronics"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-029-rear_wing",
+     "part": "rear_wing",
+     "cost_cents": 7557428,
+     "hours": 1.5,
+     "lead_days": 4
+    },
+    {
+     "order": "WO-2023-029-rear_suspension",
+     "part": "rear_suspension",
+     "cost_cents": 11226089,
+     "hours": 2.8,
+     "lead_days": 5
+    },
+    {
+     "order": "WO-2023-029-gearbox",
+     "part": "gearbox",
+     "cost_cents": 60830261,
+     "hours": 4.2,
+     "lead_days": 5
+    },
+    {
+     "order": "WO-2023-029-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2648852,
+     "hours": 1.5,
+     "lead_days": 1
+    },
+    {
+     "order": "WO-2023-029-electronics",
+     "part": "electronics",
+     "cost_cents": 6855956,
+     "hours": 4.1,
+     "lead_days": 4
+    }
+   ]
+  },
+  {
+   "incident": "2023-30",
+   "season": 2023,
+   "impact_kph": 63,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-030-front_wing",
+     "part": "front_wing",
+     "cost_cents": 8336509,
+     "hours": 1.1,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2023-030-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2592627,
+     "hours": 1.6,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2023-31",
+   "season": 2023,
+   "impact_kph": 137,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "front_suspension",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-031-front_wing",
+     "part": "front_wing",
+     "cost_cents": 10683738,
+     "hours": 0.6,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2023-031-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 9615829,
+     "hours": 4.5,
+     "lead_days": 5
+    },
+    {
+     "order": "WO-2023-031-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3011052,
+     "hours": 2.7,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2023-32",
+   "season": 2023,
+   "impact_kph": 92,
+   "zone": "rear",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "rear_wing"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2023-032-rear_wing",
+     "part": "rear_wing",
+     "cost_cents": 7598542,
+     "hours": 1.2,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2024-01",
+   "season": 2024,
+   "impact_kph": 235,
+   "zone": "rear",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "floor",
+     "rear_wing",
+     "rear_suspension",
+     "bodywork",
+     "electronics"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-001-floor",
+     "part": "floor",
+     "cost_cents": 46815876,
+     "hours": 2.9,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2024-001-rear_wing",
+     "part": "rear_wing",
+     "cost_cents": 7718381,
+     "hours": 1.4,
+     "lead_days": 4
+    },
+    {
+     "order": "WO-2024-001-rear_suspension",
+     "part": "rear_suspension",
+     "cost_cents": 8418905,
+     "hours": 3.0,
+     "lead_days": 5
+    },
+    {
+     "order": "WO-2024-001-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3324511,
+     "hours": 1.6,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2024-001-electronics",
+     "part": "electronics",
+     "cost_cents": 6065840,
+     "hours": 3.8,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2024-02",
+   "season": 2024,
+   "impact_kph": 234,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "front_suspension",
+     "bodywork",
+     "brakes"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-002-front_wing",
+     "part": "front_wing",
+     "cost_cents": 9797879,
+     "hours": 0.7,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2024-002-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 8892729,
+     "hours": 3.9,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2024-002-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2855270,
+     "hours": 1.5,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2024-002-brakes",
+     "part": "brakes",
+     "cost_cents": 2907535,
+     "hours": 1.2,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2024-03",
+   "season": 2024,
+   "impact_kph": 72,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-003-front_wing",
+     "part": "front_wing",
+     "cost_cents": 10334377,
+     "hours": 0.7,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2024-04",
+   "season": 2024,
+   "impact_kph": 117,
+   "zone": "side",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-004-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2745945,
+     "hours": 1.7,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2024-05",
+   "season": 2024,
+   "impact_kph": 60,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-005-front_wing",
+     "part": "front_wing",
+     "cost_cents": 10572610,
+     "hours": 0.7,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2024-005-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2846041,
+     "hours": 1.5,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2024-06",
+   "season": 2024,
+   "impact_kph": 115,
+   "zone": "side",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_suspension",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-006-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 10304951,
+     "hours": 3.1,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2024-006-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3215574,
+     "hours": 1.4,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2024-07",
+   "season": 2024,
+   "impact_kph": 271,
+   "zone": "front",
+   "band": "heavy",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "rear_wing",
+     "front_suspension",
+     "chassis",
+     "bodywork",
+     "brakes"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-007-front_wing",
+     "part": "front_wing",
+     "cost_cents": 10146815,
+     "hours": 1.0,
+     "lead_days": 1
+    },
+    {
+     "order": "WO-2024-007-floor",
+     "part": "floor",
+     "cost_cents": 42613575,
+     "hours": 2.7,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2024-007-rear_wing",
+     "part": "rear_wing",
+     "cost_cents": 7825875,
+     "hours": 1.1,
+     "lead_days": 4
+    },
+    {
+     "order": "WO-2024-007-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 9424257,
+     "hours": 2.8,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2024-007-chassis",
+     "part": "chassis",
+     "cost_cents": 105616604,
+     "hours": 11.1,
+     "lead_days": 18
+    },
+    {
+     "order": "WO-2024-007-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2821923,
+     "hours": 1.4,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2024-007-brakes",
+     "part": "brakes",
+     "cost_cents": 2785737,
+     "hours": 1.4,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2024-08",
+   "season": 2024,
+   "impact_kph": 118,
+   "zone": "side",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-008-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3531706,
+     "hours": 1.1,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2024-09",
+   "season": 2024,
+   "impact_kph": 107,
+   "zone": "side",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-009-front_wing",
+     "part": "front_wing",
+     "cost_cents": 10358930,
+     "hours": 0.9,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2024-10",
+   "season": 2024,
+   "impact_kph": 81,
+   "zone": "side",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-010-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2545840,
+     "hours": 1.3,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2024-11",
+   "season": 2024,
+   "impact_kph": 77,
+   "zone": "side",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "floor",
+     "front_suspension",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-011-floor",
+     "part": "floor",
+     "cost_cents": 37010939,
+     "hours": 2.9,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2024-011-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 7036596,
+     "hours": 3.6,
+     "lead_days": 5
+    },
+    {
+     "order": "WO-2024-011-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2918468,
+     "hours": 1.0,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2024-12",
+   "season": 2024,
+   "impact_kph": 132,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-012-front_wing",
+     "part": "front_wing",
+     "cost_cents": 12203933,
+     "hours": 1.2,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2024-012-floor",
+     "part": "floor",
+     "cost_cents": 38893963,
+     "hours": 2.9,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2024-012-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2739495,
+     "hours": 1.4,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2024-13",
+   "season": 2024,
+   "impact_kph": 104,
+   "zone": "side",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-013-front_wing",
+     "part": "front_wing",
+     "cost_cents": 10428450,
+     "hours": 0.6,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2024-013-floor",
+     "part": "floor",
+     "cost_cents": 40513127,
+     "hours": 2.2,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2024-013-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3213085,
+     "hours": 1.2,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2024-14",
+   "season": 2024,
+   "impact_kph": 81,
+   "zone": "side",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-014-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3693167,
+     "hours": 2.0,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2024-15",
+   "season": 2024,
+   "impact_kph": 70,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-015-front_wing",
+     "part": "front_wing",
+     "cost_cents": 10661740,
+     "hours": 1.0,
+     "lead_days": 1
+    }
+   ]
+  },
+  {
+   "incident": "2024-16",
+   "season": 2024,
+   "impact_kph": 68,
+   "zone": "side",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-016-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2842485,
+     "hours": 0.9,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2024-17",
+   "season": 2024,
+   "impact_kph": 112,
+   "zone": "side",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "floor",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-017-floor",
+     "part": "floor",
+     "cost_cents": 34638465,
+     "hours": 1.6,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2024-017-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3287635,
+     "hours": 1.0,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2024-18",
+   "season": 2024,
+   "impact_kph": 93,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-018-front_wing",
+     "part": "front_wing",
+     "cost_cents": 8488940,
+     "hours": 0.7,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2024-19",
+   "season": 2024,
+   "impact_kph": 66,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-019-front_wing",
+     "part": "front_wing",
+     "cost_cents": 10800576,
+     "hours": 0.7,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2024-20",
+   "season": 2024,
+   "impact_kph": 224,
+   "zone": "side",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "floor",
+     "rear_wing",
+     "bodywork",
+     "brakes"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-020-floor",
+     "part": "floor",
+     "cost_cents": 32011681,
+     "hours": 2.4,
+     "lead_days": 8
+    },
+    {
+     "order": "WO-2024-020-rear_wing",
+     "part": "rear_wing",
+     "cost_cents": 7947206,
+     "hours": 0.6,
+     "lead_days": 4
+    },
+    {
+     "order": "WO-2024-020-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3464910,
+     "hours": 1.5,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2024-020-brakes",
+     "part": "brakes",
+     "cost_cents": 2761893,
+     "hours": 1.1,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2024-21",
+   "season": 2024,
+   "impact_kph": 91,
+   "zone": "side",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-021-front_wing",
+     "part": "front_wing",
+     "cost_cents": 12096938,
+     "hours": 0.6,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2024-021-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3500584,
+     "hours": 1.4,
+     "lead_days": 1
+    }
+   ]
+  },
+  {
+   "incident": "2024-22",
+   "season": 2024,
+   "impact_kph": 227,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "bodywork",
+     "electronics"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-022-front_wing",
+     "part": "front_wing",
+     "cost_cents": 11032832,
+     "hours": 0.7,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2024-022-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3216085,
+     "hours": 1.5,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2024-022-electronics",
+     "part": "electronics",
+     "cost_cents": 5582406,
+     "hours": 3.5,
+     "lead_days": 4
+    }
+   ]
+  },
+  {
+   "incident": "2024-23",
+   "season": 2024,
+   "impact_kph": 132,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "front_suspension",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-023-front_wing",
+     "part": "front_wing",
+     "cost_cents": 9882279,
+     "hours": 0.7,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2024-023-floor",
+     "part": "floor",
+     "cost_cents": 36628694,
+     "hours": 2.3,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2024-023-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 9262416,
+     "hours": 3.5,
+     "lead_days": 5
+    },
+    {
+     "order": "WO-2024-023-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3040381,
+     "hours": 1.7,
+     "lead_days": 1
+    }
+   ]
+  },
+  {
+   "incident": "2024-24",
+   "season": 2024,
+   "impact_kph": 213,
+   "zone": "side",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "front_suspension",
+     "electronics"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-024-front_wing",
+     "part": "front_wing",
+     "cost_cents": 10162420,
+     "hours": 0.6,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2024-024-floor",
+     "part": "floor",
+     "cost_cents": 33325089,
+     "hours": 2.7,
+     "lead_days": 8
+    },
+    {
+     "order": "WO-2024-024-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 7675479,
+     "hours": 3.2,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2024-024-electronics",
+     "part": "electronics",
+     "cost_cents": 5692861,
+     "hours": 3.2,
+     "lead_days": 4
+    }
+   ]
+  },
+  {
+   "incident": "2024-25",
+   "season": 2024,
+   "impact_kph": 269,
+   "zone": "front",
+   "band": "heavy",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "front_suspension",
+     "chassis",
+     "bodywork",
+     "electronics"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-025-front_wing",
+     "part": "front_wing",
+     "cost_cents": 7821280,
+     "hours": 0.7,
+     "lead_days": 1
+    },
+    {
+     "order": "WO-2024-025-floor",
+     "part": "floor",
+     "cost_cents": 34606038,
+     "hours": 2.1,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2024-025-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 9880583,
+     "hours": 3.8,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2024-025-chassis",
+     "part": "chassis",
+     "cost_cents": 158814719,
+     "hours": 13.6,
+     "lead_days": 18
+    },
+    {
+     "order": "WO-2024-025-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3086769,
+     "hours": 1.1,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2024-025-electronics",
+     "part": "electronics",
+     "cost_cents": 5596386,
+     "hours": 3.5,
+     "lead_days": 3
+    }
+   ]
+  },
+  {
+   "incident": "2024-26",
+   "season": 2024,
+   "impact_kph": 66,
+   "zone": "side",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "floor",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-026-floor",
+     "part": "floor",
+     "cost_cents": 45608696,
+     "hours": 3.2,
+     "lead_days": 8
+    },
+    {
+     "order": "WO-2024-026-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3106735,
+     "hours": 1.8,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2024-27",
+   "season": 2024,
+   "impact_kph": 285,
+   "zone": "side",
+   "band": "heavy",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "floor",
+     "front_suspension",
+     "rear_suspension",
+     "gearbox",
+     "bodywork",
+     "electronics"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-027-floor",
+     "part": "floor",
+     "cost_cents": 34849729,
+     "hours": 2.7,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2024-027-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 9641938,
+     "hours": 3.4,
+     "lead_days": 5
+    },
+    {
+     "order": "WO-2024-027-rear_suspension",
+     "part": "rear_suspension",
+     "cost_cents": 9660832,
+     "hours": 4.5,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2024-027-gearbox",
+     "part": "gearbox",
+     "cost_cents": 54538254,
+     "hours": 4.2,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2024-027-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2747384,
+     "hours": 1.5,
+     "lead_days": 1
+    },
+    {
+     "order": "WO-2024-027-electronics",
+     "part": "electronics",
+     "cost_cents": 5177538,
+     "hours": 5.5,
+     "lead_days": 5
+    }
+   ]
+  },
+  {
+   "incident": "2024-28",
+   "season": 2024,
+   "impact_kph": 124,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "floor",
+     "front_suspension",
+     "bodywork",
+     "electronics"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-028-front_wing",
+     "part": "front_wing",
+     "cost_cents": 9876479,
+     "hours": 0.7,
+     "lead_days": 1
+    },
+    {
+     "order": "WO-2024-028-floor",
+     "part": "floor",
+     "cost_cents": 45539673,
+     "hours": 3.4,
+     "lead_days": 7
+    },
+    {
+     "order": "WO-2024-028-front_suspension",
+     "part": "front_suspension",
+     "cost_cents": 9594476,
+     "hours": 3.1,
+     "lead_days": 6
+    },
+    {
+     "order": "WO-2024-028-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3119364,
+     "hours": 1.4,
+     "lead_days": 1
+    },
+    {
+     "order": "WO-2024-028-electronics",
+     "part": "electronics",
+     "cost_cents": 6913148,
+     "hours": 4.3,
+     "lead_days": 5
+    }
+   ]
+  },
+  {
+   "incident": "2024-29",
+   "season": 2024,
+   "impact_kph": 112,
+   "zone": "front",
+   "band": "light",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-029-front_wing",
+     "part": "front_wing",
+     "cost_cents": 12272716,
+     "hours": 0.7,
+     "lead_days": 3
+    },
+    {
+     "order": "WO-2024-029-bodywork",
+     "part": "bodywork",
+     "cost_cents": 3459507,
+     "hours": 1.3,
+     "lead_days": 2
+    }
+   ]
+  },
+  {
+   "incident": "2024-30",
+   "season": 2024,
+   "impact_kph": 242,
+   "zone": "front",
+   "band": "moderate",
+   "damage_report": {
+    "by": "Chief Mechanic",
+    "parts": [
+     "front_wing",
+     "bodywork"
+    ]
+   },
+   "work_orders": [
+    {
+     "order": "WO-2024-030-front_wing",
+     "part": "front_wing",
+     "cost_cents": 9942135,
+     "hours": 0.9,
+     "lead_days": 2
+    },
+    {
+     "order": "WO-2024-030-bodywork",
+     "part": "bodywork",
+     "cost_cents": 2985288,
+     "hours": 1.5,
+     "lead_days": 2
+    }
+   ]
+  }
+ ]
+}
