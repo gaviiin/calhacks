@@ -488,23 +488,26 @@
 .rp-caption {
   position: absolute;
   left: 14px;
-  right: 14px;
-  top: 58px;
+  top: 54px;
   z-index: 4;
   display: grid;
-  grid-template-columns: 1fr auto;
-  gap: 8px 14px;
-  padding: 12px 14px;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 5px 12px;
+  width: min(520px, calc(100% - 28px));
+  padding: 7px 11px 8px;
   border: 1px solid var(--g-dark-edge);
-  border-radius: 14px;
-  background: var(--g-dark-chip-solid);
+  border-radius: 10px;
+  background: rgba(7, 18, 44, 0.72);
   color: var(--g-dark-ink);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
 }
 
+/* the steps: one thin segmented line, the step's name on hover */
 .rp-steps {
   grid-column: 1 / -1;
   display: flex;
-  gap: 4px;
+  gap: 3px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -512,71 +515,64 @@
 
 .rp-steps li {
   flex: 1;
-  min-width: 0;
-  font: 600 10px/1 var(--mono);
-  letter-spacing: 0.06em;
-  text-transform: uppercase;
-  color: var(--g-dark-ink-dim);
-}
-
-.rp-steps li::before {
-  content: '';
-  display: block;
-  height: 3px;
-  margin-bottom: 6px;
-  border-radius: 2px;
+  height: 2px;
+  border-radius: 1px;
   background: rgba(140, 180, 255, 0.2);
 }
 
-.rp-steps li.is-done::before {
-  background: rgba(140, 180, 255, 0.7);
+.rp-steps li.is-done {
+  background: rgba(140, 180, 255, 0.65);
 }
 
 .rp-steps li.is-on {
-  color: #fff;
-}
-
-.rp-steps li.is-on::before {
   background: #fff;
 }
 
-.rp-steps li.rp-step--report.is-on::before,
-.rp-steps li.rp-step--upload.is-on::before {
+.rp-steps li.rp-step--report.is-on,
+.rp-steps li.rp-step--upload.is-on {
   background: var(--g-d-alert, #ff7360);
 }
 
 .rp-steps li span {
-  display: block;
+  position: absolute;
+  width: 1px;
+  height: 1px;
   overflow: hidden;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  clip: rect(0 0 0 0);
 }
 
+/* the step itself: one line, the detail cut short rather than wrapped */
 .rp-now {
-  display: grid;
-  gap: 3px;
+  display: flex;
+  gap: 8px;
+  align-items: baseline;
   min-width: 0;
 }
 
 .rp-now b {
-  font: 700 17px/1.2 var(--display);
-  letter-spacing: 0.02em;
+  flex: none;
+  font: 700 13px/1.2 var(--display);
+  letter-spacing: 0.03em;
   color: #fff;
 }
 
 .rp-now span {
-  font: 400 13px/1.35 var(--body);
-  color: var(--g-dark-ink);
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font: 400 12px/1.2 var(--body);
+  color: var(--g-dark-ink-dim);
 }
 
 .rp-count {
-  align-self: end;
-  font-size: 12px;
+  align-self: baseline;
+  font-size: 11px;
   color: var(--g-d-alert, #ff7360);
   white-space: nowrap;
 }
 
 .rp-caption--rest {
-  grid-template-columns: 1fr;
-  background: var(--g-dark-chip);
+  grid-template-columns: minmax(0, 1fr);
+  background: rgba(7, 18, 44, 0.55);
 }

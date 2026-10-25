@@ -220,15 +220,15 @@ export function ReplayStage({ race, inc, car }: { race: RaceData; inc: Inc | nul
         <div className="rp-caption" role="status" aria-live="polite">
           <ol className="rp-steps">
             {play.steps.map((s, i) => (
-              <li key={i} className={`${i < frame.i ? 'is-done' : i === frame.i ? 'is-on' : ''} rp-step--${s.kind}`}>
+              <li key={i} className={`${i < frame.i ? 'is-done' : i === frame.i ? 'is-on' : ''} rp-step--${s.kind}`} title={s.title}>
                 <span>{s.kind === 'before' ? 'Before' : s.kind === 'telemetry' ? 'Telemetry' : s.kind === 'race' ? 'Race control' : s.kind === 'confirmed' ? 'Confirmed' : s.kind === 'upload' ? 'Uploaded' : 'Engineer'}</span>
               </li>
             ))}
           </ol>
           <div className="rp-now">
             <b>{frame.cur.title}</b>
-            <span>
-              {frame.cur.kind !== 'before' && frame.cur.kind !== 'upload' ? `${clock(frame.cur.at)} UTC · ` : ''}
+            <span title={frame.cur.detail}>
+              {frame.cur.kind !== 'before' && frame.cur.kind !== 'upload' ? `${clock(frame.cur.at).slice(0, 8)} · ` : ''}
               {frame.cur.detail}
             </span>
           </div>
