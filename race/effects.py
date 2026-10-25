@@ -22,6 +22,7 @@ from race.events import Effect, RaceEvent
 from race.jev import JevAnswers
 from race.points import points_for, position_of, projected_standings
 from race.policies import Policy
+from race.precedents import PrecedentMatch
 
 CAP_USD_CENTS = int(os.environ.get("CAP_USD_CENTS", str(215_000_000 * 100)))  # 2026 cost cap, agents/config.py
 RELEVANCE_FLOOR = 0.15
@@ -131,33 +132,43 @@ def damage_band(parts_p: dict[str, float], severity_p: dict[str, float], ctx: Ef
     return _band(lo, mid, hi), detail
 
 
-def crash_effects(event: RaceEvent, jev: JevAnswers, policy: Policy | None, ctx: EffectsContext) -> list[Effect]:
+def crash_effects(event: RaceEvent, jev: JevAnswers, policy: Policy | None, ctx: EffectsContext,
+                  precedent: PrecedentMatch | None = None) -> list[Effect]:
     car = event.driver_number
     sev_p = dict(jev.p("severity")) or {"none": 1.0}
     parts_p = dict(jev.parts)
     decided_by, status, basis_note = "jev", "proposed", ""
     shadow = policy if (policy and policy.autonomy != "GRANTED") else None
     if shadow:
-        # A shadow policy only watches: Jev decides, and the row says which draft would have matched.
+        # A shadow policy only watches: the row says which draft would have matched.
         basis_note = f" (shadow policy {shadow.policy_id} would have matched)"
         policy = None
+    tpl: dict = {}
     if policy:
         decided_by = f"policy:{policy.policy_id}"
         status = "autonomous"
         tpl = policy.effect_template
+    elif precedent:
+        # The team has done this before and it scored the same: the precedent's protocol runs on its own.
+        decided_by = "precedent:" + ",".join(precedent.case_ids[:4])
+        status = "autonomous"
+        tpl = precedent.effect_template()
+        basis_note = " " + precedent.why()
+    if policy or precedent:
         if "severity" in tpl:
             sev = tpl["severity"]
             sev_p = {k: (1.0 if k == sev else 0.0) for k in ("none", "light", "moderate", "heavy")}
             parts_p = dict(P.SEVERITY_TEMPLATES.get(sev, []))
-            basis_note = f" (policy {policy.policy_id}: severity {sev})"
+            if policy:
+                basis_note = f" (policy {policy.policy_id}: severity {sev})"
         if tpl.get("cost") == 0 or tpl.get("cost_cents") == [0, 0, 0]:
             return []
     elif jev.relevant < RELEVANCE_FLOOR or (1 - sev_p.get("none", 0.0)) < 0.3:
         return []
 
     out: list[Effect] = []
-    if policy and "cost_cents" in policy.effect_template:
-        lo, mid, hi = _band(*policy.effect_template["cost_cents"])
+    if "cost_cents" in tpl:
+        lo, mid, hi = _band(*tpl["cost_cents"])
         detail = []
     else:
         (lo, mid, hi), detail = damage_band(parts_p, sev_p, ctx)
@@ -189,7 +200,8 @@ def crash_effects(event: RaceEvent, jev: JevAnswers, policy: Policy | None, ctx:
         return []
     ctx.booked[car] = {"lap": event.lap, "mid": mid, "low": lo, "high": hi}
     parts_txt = ", ".join(f"{d['label']} {int(d['p'] * 100)}%" for d in detail[:5]) or "fixed band"
-    out.append(Effect("cost", "6050", lo, mid, hi, f"Crash damage - car {car} - {parts_txt}", "assumption", decided_by, why, jev.log(), status))
+    basis = "precedent" if precedent and not policy else "assumption"
+    out.append(Effect("cost", "6050", lo, mid, hi, f"Crash damage - car {car} - {parts_txt}", basis, decided_by, why, jev.log(), status))
     labour = P.REPAIR_LABOUR.get(sev)
     if labour and labour.mid > 0:
         l, m, h = (ctx.gbp_cents(labour.low), ctx.gbp_cents(labour.mid), ctx.gbp_cents(labour.high))
@@ -259,7 +271,23 @@ def bonus_effects(event: RaceEvent, jev: JevAnswers, ctx: EffectsContext) -> lis
 
 # ---------------------------------------------------------------------- entry point
 
-def effects_for(event: RaceEvent, jev: JevAnswers, policy: Policy | None, ctx: EffectsContext) -> list[Effect]:
+def pit_stop_effects(event: RaceEvent, policy: Policy | None, precedent: PrecedentMatch | None, ctx: EffectsContext) -> list[Effect]:
+    """A tyre change is supplied kit: the protocol books it as a zero-cost line so the tape shows the desk saw it."""
+    granted = policy if policy and policy.autonomy == "GRANTED" else None
+    if not granted and not precedent:
+        return []
+    under = event.payload.get("under") or "green"
+    if granted:
+        decided_by, why = f"policy:{granted.policy_id}", f"Policy {granted.policy_id}: {granted.title or 'pit stop protocol'}."
+    else:
+        decided_by, why = "precedent:" + ",".join(precedent.case_ids[:4]), precedent.why()
+    memo = f"Tyre set {event.state.compound if event.state and event.state.compound else ''} fitted at L{event.lap}".strip()
+    memo += " under the safety car: free stop" if under in ("sc", "vsc") else ": supplied tyres, no cost line"
+    return [Effect("cost", "tyres", 0, 0, 0, memo, "policy" if granted else "precedent", decided_by, why, {}, "autonomous")]
+
+
+def effects_for(event: RaceEvent, jev: JevAnswers, policy: Policy | None, ctx: EffectsContext,
+                precedent: PrecedentMatch | None = None) -> list[Effect]:
     team_car = ctx.team_of.get(event.driver_number) == ctx.team
     involved = team_car or bool(event.payload.get("team_involved"))
 
@@ -273,7 +301,9 @@ def effects_for(event: RaceEvent, jev: JevAnswers, policy: Policy | None, ctx: E
 
     out: list[Effect] = []
     if event.kind in ("incident", "retirement_suspected", "retirement_confirmed") and involved:
-        out += crash_effects(event, jev, policy, ctx)
+        out += crash_effects(event, jev, policy, ctx, precedent)
+    if event.kind == "pit_stop" and team_car:
+        out += pit_stop_effects(event, policy, precedent, ctx)
     if event.kind in ("position", "retirement_suspected", "retirement_confirmed", "standings"):
         out += prize_effects(event, jev, ctx)
         out += bonus_effects(event, jev, ctx)

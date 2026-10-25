@@ -52,18 +52,33 @@ synthetic `world/prize_table.json` (real constructors' payouts are confidential;
 $8-9m). Sponsors and bonus clauses are Meridian's synthetic contracts. Spares (`race/data/williams_spares.json`)
 are an assumption. Live revenue is therefore a change in *projected* season prize money and bonus status.
 
-## The three tiers, and who decides
+## Learned first: the tiers, and who decides
 
 | Tier | Decides | Shown as |
 | --- | --- | --- |
-| Policy (`race_policies`, GRANTED) | a rule a person approved; no model call | `policy` chip, solid |
-| Jev (System One) | typed answers with probabilities for anything no policy covers | `jev` chip with ms and P(severity) |
+| Policy (`race_policies`, GRANTED) | a learned rule with a licence (or a person's grant); no model call | `policy` chip, solid |
+| Precedent (`race/data/precedents.jsonl`) | the team did this before and it scored the same: the nearest cases' protocol | `precedent` chip, solid |
+| Jev (System One) | typed answers with probabilities for anything nothing learned covers | `jev` chip with ms and P(severity) |
 | Claude (System Two) | the repair and money plan after an incident; policy drafts | forecast panel; `claude` chip |
 
-A policy starts as a SHADOW: it only watches, Jev decides, and the effect row names the draft that would have
-matched. The Head of Racing Finance grants autonomy; from then on the policy decides and the row is `autonomous`.
-A correction in the dashboard writes a `race_precedents` row and counts a contradiction on the policy; three alike
-corrections, or a contradiction rate over 20%, make the learner draft a child policy.
+**The licence.** A policy earns autonomy from its evidence, inside the database: with n precedents of which a share
+p ended the way the policy says, the 90% Wilson lower bound of p must clear 0.75 with at least 5 cases. 12 of 12
+passes (lb 0.82), 52 of 52 is 0.95, 3 of 3 (lb 0.53) stays a SHADOW that only watches. A person can revoke or
+suspend, and the learner can never grant more than the evidence does. On the 2025-26 Williams history four of the
+five drafted policies are licensed on day one (routine pit stop 52/52, safety-car stop 33/33, procedural
+infringement 16/16, collision-and-carried-on 12/12); "stopped with no stewards' message" (6/6, lb 0.69) is not.
+
+**Precedents.** Every historical case and every correction is a stored case with a small feature vector (kind, the
+stewards' reason words, retired within two laps, pitted straight after, track status, damage likely, compound and
+tyre age for pit stops). For a new event the store takes the seven nearest cases; when at least three score 0.85 or
+above and 80% agree, their outcome is the protocol and it books the money on its own authority, naming the cases.
+Albon's lap-12 stop in Canada matched six earlier Williams stops (Melbourne 2025, Austria 2025, Austria 2026...) at
+similarity 0.99 and was booked heavy, $1.7m mid, before any model was asked. A wing replacement after light contact
+or a tyre set under the safety car work the same way.
+
+A correction in the dashboard writes a `race_precedents` row, becomes a stored case carrying the band the person
+booked, and counts a contradiction on the policy; three alike corrections, or a contradiction rate over 20%, make the
+learner draft a child policy.
 
 The forecast agent runs twice when the evidence changes: once on our own retirement call (minutes before the
 stewards speak, so the first plan usually reads "no contact recorded, likely mechanical") and again when the

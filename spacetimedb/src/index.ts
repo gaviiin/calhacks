@@ -203,6 +203,8 @@ const racePolicies = table(
     effectTemplate: t.string(), // JSON
     autonomy: t.string(), // SHADOW | GRANTED | REVOKED | SUSPENDED
     precedentCount: t.u32(),
+    consistencyPct: t.u32(), // share of the precedents that ended the way the policy says, 0-100
+    licence: t.string(), // "" or "licence(n=52, lb=0.95)": the evidence that granted autonomy without a person
     hits: t.u32(),
     contradictions: t.u32(),
     createdBy: t.string(),
@@ -472,7 +474,7 @@ const RACE_EVENT_KINDS = [
 const RACE_SOURCES = ['openf1_replay', 'openf1_live', 'test_fixture'];
 const CAR_STATUSES = ['running', 'pit', 'retired_suspected', 'retired'];
 const EFFECT_KINDS = ['cost', 'revenue_projection', 'bonus', 'cap_headroom'];
-const EFFECT_BASES = ['press', 'assumption', 'contract', 'ladder', 'policy'];
+const EFFECT_BASES = ['press', 'assumption', 'contract', 'ladder', 'policy', 'precedent'];
 const EFFECT_STATUSES = ['proposed', 'autonomous', 'corrected'];
 const FORECAST_STATUSES = ['running', 'ready', 'failed', 'offline'];
 const AUTONOMY = ['SHADOW', 'GRANTED', 'REVOKED', 'SUSPENDED'];
@@ -576,29 +578,52 @@ export const recordForecast = spacetimedb.reducer(
 
 const PolicyInput = t.object('RacePolicyInput', {
   policyId: t.string(), parentPolicyId: t.string(), title: t.string(), pattern: t.string(), effectTemplate: t.string(),
-  precedentCount: t.u32(), createdBy: t.string(), createdAt: t.string(),
+  precedentCount: t.u32(), consistencyPct: t.u32(), createdBy: t.string(), createdAt: t.string(),
 });
 
-// The learner proposes; autonomy always starts at SHADOW whatever the caller says.
+// The licence: a policy earns autonomy from evidence, not from a signature. With n precedents of which a
+// share p ended the way the policy says, the 90% Wilson lower bound of p must clear LICENCE_LB with at least
+// LICENCE_MIN_N cases. A person can still revoke or suspend; the learner can never grant more than this.
+const LICENCE_MIN_N = 5;
+const LICENCE_LB = 0.75;
+function wilsonLower(successes: number, n: number, z = 1.645): number {
+  if (n === 0) return 0;
+  const p = successes / n;
+  const denom = 1 + (z * z) / n;
+  const centre = p + (z * z) / (2 * n);
+  const spread = z * Math.sqrt((p * (1 - p)) / n + (z * z) / (4 * n * n));
+  return Math.max(0, (centre - spread) / denom);
+}
+function licenceFor(precedentCount: number, consistencyPct: number): string {
+  const successes = Math.round((precedentCount * consistencyPct) / 100);
+  const lb = wilsonLower(successes, precedentCount);
+  return precedentCount >= LICENCE_MIN_N && lb >= LICENCE_LB ? `licence(n=${precedentCount}, lb=${lb.toFixed(2)})` : '';
+}
+
+// The learner proposes; the module decides the starting autonomy from the evidence (licence) or SHADOW.
 export const proposeRacePolicy = spacetimedb.reducer(
   { policy: PolicyInput },
   (ctx, { policy }) => {
     requireRole(ctx, 'race');
     if (policy.policyId.length === 0 || policy.policyId.length > 128) throw new SenderError('invalid policy: policyId');
     if (policy.pattern.length > 4096 || policy.effectTemplate.length > 4096) throw new SenderError('invalid policy: too large');
+    if (policy.consistencyPct > 100) throw new SenderError('invalid policy: consistencyPct must be 0-100');
     if (policy.parentPolicyId !== '' && !ctx.db.racePolicies.policyId.find(policy.parentPolicyId)) {
       throw new SenderError('invalid policy: parent does not exist');
     }
     requireIso('policy.createdAt', policy.createdAt);
+    const licence = licenceFor(policy.precedentCount, policy.consistencyPct);
     const cur = ctx.db.racePolicies.policyId.find(policy.policyId);
     if (cur) {
-      // Re-proposing refreshes the draft only while it is still a shadow.
-      if (cur.autonomy !== 'SHADOW') throw new SenderError('invalid policy: already decided by a person');
-      ctx.db.racePolicies.policyId.update({ ...cur, ...policy, updatedAt: policy.createdAt });
+      // Re-proposing refreshes the draft while no person has decided; a licence may grow with new precedents.
+      if (cur.approvedBy !== '' || cur.autonomy === 'REVOKED' || cur.autonomy === 'SUSPENDED') {
+        throw new SenderError('invalid policy: already decided by a person');
+      }
+      ctx.db.racePolicies.policyId.update({ ...cur, ...policy, licence, autonomy: licence ? 'GRANTED' : 'SHADOW', updatedAt: policy.createdAt });
       return;
     }
     ctx.db.racePolicies.insert({
-      ...policy, autonomy: 'SHADOW', hits: 0, contradictions: 0, approvedBy: '', updatedAt: policy.createdAt,
+      ...policy, licence, autonomy: licence ? 'GRANTED' : 'SHADOW', hits: 0, contradictions: 0, approvedBy: '', updatedAt: policy.createdAt,
     });
   }
 );

@@ -18,6 +18,8 @@ export default __t.row({
   effectTemplate: __t.string().name("effect_template"),
   autonomy: __t.string(),
   precedentCount: __t.u32().name("precedent_count"),
+  consistencyPct: __t.u32().name("consistency_pct"),
+  licence: __t.string(),
   hits: __t.u32(),
   contradictions: __t.u32(),
   createdBy: __t.string().name("created_by"),

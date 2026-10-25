@@ -30,6 +30,7 @@ from pathlib import Path
 from race import openf1
 from race.events import now_iso
 from race.normalize import normalize
+from race.precedents import Case as PCase, PrecedentStore
 from race.sink import RaceSink
 
 CACHE_SESSIONS_FILE = Path(__file__).resolve().parent / "data" / "onboarding_sessions.json"
@@ -48,8 +49,18 @@ class Case:
     retired_within_laps: int | None
     pit_within_laps: int | None
     under: str
-    outcome: str  # heavy | moderate | light | none | free_stop
+    outcome: str  # heavy | moderate | light | none | free_stop | tyre_set
     summary: str
+    lap: int = 0
+    compound: str = ""
+    tyre_age: int | None = None
+    damage_likely: bool = False
+
+    def precedent(self) -> PCase:
+        return PCase(case_id=f"{self.session_key}-{self.car}-L{self.lap}-{self.kind}", kind=self.kind, outcome=self.outcome,
+                     reason=self.reason, retired_within_laps=self.retired_within_laps, pit_within_laps=self.pit_within_laps,
+                     under=self.under, damage_likely=self.damage_likely, compound=self.compound, tyre_age=self.tyre_age,
+                     source="history", session_key=self.session_key, car=self.car, lap=self.lap, summary=self.summary)
 
 
 @dataclass
@@ -67,7 +78,8 @@ class Draft:
         return {
             "policy_id": self.policy_id, "parent_policy_id": self.parent_policy_id, "title": self.title,
             "pattern": json.dumps(self.pattern, separators=(",", ":")), "effect_template": json.dumps(self.effect_template, separators=(",", ":")),
-            "precedent_count": len(self.cases), "created_by": created_by, "created_at": now_iso(),
+            "precedent_count": len(self.cases), "consistency_pct": int(round(self.consistency * 100)),
+            "created_by": created_by, "created_at": now_iso(),
         }
 
 
@@ -124,17 +136,18 @@ def cases_from_session(rows: dict, team: str) -> list[Case]:
                 else:
                     outcome = "none"
                 out.append(Case(e.session_key, car, "incident", reason, abs(rw) if rw is not None else None, pw, track, outcome,
-                                f"S{e.session_key} car {car} L{e.lap}: {e.payload.get('message', '')[:90]}"))
+                                f"S{e.session_key} car {car} L{e.lap}: {e.payload.get('message', '')[:90]}", lap=e.lap, damage_likely=damage))
         if e.kind == "pit_stop" and e.driver_number in cars:
             under = e.payload.get("under") or track
-            out.append(Case(e.session_key, e.driver_number, "pit_stop", "", None, None, under, "free_stop",
-                            f"S{e.session_key} car {e.driver_number} L{e.lap}: pit stop under {under}"))
+            out.append(Case(e.session_key, e.driver_number, "pit_stop", "", None, None, under, "free_stop" if under in ("sc", "vsc") else "tyre_set",
+                            f"S{e.session_key} car {e.driver_number} L{e.lap}: pit stop under {under}", lap=e.lap,
+                            compound=e.state.compound if e.state else "", tyre_age=e.state.tyre_age if e.state else None))
     # retirements with no race-control mention at all (Melbourne 2025): their own group
     mentioned = {c.car for c in out if c.kind == "incident" and c.session_key == evs[0].session_key} if evs else set()
     for car, lap in retired.items():
         if car not in mentioned:
             out.append(Case(evs[0].session_key, car, "retirement_suspected", "", 0, None, track, "heavy",
-                            f"S{evs[0].session_key} car {car} L{lap}: stopped, no stewards' message"))
+                            f"S{evs[0].session_key} car {car} L{lap}: stopped, no stewards' message", lap=lap))
     return out
 
 
@@ -156,7 +169,7 @@ GROUPS = [
     ("green-pit-stop", "Routine pit stop: tyres are supplied, no cost line", lambda c: c.kind == "pit_stop" and c.under not in ("sc", "vsc"),
      {"kind": "pit_stop"}),
 ]
-OUTCOME_TEMPLATE = {"heavy": {"severity": "heavy"}, "moderate": {"severity": "moderate"}, "light": {"severity": "light"}, "none": {"cost": 0}, "free_stop": {"cost": 0}}
+OUTCOME_TEMPLATE = {"heavy": {"severity": "heavy"}, "moderate": {"severity": "moderate"}, "light": {"severity": "light"}, "none": {"cost": 0}, "free_stop": {"cost": 0}, "tyre_set": {"cost": 0}}
 
 
 def draft_policies(cases: list[Case]) -> list[Draft]:
@@ -226,6 +239,14 @@ def learn(sink: RaceSink) -> list[Draft]:
         eff = effects.get(p["effect_key"], {})
         key = (p.get("policy_id") or "jev", re.sub(r"\W+", "-", (p.get("reason") or "").lower())[:40])
         by_policy_reason[key].append((p, eff))
+    store = PrecedentStore.load()
+    for pr, eff in ((x[0], x[1]) for items in by_policy_reason.values() for x in items):
+        mid = int(pr["corrected_mid_cents"])
+        outcome = "none" if mid == 0 else "light" if mid < 25_000_000 else "moderate" if mid < 90_000_000 else "heavy"
+        store.add(PCase(case_id=f"corr-{pr['precedent_key'][:24]}", kind="incident", outcome=outcome, reason=pr.get("reason", ""),
+                        source="correction", summary=f"correction by {pr.get('by', '')}: {pr.get('reason', '')[:70]}",
+                        cost_cents=[int(pr["corrected_low_cents"]), mid, int(pr["corrected_high_cents"])]))
+    store.save()
     for (pid, reason_slug), items in by_policy_reason.items():
         if len(items) < MIN_ALIKE_CORRECTIONS:
             continue
@@ -261,6 +282,11 @@ def onboard(team: str, offline: bool, sink: RaceSink | None, limit: int | None =
         used += 1
         cases.extend(got)
     print(f"{used} sessions, {len(cases)} cases: " + ", ".join(f"{k}={v}" for k, v in sorted(_count(cases).items())))
+    store = PrecedentStore.load()
+    for c in cases:
+        store.add(c.precedent())
+    store.save()
+    print(f"precedent store: {len(store)} cases in race/data/precedents.jsonl")
     drafts = draft_policies(cases)
     drafts.sort(key=lambda d: bool(d.parent_policy_id))  # parents first: the module refuses a child without its parent
     for d in drafts:

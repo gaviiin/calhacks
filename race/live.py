@@ -57,13 +57,15 @@ class Live(Replay):
         self.acronym = {}
         from race.effects import EffectsContext
         from race.policies import PolicyBook
+        from race.precedents import PrecedentStore
 
         self.ctx = EffectsContext(team=team, team_of=self.team_of, fx_date=now_iso()[:10])
         self.book = PolicyBook.from_rows(sink.sql("SELECT * FROM race_policies") if sink else [])
+        self.precedents = PrecedentStore.load()
         self.track_status = "green"
         self.recent, self.incident_lap, self.pit_lap, self.retired_lap = {}, {}, {}, {}
         self.forecasted, self.reforecasted, self.threads = set(), set(), []
-        self.stats = {"events": 0, "effects": 0, "jev_calls": 0, "jev_ms": [], "policy_hits": 0, "forecasts": 0}
+        self.stats = {"events": 0, "effects": 0, "jev_calls": 0, "jev_ms": [], "policy_hits": 0, "precedent_hits": 0, "forecasts": 0}
         self.normalizer: Normalizer | None = None
         self._lock = threading.Lock()
 

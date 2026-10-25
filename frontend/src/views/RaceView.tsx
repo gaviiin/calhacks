@@ -398,7 +398,7 @@ function EffectRow({ effect, connected }: { effect: RaceEffects; connected: bool
     <li className={cls}>
       <div className="effect-top">
         <span className={`tier tier--${tier}`}>
-          {TIER_LABEL[tier]}
+          {effect.decidedBy.startsWith('precedent') ? 'precedent' : TIER_LABEL[tier]}
           {jev && (
             <span className="tier-note mono">
               {jev.ms !== null && `${Math.round(jev.ms)}ms`}
@@ -697,7 +697,7 @@ function Learning() {
               <span className="policy-title">{p.title || p.policyId}</span>
               <span className={`state ${AUTONOMY_TONE[p.autonomy] ?? ''}`}>{p.autonomy}</span>
               <span className="mono muted">
-                {p.hits} hits · {p.contradictions} contradictions
+                {p.hits} hits · {p.contradictions} contradictions{p.licence ? ` · ${p.licence}` : p.approvedBy ? ` · granted by ${p.approvedBy}` : ' · shadow, no licence yet'}
               </span>
             </li>
           ))}

@@ -24,7 +24,8 @@ from race.effects import EffectsContext, effects_for
 from race.events import MONEY_KINDS, RaceEvent, parse_iso
 from race.jev import JevAnswers, available as jev_available, decide
 from race.normalize import normalize
-from race.policies import PolicyBook
+from race.policies import PolicyBook, flat_view
+from race.precedents import PrecedentStore
 from race.sink import RaceSink
 
 FIXTURES = Path(__file__).resolve().parent / "fixtures"
@@ -77,6 +78,7 @@ class Replay:
         self.ctx.next_race_days, self.ctx.next_race_flyaway = next_race(self.session) if not fixtures_only else (7, True)
         self.ctx.sprint = "Sprint" in (self.session.get("session_name") or "")
         self.book = PolicyBook.from_rows(sink.sql("SELECT * FROM race_policies") if sink else [])
+        self.precedents = PrecedentStore.load()
         self.track_status = "green"
         self.recent: dict[int, list[str]] = {}
         self.incident_lap: dict[int, int] = {}
@@ -85,7 +87,7 @@ class Replay:
         self.forecasted: set[int] = set()
         self.reforecasted: set[int] = set()
         self.threads: list[threading.Thread] = []
-        self.stats = {"events": 0, "effects": 0, "jev_calls": 0, "jev_ms": [], "policy_hits": 0, "forecasts": 0}
+        self.stats = {"events": 0, "effects": 0, "jev_calls": 0, "jev_ms": [], "policy_hits": 0, "precedent_hits": 0, "forecasts": 0}
 
     # ------------------------------------------------------------------ per event
     def context_for(self, ev: RaceEvent) -> dict:
@@ -141,17 +143,24 @@ class Replay:
 
         jev = JevAnswers()
         policy = None
+        precedent = None
         if self.wants_jev(ev):
             context = self.context_for(ev)
             policy = self.book.resolve(ev, context)
-            if policy is None or policy.autonomy != "GRANTED":
+            granted = policy is not None and policy.autonomy == "GRANTED"
+            if not granted:
+                precedent = self.precedents.match(flat_view(ev, context))
+            if granted:
+                self.stats["policy_hits"] += 1
+            elif precedent:
+                self.stats["precedent_hits"] += 1
+            else:
+                # nothing learned covers it: System One decides in a few hundred milliseconds
                 jev = decide(ev, context) if not self.offline else __import__("race.jev", fromlist=["offline_decide"]).offline_decide(ev, context)
                 if not jev.offline:
                     self.stats["jev_calls"] += 1
                     self.stats["jev_ms"].append(jev.latency_ms)
-            if policy is not None:
-                self.stats["policy_hits"] += 1
-        effects = effects_for(ev, jev, policy, self.ctx)
+        effects = effects_for(ev, jev, policy, self.ctx, precedent)
         if effects and self.sink:
             self.sink.effects(ev, effects)
         self.stats["effects"] += len(effects)
@@ -159,6 +168,7 @@ class Replay:
         ours = self.team_of.get(car) == self.team
         if self.want_forecast and ours and car not in self.forecasted and (
             ev.kind in ("retirement_suspected", "retirement_confirmed") or (ev.kind == "incident" and jev.needs_forecast >= 0.5)
+            or (ev.kind == "incident" and precedent is not None and precedent.outcome in ("heavy", "moderate"))
         ):
             self.forecasted.add(car)
             self.start_forecast(ev, jev, effects)

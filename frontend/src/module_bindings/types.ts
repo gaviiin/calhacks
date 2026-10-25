@@ -288,6 +288,8 @@ export const RacePolicies = __t.object("RacePolicies", {
   effectTemplate: __t.string(),
   autonomy: __t.string(),
   precedentCount: __t.u32(),
+  consistencyPct: __t.u32(),
+  licence: __t.string(),
   hits: __t.u32(),
   contradictions: __t.u32(),
   createdBy: __t.string(),
@@ -304,6 +306,7 @@ export const RacePolicyInput = __t.object("RacePolicyInput", {
   pattern: __t.string(),
   effectTemplate: __t.string(),
   precedentCount: __t.u32(),
+  consistencyPct: __t.u32(),
   createdBy: __t.string(),
   createdAt: __t.string(),
 });

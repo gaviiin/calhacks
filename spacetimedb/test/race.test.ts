@@ -112,7 +112,7 @@ describe('race_effects', () => {
     d.as('race', ctx => mod.recordRaceEvent(ctx, { event: d.event(), state: undefined }));
     d.as('race', ctx => mod.proposeRacePolicy(ctx, { policy: {
       policyId: 'collision-heavy', parentPolicyId: '', title: 'Heavy collision', pattern: '{"kind":"incident"}',
-      effectTemplate: '{"severity":"heavy"}', precedentCount: 12, createdBy: 'learner', createdAt: AT,
+      effectTemplate: '{"severity":"heavy"}', precedentCount: 12, consistencyPct: 100, createdBy: 'learner', createdAt: AT,
     } }));
     d.as('race', ctx => mod.recordRaceEffects(ctx, { eventKey: KEY_A, effects: [
       d.effect(0, { decidedBy: 'policy:collision-heavy', status: 'autonomous' }),
@@ -135,12 +135,13 @@ describe('race_forecasts', () => {
 });
 
 describe('race policies and corrections', () => {
-  it('a proposed policy is always a shadow; only the head grants autonomy', () => {
+  it('a weakly supported policy is a shadow; the head may grant it', () => {
     const d = makeDesk();
     const policy = { policyId: 'p1', parentPolicyId: '', title: 'SC pit stop is free', pattern: '{"kind":"pit_stop","under":"safety_car"}',
-      effectTemplate: '{"cost":0}', precedentCount: 20, createdBy: 'learner', createdAt: AT };
+      effectTemplate: '{"cost":0}', precedentCount: 3, consistencyPct: 100, createdBy: 'learner', createdAt: AT };
     d.as('race', ctx => mod.proposeRacePolicy(ctx, { policy }));
     expect(d.h.db.racePolicies.policyId.find('p1')?.autonomy).toBe('SHADOW');
+    expect(d.h.db.racePolicies.policyId.find('p1')?.licence).toBe('');
     expect(() => d.as('race', ctx => mod.setRacePolicyAutonomy(ctx, { policyId: 'p1', autonomy: 'GRANTED', by: 'learner', at: AT }))).toThrow(/unauthorized/);
     d.as('head', ctx => mod.setRacePolicyAutonomy(ctx, { policyId: 'p1', autonomy: 'GRANTED', by: 'head', at: AT }));
     expect(d.h.db.racePolicies.policyId.find('p1')?.autonomy).toBe('GRANTED');
@@ -152,7 +153,7 @@ describe('race policies and corrections', () => {
     const d = makeDesk();
     d.as('race', ctx => mod.recordRaceEvent(ctx, { event: d.event(), state: undefined }));
     d.as('race', ctx => mod.proposeRacePolicy(ctx, { policy: {
-      policyId: 'p1', parentPolicyId: '', title: 't', pattern: '{}', effectTemplate: '{}', precedentCount: 3, createdBy: 'learner', createdAt: AT,
+      policyId: 'p1', parentPolicyId: '', title: 't', pattern: '{}', effectTemplate: '{}', precedentCount: 3, consistencyPct: 100, createdBy: 'learner', createdAt: AT,
     } }));
     d.as('race', ctx => mod.recordRaceEffects(ctx, { eventKey: KEY_A, effects: [d.effect(0, { decidedBy: 'policy:p1', status: 'autonomous' })] }));
     const args = { effectKey: `${KEY_A}:0`, lowCents: 150n, midCents: 250n, highCents: 350n, reason: 'floor was replaced, not repaired', by: 'head', at: '2026-05-25T09:00:00Z' };
@@ -163,5 +164,25 @@ describe('race policies and corrections', () => {
     expect(d.h.db.racePrecedents.count()).toBe(1n);
     expect(d.h.db.racePolicies.policyId.find('p1')?.contradictions).toBe(1);
     expect(() => d.as('head', ctx => mod.correctRaceEffect(ctx, { ...args, at: '2026-05-25T10:00:00Z', midCents: 50n }))).toThrow(/low <= mid <= high/);
+  });
+});
+
+describe('the licence', () => {
+  it('grants autonomy from evidence: 12 of 12 passes, 3 of 3 and 4 of 5 do not, and a person can still revoke', () => {
+    const d = makeDesk();
+    const base = { parentPolicyId: '', title: 't', pattern: '{"kind":"pit_stop"}', effectTemplate: '{"cost":0}', createdBy: 'learner', createdAt: AT };
+    d.as('race', ctx => mod.proposeRacePolicy(ctx, { policy: { ...base, policyId: 'strong', precedentCount: 12, consistencyPct: 100 } }));
+    d.as('race', ctx => mod.proposeRacePolicy(ctx, { policy: { ...base, policyId: 'few', precedentCount: 3, consistencyPct: 100 } }));
+    d.as('race', ctx => mod.proposeRacePolicy(ctx, { policy: { ...base, policyId: 'mixed', precedentCount: 5, consistencyPct: 80 } }));
+    expect(d.h.db.racePolicies.policyId.find('strong')?.autonomy).toBe('GRANTED');
+    expect(d.h.db.racePolicies.policyId.find('strong')?.licence).toMatch(/^licence\(n=12, lb=0\.8/);
+    expect(d.h.db.racePolicies.policyId.find('few')?.autonomy).toBe('SHADOW');
+    expect(d.h.db.racePolicies.policyId.find('mixed')?.autonomy).toBe('SHADOW');
+    // more evidence later grows the licence; a revoke by a person is final for the learner
+    d.as('race', ctx => mod.proposeRacePolicy(ctx, { policy: { ...base, policyId: 'few', precedentCount: 9, consistencyPct: 100 } }));
+    expect(d.h.db.racePolicies.policyId.find('few')?.autonomy).toBe('GRANTED');
+    d.as('head', ctx => mod.setRacePolicyAutonomy(ctx, { policyId: 'strong', autonomy: 'REVOKED', by: 'head', at: AT }));
+    expect(() => d.as('race', ctx => mod.proposeRacePolicy(ctx, { policy: { ...base, policyId: 'strong', precedentCount: 40, consistencyPct: 100 } }))).toThrow(/already decided/);
+    expect(() => d.as('race', ctx => mod.proposeRacePolicy(ctx, { policy: { ...base, policyId: 'x', precedentCount: 5, consistencyPct: 101 } }))).toThrow(/0-100/);
   });
 });

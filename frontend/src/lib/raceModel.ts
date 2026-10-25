@@ -238,7 +238,7 @@ export function involvesTeam(e: RaceEvents): boolean {
 export type Tier = 'policy' | 'jev' | 'claude' | 'code';
 
 export function tierOf(decidedBy: string): Tier {
-  if (decidedBy.startsWith('policy')) return 'policy';
+  if (decidedBy.startsWith('policy') || decidedBy.startsWith('precedent')) return 'policy';
   if (decidedBy.startsWith('jev')) return 'jev';
   if (decidedBy.startsWith('claude')) return 'claude';
   return 'code';
