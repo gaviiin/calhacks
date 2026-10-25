@@ -77,7 +77,8 @@ const FEATURES: Feature[] = [
     how: [
       'Lines: spares reserved at the track or Grove, factory work orders, inventory moves, hand-carries and freight against the next cut-off, FIA notices, and the entries.',
       'The Chief of Staff approves the plan once. Every line with a precedent at 0.8 or above executes and posts on its own, whatever its amount.',
-      'A line with no precedent waits for the Head of Cost Cap. A later version of the incident rewrites the lines; an approval stands.',
+      'A precedent is the same part, booked the same way, at a price the team has paid before; an entry is split by part, so a booking above the team\'s history is caught part by part.',
+      'A line with no precedent waits for the Head of Cost Cap, and their decision becomes the precedent.',
     ],
     why: [
       'In F1 the size of a bill says little about its risk. A $127k wing the team replaces every month is routine; a $1.08m tub it has never built mid-season is not.',
