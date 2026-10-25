@@ -139,10 +139,23 @@ export function RaceBridge({ children }: { children: ReactNode }) {
   const conn = useSpacetimeDB();
   const [events] = useTable(tables.raceEvents);
   const [cars] = useTable(tables.carState);
-  const [effects] = useTable(tables.raceEffects);
+  const [rawEffects] = useTable(tables.raceEffects);
   const [forecasts] = useTable(tables.raceForecasts);
   const [policies] = useTable(tables.racePolicies);
   const [precedents] = useTable(tables.racePrecedents);
+  // A corrected line carries the band the person booked (its latest race_precedents row), so totals follow the
+  // correction instead of losing the line.
+  const effects = useMemo(() => {
+    const latest = new Map<string, RacePrecedents>();
+    for (const p of precedents) {
+      const cur = latest.get(p.effectKey);
+      if (!cur || p.at > cur.at) latest.set(p.effectKey, p);
+    }
+    return rawEffects.map((e) => {
+      const p = e.status === 'corrected' ? latest.get(e.effectKey) : undefined;
+      return p ? { ...e, lowCents: p.correctedLowCents, midCents: p.correctedMidCents, highCents: p.correctedHighCents } : e;
+    });
+  }, [rawEffects, precedents]);
   const [incidents] = useTable(tables.raceIncidents);
   const [beliefs] = useTable(tables.raceBeliefs);
   const [actions] = useTable(tables.raceActions);

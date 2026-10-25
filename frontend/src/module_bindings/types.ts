@@ -618,6 +618,14 @@ export const RaceQuestions = __t.object("RaceQuestions", {
 });
 export type RaceQuestions = __Infer<typeof RaceQuestions>;
 
+export const RaceReplayMode = __t.object("RaceReplayMode", {
+  id: __t.u32(),
+  replayedDecisions: __t.bool(),
+  setBy: __t.string(),
+  at: __t.string(),
+});
+export type RaceReplayMode = __Infer<typeof RaceReplayMode>;
+
 export const RaceRules = __t.object("RaceRules", {
   id: __t.u32(),
   autoPostMaxCents: __t.i64(),

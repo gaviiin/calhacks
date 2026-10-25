@@ -486,6 +486,13 @@ const raceLatency = table(
   }
 );
 
+// Replaying a demo: the team's documented decisions (race/people.py) are recorded through the desk, tagged
+// '(replayed)'. Off unless the owner or the CFO turns it on for a replay; every replayed decision is audited as one.
+const raceReplayMode = table(
+  { name: 'race_replay_mode', public: true },
+  { id: t.u32().primaryKey(), replayedDecisions: t.bool(), setBy: t.string(), at: t.string() }
+);
+
 // A question's deadline, kept by the database itself: when it comes due the module takes the stated default even if
 // every agent process is down.
 const raceQuestionTimers = table(
@@ -525,6 +532,7 @@ const spacetimedb = schema({
   raceOnline,
   raceLatency,
   raceQuestionTimers,
+  raceReplayMode,
 });
 export default spacetimedb;
 
@@ -674,6 +682,14 @@ function gate(ctx: any, action: string, targetKey: string, check: (c: Caller) =>
   return true;
 }
 
+/** A person, or (only while replay mode is on) the desk recording a documented decision tagged '(replayed)'. */
+function personOrReplay(ctx: any, c: Caller, by: string): string | null {
+  if (c.person) return null;
+  const mode = ctx.db.raceReplayMode.id.find(0);
+  if (mode?.replayedDecisions && (c.role === 'race' || c.owner) && /\(replayed\)\s*$/.test(by)) return null;
+  return personOnly(c);
+}
+
 const personOnly = (c: Caller) =>
   c.person ? null : c.owner || AGENT_ROLES.includes(c.role) ? 'only a person decides this; an agent identity is refused' : `caller has no seat (${c.role})`;
 
@@ -744,6 +760,21 @@ export const setRaceClock = spacetimedb.reducer(
     const cur = ctx.db.raceRules.id.find(RULES_ID);
     if (cur) ctx.db.raceRules.id.update({ ...cur, replayPace: pace });
     else ctx.db.raceRules.insert({ id: RULES_ID, ...DEFAULT_RULES, replayPace: pace, updatedBy: 'defaults', updatedAt: ctx.timestamp.toISOString() });
+  }
+);
+
+// The owner (or the CFO) turns replayed decisions on for a demo replay, and off again. Audited.
+export const setReplayDecisions = spacetimedb.reducer(
+  { allowed: t.bool() },
+  (ctx, { allowed }) => {
+    gate(ctx, 'set_replay_decisions', 'race_replay_mode',
+      (c) => (c.owner || (c.person && c.role === 'cfo') ? null : 'only the owner or the CFO sets replay mode'),
+      (c) => {
+        const row = { id: 0, replayedDecisions: allowed, setBy: c.name, at: ctx.timestamp.toISOString() };
+        if (ctx.db.raceReplayMode.id.find(0)) ctx.db.raceReplayMode.id.update(row);
+        else ctx.db.raceReplayMode.insert(row);
+        return allowed ? "replayed decisions on: the team's documented decisions are recorded, each labelled replayed" : 'replayed decisions off';
+      });
   }
 );
 
@@ -1156,7 +1187,9 @@ export const applyRaceAnswer = spacetimedb.reducer(
       (c) => {
         if (c.role !== 'race') return 'only the race desk applies answers';
         if (q.status !== 'answered' && q.status !== 'defaulted') return 'the question has no answer yet';
-        if (!q.effectKeys.split(',').includes(effectKey)) return 'the question does not cover this effect';
+        // The line must be one the question named, or one of its incident's own evidence (an answer settles the crash).
+        const inc = ctx.db.raceIncidents.incidentKey.find(q.incidentKey);
+        if (!q.effectKeys.split(',').includes(effectKey) && !(inc && inc.evidenceJson.includes(eff.eventKey))) return 'the question does not cover this effect';
         if (!corrected && !AWAITING_PERSON.includes(eff.status)) return `effect is ${eff.status}`;
         return null;
       },
@@ -1171,7 +1204,7 @@ export const applyRaceAnswer = spacetimedb.reducer(
         }
         if (answered) {
           const who = answererOf(ctx, questionKey);
-          signOff(ctx, effectKey, who, by, `question:${questionKey}`);
+          signOff(ctx, effectKey, who, by, `${/\(replayed\)\s*$/.test(by) ? 'replayed ' : ''}question:${questionKey}`);
           reconsiderPostings(ctx, effectKey, by);
           return `${by}'s answer applied${corrected ? `: corrected to ${usd(midCents)}` : ''}`;
         }
@@ -1283,7 +1316,7 @@ export const setRaceActionStatus = spacetimedb.reducer(
 // action's detail with who made it; the desk prices options but never picks, so only race_head may call this.
 export const chooseRaceActionOption = spacetimedb.reducer(
   { actionKey: t.string(), option: t.string(), by: t.string(), at: t.string() },
-  (ctx, { actionKey, option, at }) => {
+  (ctx, { actionKey, option, by, at }) => {
     requireIso('at', at);
     const cur = ctx.db.raceActions.actionKey.find(actionKey);
     if (!cur) throw new SenderError('no such action');
@@ -1295,12 +1328,13 @@ export const chooseRaceActionOption = spacetimedb.reducer(
     }
     const options = Array.isArray(detail.options) ? (detail.options as { id?: string }[]) : [];
     gate(ctx, 'choose_option', actionKey,
-      (c) => personOnly(c) ?? (cur.status !== 'awaiting_approval' ? 'action is not awaiting a decision' : !options.some((o) => o.id === option) ? 'not one of the priced options' : null),
+      (c) => personOrReplay(ctx, c, by) ?? (cur.status !== 'awaiting_approval' ? 'action is not awaiting a decision' : !options.some((o) => o.id === option) ? 'not one of the priced options' : null),
       (c) => {
-        const detailJson = JSON.stringify({ ...detail, chosen: option, chosen_by: c.name, chosen_at: at });
+        const who = c.person ? c.name : by.slice(0, 64);
+        const detailJson = JSON.stringify({ ...detail, chosen: option, chosen_by: who, chosen_at: at });
         if (detailJson.length > 4096) throw new SenderError('invalid choice: detail too large');
-        ctx.db.raceActions.actionKey.update({ ...cur, status: 'approved', detailJson, decidedBy: `person:${c.name}`, updatedAt: at });
-        return `${cur.title}: ${c.name} chose ${option}`;
+        ctx.db.raceActions.actionKey.update({ ...cur, status: 'approved', detailJson, decidedBy: `person:${who}`, updatedAt: at });
+        return `${cur.title}: ${who} chose ${option}${c.person ? '' : ' (replayed historical decision)'}`;
       });
   }
 );
@@ -1368,16 +1402,17 @@ export const askRaceQuestion = spacetimedb.reducer(
 // it and learns from it. The answer is recorded under the seat's name, not a name the client sends.
 export const answerRaceQuestion = spacetimedb.reducer(
   { questionKey: t.string(), answerJson: t.string(), by: t.string(), at: t.string() },
-  (ctx, { questionKey, answerJson, at }) => {
+  (ctx, { questionKey, answerJson, by, at }) => {
     requireIso('at', at);
     requireLen('answerJson', answerJson, 2048);
     const q = ctx.db.raceQuestions.questionKey.find(questionKey);
     if (!q) throw new SenderError('no such question');
     gate(ctx, 'answer_question', questionKey,
-      (c) => personOnly(c) ?? (q.status !== 'open' ? `question is ${q.status}` : null),
+      (c) => personOrReplay(ctx, c, by) ?? (q.status !== 'open' ? `question is ${q.status}` : null),
       (c) => {
-        ctx.db.raceQuestions.questionKey.update({ ...q, status: 'answered', answerJson, answeredBy: c.name });
-        return `answered by ${c.name}`;
+        const who = c.person ? c.name : by.slice(0, 64);
+        ctx.db.raceQuestions.questionKey.update({ ...q, status: 'answered', answerJson, answeredBy: who });
+        return c.person ? `answered by ${who}` : `replayed historical decision: ${who}`;
       });
   }
 );

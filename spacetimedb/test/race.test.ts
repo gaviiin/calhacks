@@ -431,6 +431,23 @@ describe('the money gate', () => {
     expect(d.h.db.raceRules.id.find(0)).toBeNull();
   });
 
+  it('records the team\'s documented decisions only in replay mode, labelled replayed', () => {
+    const d = desk();
+    const q = { questionKey: 'qr', incidentKey: 'i', kind: 'damage', prompt: '?', optionsJson: '[]', routeRole: 'cm', expectedLossCents: 1n,
+      deadlineAt: '', effectKeys: '', defaultOption: 'a', status: 'open', answerJson: '', answeredBy: '', createdAt: AT };
+    d.as('race', ctx => mod.askRaceQuestion(ctx, { question: q }));
+    d.as('race', ctx => mod.answerRaceQuestion(ctx, { questionKey: 'qr', answerJson: '{"option":"b"}', by: 'Chief mechanic (replayed)', at: AT }));
+    expect(d.lastAudit()).toMatchObject({ action: 'answer_question', allowed: false });
+    d.as('race', ctx => mod.setReplayDecisions(ctx, { allowed: true }));
+    expect(d.lastAudit()).toMatchObject({ action: 'set_replay_decisions', allowed: false }); // the desk cannot turn it on
+    d.as('owner', ctx => mod.setReplayDecisions(ctx, { allowed: true }));
+    d.as('race', ctx => mod.answerRaceQuestion(ctx, { questionKey: 'qr', answerJson: '{"option":"b"}', by: 'Chief mechanic', at: AT }));
+    expect(d.lastAudit()).toMatchObject({ allowed: false }); // untagged: still refused
+    d.as('race', ctx => mod.answerRaceQuestion(ctx, { questionKey: 'qr', answerJson: '{"option":"b"}', by: 'Chief mechanic (replayed)', at: AT }));
+    expect(d.lastAudit()).toMatchObject({ allowed: true, reason: 'replayed historical decision: Chief mechanic (replayed)' });
+    expect(d.h.db.raceQuestions.questionKey.find('qr')?.answeredBy).toBe('Chief mechanic (replayed)');
+  });
+
   it('measures each event from the desk reading it to the commit, and lists seats but not agents', () => {
     const d = desk();
     d.as('race', ctx => mod.recordRaceEvent(ctx, { event: d.event({ eventKey: KEY_B, ingestedAt: '2026-05-24T16:25:37Z' }), state: undefined }));

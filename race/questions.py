@@ -29,7 +29,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from race import prices as P
-from race.events import Effect, Incident, Question
+from race.events import Effect, Entry, EntryLine, Incident, Question
 from race.precedents import Case, similarity
 
 SEVERITIES = ("heavy", "moderate", "light")
@@ -232,6 +232,7 @@ def apply_answers(state, sink, book) -> list[Incident]:
             continue
         verb = "the deadline passed; the desk took" if ans.get("defaulted") else f"{by} answered"
         book.assess(inc, {"severity": {s: (1.0 if s == opt["severity"] else 0.0) for s in (*SEVERITIES, "none")}, "assessed_as": opt["severity"],
+                          "parts": dict(P.SEVERITY_TEMPLATES.get(opt["severity"], [])),
                           "assessed_band": opt["band"], "assessed_by": by, "precedent": opt.get("case_id", "")},
                     f"{verb} {opt['label']}", state.now or inc.updated_at)
         _apply_to_lines(q, opt, by, state, sink)
@@ -242,23 +243,70 @@ def apply_answers(state, sink, book) -> list[Incident]:
 
 
 def _apply_to_lines(q: Question, opt: dict, by: str, state, sink) -> None:
+    """The answer settles every crash line of the incident: the first parts line takes the answer's band, the desk's
+    own revisions of it are superseded (corrected to zero, so the crash is booked once), the rest are confirmed. Each
+    write goes through pit-wall's apply_race_answer, which checks the answer exists and the line is the incident's, and
+    records the answering person's sign-off (a deadline default signs nothing off)."""
     lo, mid, hi = (int(x) for x in opt["band"])
+    reason = f"{by}: {opt['label']} ({q.question_key})"[:512]
+    inc = state.incidents.get(q.incident_key)
+    evidence = {x.get("event_key") for x in (inc.evidence if inc else [])}
+    parts_done = False
     for ev, effs in state.effects:
+        if ev.key not in evidence and not any(k.startswith(f"{ev.key}:") for k in q.effect_keys):
+            continue
         for i, e in enumerate(effs):
             k = f"{ev.key}:{i}"
-            if k not in q.effect_keys:
+            if e.kind != "cost" or e.bucket not in CRASH_BUCKETS or e.status == "corrected":
                 continue
-            # The desk applies the person's recorded answer through pit-wall, which checks the answer exists and covers
-            # this line, and records whose sign-off it is (a deadline default signs nothing off).
-            if e.bucket == "6050" and abs(e.mid_cents - mid) > 0.05 * max(mid, 1):
-                parts_lo, parts_mid, parts_hi = _parts_share(opt["severity"], lo, mid, hi)
+            revision = "revision" in e.memo.lower()
+            if e.bucket == "6050" and (revision or parts_done):
                 e.status = "corrected"
+                _adjust_books(state, k, e.mid_cents, 0, reason)
                 if sink is not None:
-                    sink.apply_answer(q.question_key, k, True, parts_lo, parts_mid, parts_hi, state.now)
+                    sink.apply_answer(q.question_key, k, True, 0, 0, 0, state.now)
+            elif e.bucket == "6050":
+                parts_done = True
+                if abs(e.mid_cents - mid) > 0.05 * max(mid, 1):
+                    parts_lo, parts_mid, parts_hi = _parts_share(opt["severity"], lo, mid, hi)
+                    e.status = "corrected"
+                    _adjust_books(state, k, e.mid_cents, parts_mid, reason)
+                    if sink is not None:
+                        sink.apply_answer(q.question_key, k, True, parts_lo, parts_mid, parts_hi, state.now)
+                elif e.status in ("needs_person", "proposed", "autonomous"):
+                    e.status = "confirmed"
+                    if sink is not None:
+                        sink.apply_answer(q.question_key, k, False, e.low_cents, e.mid_cents, e.high_cents, state.now)
             elif e.status in ("needs_person", "proposed", "autonomous"):
                 e.status = "confirmed"
                 if sink is not None:
                     sink.apply_answer(q.question_key, k, False, e.low_cents, e.mid_cents, e.high_cents, state.now)
+    rp = getattr(state, "replay", None)
+    if inc is not None and rp is not None and inc.session_key == int(rp.session.get("session_key") or 0):
+        b = rp.ctx.booked.get(inc.driver_number)
+        if b is not None:
+            b.update({"assessed": True})  # no machine revision of this crash from now on (race/effects.py)
+
+
+def _adjust_books(state, effect_key: str, was: int, now: int, reason: str) -> None:
+    """A corrected line moves the books by the difference: an adjusting entry on the same accounts (reversed when the
+    correction is lower), routed to the ERP like any other entry by the runner (state.pending_entries)."""
+    delta = int(now) - int(was)
+    orig = next((e for e in state.entries.values() if e.effect_key == effect_key), None)
+    if orig is None or delta == 0:
+        return
+    sign = 1 if delta > 0 else -1
+    lines = [EntryLine(l.account, abs(delta) if (l.debit_cents > 0) == (sign > 0) else 0,
+                       abs(delta) if (l.credit_cents > 0) == (sign > 0) else 0, l.memo) for l in orig.lines]
+    lines = [l for l in lines if l.debit_cents or l.credit_cents]
+    adj = Entry(entry_key=f"{orig.entry_key}:adj", incident_key=orig.incident_key, effect_key=effect_key,
+                memo=f"Adjustment after the garage's assessment ({'+' if sign > 0 else '-'}${abs(delta) / 100:,.0f}): {orig.memo}"[:512],
+                effective_date=orig.effective_date, recognition=orig.recognition, cap_relevant=orig.cap_relevant, lines=lines,
+                evidence=[*orig.evidence, reason[:120]], at=state.now or orig.at)
+    pend = getattr(state, "pending_entries", None)
+    if pend is None:
+        pend = state.pending_entries = []
+    pend.append(adj)
 
 
 def _parts_share(sev: str, lo: int, mid: int, hi: int) -> tuple[int, int, int]:

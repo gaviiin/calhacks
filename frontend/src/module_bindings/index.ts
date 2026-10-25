@@ -66,6 +66,7 @@ import SetRaceActionStatusReducer from "./set_race_action_status_reducer";
 import SetRaceClockReducer from "./set_race_clock_reducer";
 import SetRacePolicyAutonomyReducer from "./set_race_policy_autonomy_reducer";
 import SetRaceRulesReducer from "./set_race_rules_reducer";
+import SetReplayDecisionsReducer from "./set_replay_decisions_reducer";
 import SetReviewStatusReducer from "./set_review_status_reducer";
 import SetWriterReducer from "./set_writer_reducer";
 import UpsertRaceIncidentReducer from "./upsert_race_incident_reducer";
@@ -97,6 +98,7 @@ import RacePoliciesRow from "./race_policies_table";
 import RacePostingsRow from "./race_postings_table";
 import RacePrecedentsRow from "./race_precedents_table";
 import RaceQuestionsRow from "./race_questions_table";
+import RaceReplayModeRow from "./race_replay_mode_table";
 import RaceRulesRow from "./race_rules_table";
 import RaceSeatsRow from "./race_seats_table";
 import RaceSignoffsRow from "./race_signoffs_table";
@@ -425,6 +427,17 @@ const tablesSchema = __schema({
       { name: 'race_questions_question_key_key', constraint: 'unique', columns: ['questionKey'] },
     ],
   }, RaceQuestionsRow),
+  raceReplayMode: __table({
+    name: 'race_replay_mode',
+    indexes: [
+      { accessor: 'id', name: 'race_replay_mode_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'race_replay_mode_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, RaceReplayModeRow),
   raceRules: __table({
     name: 'race_rules',
     indexes: [
@@ -508,6 +521,7 @@ const reducersSchema = __reducers(
   __reducerSchema("set_race_clock", SetRaceClockReducer),
   __reducerSchema("set_race_policy_autonomy", SetRacePolicyAutonomyReducer),
   __reducerSchema("set_race_rules", SetRaceRulesReducer),
+  __reducerSchema("set_replay_decisions", SetReplayDecisionsReducer),
   __reducerSchema("set_review_status", SetReviewStatusReducer),
   __reducerSchema("set_writer", SetWriterReducer),
   __reducerSchema("upsert_race_incident", UpsertRaceIncidentReducer),

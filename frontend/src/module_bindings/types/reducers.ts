@@ -38,6 +38,7 @@ import SetRaceActionStatusReducer from "../set_race_action_status_reducer";
 import SetRaceClockReducer from "../set_race_clock_reducer";
 import SetRacePolicyAutonomyReducer from "../set_race_policy_autonomy_reducer";
 import SetRaceRulesReducer from "../set_race_rules_reducer";
+import SetReplayDecisionsReducer from "../set_replay_decisions_reducer";
 import SetReviewStatusReducer from "../set_review_status_reducer";
 import SetWriterReducer from "../set_writer_reducer";
 import UpsertRaceIncidentReducer from "../upsert_race_incident_reducer";
@@ -74,6 +75,7 @@ export type SetRaceActionStatusParams = __Infer<typeof SetRaceActionStatusReduce
 export type SetRaceClockParams = __Infer<typeof SetRaceClockReducer>;
 export type SetRacePolicyAutonomyParams = __Infer<typeof SetRacePolicyAutonomyReducer>;
 export type SetRaceRulesParams = __Infer<typeof SetRaceRulesReducer>;
+export type SetReplayDecisionsParams = __Infer<typeof SetReplayDecisionsReducer>;
 export type SetReviewStatusParams = __Infer<typeof SetReviewStatusReducer>;
 export type SetWriterParams = __Infer<typeof SetWriterReducer>;
 export type UpsertRaceIncidentParams = __Infer<typeof UpsertRaceIncidentReducer>;

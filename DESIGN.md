@@ -1,26 +1,26 @@
 ---
 name: Pit Wall
-description: The finance desk of Meridian Racing. Agents propose, people approve, the gateway posts, and the whole shift runs on one clock.
+description: Race-day finance for Williams Racing. Each person's view is a few live instruments in the Williams garage's white, navy and blue; agents propose, people decide, the books move.
 colors:
-  bg: "#07090c"
-  panel: "#0c1118"
-  panel-2: "#111823"
-  raise: "#151d29"
-  line: "#2b323a"
-  line-soft: "#1b222b"
-  ink: "#f3f3f0"
-  steel: "#aab5bc"
-  muted: "#8f98a1"
-  lime: "#c9ff4b"
-  lime-hover: "#d7ff74"
-  lime-wash: "rgba(201, 255, 75, 0.1)"
-  on-lime: "#06080a"
-  hold: "#ffb547"
-  hold-wash: "rgba(255, 181, 71, 0.1)"
-  alert: "#ff725f"
-  alert-wash: "rgba(255, 114, 95, 0.1)"
-  s1: "#6d7a84"
-  s2: "#f3f3f0"
+  bg: "#eef1f5"
+  panel: "#ffffff"
+  panel-2: "#f5f7fa"
+  raise: "#e8edf4"
+  line: "#ccd5e1"
+  line-soft: "#e2e8f0"
+  ink: "#0b1b33"
+  navy: "#041e42"
+  steel: "#3c4a60"
+  muted: "#5f6d83"
+  blue: "#0a5bd8"
+  blue-wash: "rgba(10, 91, 216, 0.08)"
+  sky: "#00a3e0"
+  hold: "#b45309"
+  hold-wash: "rgba(217, 119, 6, 0.1)"
+  alert: "#c62828"
+  alert-wash: "rgba(198, 40, 40, 0.07)"
+  s1: "#8fa3bf"
+  s2: "#041e42"
 typography:
   display:
     fontFamily: "Barlow Condensed, Roboto Condensed, Arial Narrow, sans-serif"
@@ -178,6 +178,9 @@ components:
 
 # Design System: Pit Wall
 
+**Revision, 25 Oct 2026: the Williams garage.** The user replaced the dark ground and lime with the Williams Racing palette and asked for fewer words and more visuals. The world is now: cool gray ground, white panels (1px soft hairline, 6px corners, a soft offset shadow), navy ink for figures and headings, **Williams blue** (`blue`; the CSS token keeps its old name `--lime` so every desk follows) for a person's action or approval and the primary button, amber waiting, red refused. Data series are navy and sky. The blueprint car stays a navy engineering sheet with its own dark tokens (`.bp-sheet`). Race day is four role views (Pit wall, Strategy, CFO, Accounting) built from one kit (`frontend/src/views/roles/kit.tsx`: Pill, Figure, Stack, Meter, Axis, Panel, Odds) under the contract in `frontend/src/views/roles/DESIGN-BRIEF.md`: instruments in place of prose, one line of text per panel at most, basis in tooltips or one "Basis" fold. Where the sections below say dark, lime or coral, read light, blue and red; the roles (one signal for a person, three lamps with icon and word, neutral series) are unchanged.
+
+
 ## Overview
 
 **Creative North Star: "The Shift on One Clock"**
@@ -186,7 +189,7 @@ Pit Wall is a race team's finance desk read the way a pit wall reads a race: one
 
 The surface is dense and calm. Panels are flat slabs one step lighter than the ground, edged with a hairline and cornered at 2px. Text is DM Sans at 14px; numbers, ids, codes and times are IBM Plex Mono with tabular figures; only page and section headings speak in Barlow Condensed capitals. Colour is almost entirely neutral, so that the three status lamps (lime approved, amber waiting, coral refused) carry their meaning by contrast with everything else. Summaries are sentences and definition lines with the figure inline, never a wall of KPI tiles. The why sits next to the number.
 
-Dark only. The stylesheet declares `color-scheme: dark` and there is no light theme; do not add one.
+Light only since 25 Oct 2026 (the Williams garage): the stylesheet declares `color-scheme: light`; the blueprint sheet is the one dark surface.
 
 **Key Characteristics:**
 - Near-black ground with tonal panels and hairline edges; no elevation except the floating tooltip.

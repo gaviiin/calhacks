@@ -17,7 +17,9 @@ export function ServiceStrip() {
       {rows.map((h) => (
         <li key={h.service} className={`service service--${h.status}`} title={`${h.detail} (as of ${clock(h.at)} UTC)`}>
           <span className="service-dot" aria-hidden />
-          <b>{NAME[h.service] ?? h.service}</b> <span className="muted">{WORD[h.status] ?? h.status}</span>
+          {NAME[h.service] ?? h.service}
+          {h.status !== 'live' && <span className="service-word">{WORD[h.status] ?? h.status}</span>}
+          <span className="sr-only"> {WORD[h.status] ?? h.status}</span>
         </li>
       ))}
     </ul>

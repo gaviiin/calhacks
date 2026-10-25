@@ -1,20 +1,19 @@
-import { useMemo, useState, type ReactNode } from 'react';
-import { IconApproved, IconDenied, IconEntry, IconPerson, IconWaiting, IconFlag } from '../../components/icons';
+import { Fragment, useMemo, useState } from 'react';
+import { IconPerson } from '../../components/icons';
 import { parseJson, usdShort } from '../../lib/format';
 import { useRace, type RaceData } from '../../lib/race';
 import { TEAM, carLabel, eventDetail, kindMeta, sortTime, utcClock } from '../../lib/raceModel';
 import { RECOGNITION_WORDS, signedCents } from '../raceday/AccountPanel';
 import { ActButton, roleLabel } from '../raceday/shared';
+import { Axis, Figure, Panel, Pill, Stack, type Tone } from './kit';
 import './accounting.css';
 
-// Accounting: for the financial controller and the accountants. On the left, everything that happened as the desk
-// learned it, newest first: our cars' race events, what the incident log believed, what people decided, the answers
-// they gave, the entries booked and where each went. On the right, the books: every race entry by where it stands in
-// the ERP (posted with its ERP id, held for a named reviewer with the reason, rejected, failed), and its lines.
+// Accounting: for the financial controller and the accountants. What changed in the books, what is stuck, and why.
+// Top: posted / held / cap-relevant posted and the books as one bar. Then the weekend axis (booked vs posted),
+// the ledger (held rows first, with Approve / Reject), and the live feed, one line per item.
 //
-// race/erp.py decides post or hold. Holds: a crash line that waits for a person (controller), $250k or more (Head of
-// Cost Cap, the cost cap desk's materiality), $1m or more (CFO, finance K10), an FIA fine outside the cap (Head of
-// Cost Cap). A person approves here and the desk posts it; a rejected entry never reaches the ERP.
+// race/erp.py decides post or hold: a crash line that waits for a person goes to the controller; $250k or more to
+// the Head of Cost Cap; $1m or more to the CFO; an FIA fine to the Head of Cost Cap. A rejected entry never posts.
 
 type Entry = RaceData['entries'][number];
 type Line = RaceData['entryLines'][number];
@@ -58,46 +57,50 @@ function erpLines(e: Entry, lines: readonly Line[]): ErpLine[] {
   return out;
 }
 
-// ---------------------------------------------------------------- status: an icon and a word, never colour alone
+// ---------------------------------------------------------------- status: Pill (icon + word), and a bar tone
 type Status = 'posted' | 'held' | 'approved' | 'rejected' | 'failed' | 'unrouted';
-const STATUS: Record<Status, { label: string; icon: (p: { size?: number }) => JSX.Element; tone: string }> = {
-  posted: { label: 'Posted to ERP', icon: IconApproved, tone: 'ok' },
-  held: { label: 'Held for review', icon: IconWaiting, tone: 'hold' },
-  approved: { label: 'Approved, posting', icon: IconPerson, tone: 'hold' },
-  failed: { label: 'Failed, will retry', icon: IconDenied, tone: 'alert' },
-  rejected: { label: 'Rejected, kept out', icon: IconDenied, tone: 'muted' },
-  unrouted: { label: 'Not routed yet', icon: IconWaiting, tone: 'muted' },
+type BarTone = Tone | 'navy' | 'sky' | 'gray';
+const STATUS: Record<Status, { word: string; long: string; tone: Tone; bar: BarTone; rank: number }> = {
+  held: { word: 'Held', long: 'Held for review', tone: 'wait', bar: 'wait', rank: 0 },
+  failed: { word: 'Failed', long: 'Failed, will retry', tone: 'bad', bar: 'bad', rank: 1 },
+  approved: { word: 'Approved', long: 'Approved, posting', tone: 'ok', bar: 'sky', rank: 2 },
+  unrouted: { word: 'Not routed', long: 'Booked, not routed yet', tone: 'neutral', bar: 'neutral', rank: 3 },
+  posted: { word: 'Posted', long: 'Posted to the ERP', tone: 'ok', bar: 'navy', rank: 4 },
+  rejected: { word: 'Rejected', long: 'Rejected, kept out of the ERP', tone: 'neutral', bar: 'gray', rank: 5 },
 };
 const statusOf = (p: Posting | undefined): Status => (p && p.status in STATUS ? (p.status as Status) : 'unrouted');
-
-function StatusTag({ s }: { s: Status }) {
-  const m = STATUS[s];
-  const Icon = m.icon;
-  return (
-    <span className={`acc-status acc-status--${m.tone}`}>
-      <Icon size={12} />
-      <span>{m.label}</span>
-    </span>
-  );
-}
+const StatusPill = ({ s, title }: { s: Status; title?: string }) => (
+  <Pill tone={STATUS[s].tone} title={title ?? STATUS[s].long}>
+    {STATUS[s].word}
+  </Pill>
+);
 
 const firstSentence = (memo: string) => {
   const m = /^(.*?)( - counts|[.:]\s)/.exec(memo);
   return (m ? m[1]! : memo).trim();
 };
 const personOf = (by: string) => by.replace(/^person:/, '').replace(/^race_desk after /, '');
+const abs = (v: bigint) => (v < 0n ? -v : v);
+const money = (v: bigint) => Number(abs(v)) / 100;
 
-// ---------------------------------------------------------------- the feed
+function wallClock(ms: number): string {
+  if (!ms) return '—';
+  return new Date(ms).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
+}
+
+// ---------------------------------------------------------------- the feed: one line per thing the desk learned
 type FeedKind = 'race' | 'belief' | 'person' | 'answer' | 'entry' | 'books';
 interface FeedItem {
   key: string;
   kind: FeedKind;
   order: number; // when the desk learned it (system time)
-  raceAt: string; // race time, when the item belongs to the tape
+  raceAt: string;
   who: string;
-  what: ReactNode;
+  pill: { tone: Tone; word: string };
+  head: string;
+  text: string;
+  more: string; // the long version, on hover
   amount: bigint | null;
-  status?: Status;
 }
 
 const FILTERS: { id: string; label: string; kinds: FeedKind[] }[] = [
@@ -107,7 +110,6 @@ const FILTERS: { id: string; label: string; kinds: FeedKind[] }[] = [
   { id: 'race', label: 'Race', kinds: ['race', 'belief'] },
 ];
 
-const KIND_WORD: Record<FeedKind, string> = { race: 'Race', belief: 'Incident', person: 'Decision', answer: 'Answer', entry: 'Entry', books: 'Books' };
 const MONEY_KINDS = new Set(['incident', 'penalty', 'retirement_suspected', 'retirement_confirmed', 'car_stopped', 'pit_stop', 'red_flag']);
 
 function midOf(v: unknown): bigint | null {
@@ -120,19 +122,19 @@ function buildFeed(race: RaceData, lines: Map<string, Line[]>): FeedItem[] {
   const out: FeedItem[] = [];
   const evByKey = new Map(race.events.map((e) => [e.eventKey, e]));
   const incByKey = new Map(race.incidents.map((i) => [i.incidentKey, i]));
+  const entryByKey = new Map(race.entries.map((e) => [e.entryKey, e]));
   const cost = new Map<string, bigint>();
   for (const f of race.effects) if (f.kind === 'cost' && f.status !== 'corrected') cost.set(f.eventKey, (cost.get(f.eventKey) ?? 0n) + f.midCents);
 
   for (const e of race.events) {
     const ours = e.driverNumber ? e.teamName === TEAM : false;
     if (!ours || !(MONEY_KINDS.has(e.kind) || cost.has(e.eventKey))) continue;
+    const detail = eventDetail(e);
+    const who = e.source.startsWith('openf1') ? 'OpenF1 tape' : e.source;
     out.push({
-      key: `ev:${e.eventKey}`, kind: 'race', order: sortTime(e.ingestedAt), raceAt: e.at, who: e.source.startsWith('openf1') ? 'OpenF1 tape' : e.source,
-      what: (
-        <>
-          <b>{kindMeta(e.kind).label}</b> {carLabel(e.driverNumber)} L{e.lap}: {eventDetail(e)}
-        </>
-      ),
+      key: `ev:${e.eventKey}`, kind: 'race', order: sortTime(e.ingestedAt), raceAt: e.at, who,
+      pill: { tone: 'neutral', word: 'Race' },
+      head: `${carLabel(e.driverNumber)} L${e.lap} ${kindMeta(e.kind).label}`, text: detail, more: detail,
       amount: cost.get(e.eventKey) ?? null,
     });
   }
@@ -140,11 +142,8 @@ function buildFeed(race: RaceData, lines: Map<string, Line[]>): FeedItem[] {
     const inc = incByKey.get(b.incidentKey);
     out.push({
       key: `bel:${b.beliefKey}`, kind: 'belief', order: sortTime(b.recordedAt), raceAt: b.at, who: 'incident log',
-      what: (
-        <>
-          <b>{inc ? carLabel(inc.driverNumber) : 'Incident'} v{b.version}</b> {b.status}: {b.cause}
-        </>
-      ),
+      pill: { tone: 'neutral', word: 'Incident' },
+      head: `${inc ? carLabel(inc.driverNumber) : 'Incident'} v${b.version} ${b.status}`, text: b.cause, more: b.cause,
       amount: null,
     });
   }
@@ -154,14 +153,11 @@ function buildFeed(race: RaceData, lines: Map<string, Line[]>): FeedItem[] {
     const chosen = typeof d.chosen === 'string' ? d.chosen : '';
     const opts = Array.isArray(d.options) ? (d.options as { id?: string; label?: string; cost_cents?: unknown }[]) : [];
     const pick = opts.find((o) => o.id === chosen);
+    const text = `${a.title}${chosen ? ` → ${pick?.label ?? chosen}` : ''}`;
     out.push({
       key: `act:${a.actionKey}`, kind: 'person', order: sortTime(a.updatedAt), raceAt: '', who: personOf(a.decidedBy),
-      what: (
-        <>
-          <b>{a.status.replace(/_/g, ' ')}</b> {a.title}
-          {chosen ? ` · chose: ${pick?.label ?? chosen}` : ''}
-        </>
-      ),
+      pill: { tone: 'ok', word: 'Decision' },
+      head: a.status.replace(/_/g, ' '), text, more: text,
       amount: midOf(pick ? pick.cost_cents : d.cost_cents),
     });
   }
@@ -170,16 +166,15 @@ function buildFeed(race: RaceData, lines: Map<string, Line[]>): FeedItem[] {
     const ans = parseJson<{ option?: string; defaulted?: boolean }>(q.answerJson, {});
     const opts = parseJson<{ id?: string; label?: string }[]>(q.optionsJson, []);
     const label = opts.find((o) => o.id === ans.option)?.label ?? ans.option ?? '';
+    const inc = incByKey.get(q.incidentKey);
     // An answer carries no time of its own; the desk re-decides the incident when it applies one.
     const after = race.beliefs.filter((b) => b.incidentKey === q.incidentKey).reduce((m, b) => Math.max(m, sortTime(b.recordedAt)), 0);
+    const defaulted = q.status === 'defaulted';
     out.push({
       key: `q:${q.questionKey}`, kind: 'answer', order: after || sortTime(q.createdAt), raceAt: q.createdAt,
-      who: q.status === 'defaulted' ? 'deadline (default)' : q.answeredBy || roleLabel(q.routeRole),
-      what: (
-        <>
-          <b>{q.status === 'defaulted' ? 'Defaulted' : 'Answered'}</b> {q.prompt} <span className="acc-answer">→ {label || 'neither'}</span>
-        </>
-      ),
+      who: defaulted ? 'deadline (default)' : q.answeredBy || roleLabel(q.routeRole),
+      pill: defaulted ? { tone: 'wait', word: 'Default' } : { tone: 'ok', word: 'Answer' },
+      head: inc ? carLabel(inc.driverNumber) : 'Question', text: `→ ${label || 'neither'}`, more: `${q.prompt} → ${label || 'neither'}`,
       amount: q.expectedLossCents ? q.expectedLossCents : null,
     });
   }
@@ -187,250 +182,419 @@ function buildFeed(race: RaceData, lines: Map<string, Line[]>): FeedItem[] {
   for (const e of race.entries) {
     const ev = parseJson<string[]>(e.evidenceJson, []).map((k) => evByKey.get(k)).find(Boolean);
     const p = posting.get(e.entryKey);
+    const rec = RECOGNITION_WORDS[e.recognition] ?? e.recognition;
     out.push({
       key: `en:${e.entryKey}`, kind: 'entry', order: ev ? sortTime(ev.ingestedAt) : p ? sortTime(p.at) - 1 : sortTime(e.at), raceAt: e.at, who: 'race desk',
-      what: (
-        <>
-          <b>Booked</b> {firstSentence(e.memo)} <span className="muted">({RECOGNITION_WORDS[e.recognition] ?? e.recognition})</span>
-        </>
-      ),
+      pill: { tone: 'info', word: 'Booked' },
+      head: firstSentence(e.memo), text: rec, more: `${e.memo} (${rec})`,
       amount: signedCents(e, lines.get(e.entryKey)),
     });
   }
   for (const p of race.postings) {
     const s = statusOf(p);
-    const word =
-      s === 'posted' ? <>Posted as <span className="mono">{p.erpEntryId}</span></> :
-      s === 'held' ? <>Held for {roleLabel(p.reviewRole)}</> :
-      s === 'failed' ? <>Not posted: {p.reason}</> :
-      s === 'rejected' ? <>Rejected, kept out of the ERP</> : <>Approved, posting to the ERP</>;
+    const e = entryByKey.get(p.entryKey);
+    const head =
+      s === 'posted' ? p.erpEntryId :
+      s === 'held' ? `for ${roleLabel(p.reviewRole)}` :
+      s === 'failed' ? 'not posted' :
+      s === 'rejected' ? 'kept out' : 'posting';
     out.push({
       key: `po:${p.entryKey}`, kind: 'books', order: sortTime(p.at), raceAt: '', who: p.by.replace(/^race_desk after /, 'desk, after '),
-      what: word, amount: p.amountCents, status: s,
+      pill: { tone: STATUS[s].tone, word: STATUS[s].word },
+      head, text: e ? firstSentence(e.memo) : '', more: p.reason,
+      amount: p.amountCents,
     });
   }
   return out.sort((a, b) => b.order - a.order || a.key.localeCompare(b.key));
 }
 
-function wallClock(ms: number): string {
-  if (!ms) return '—';
-  return new Date(ms).toLocaleTimeString('en-GB', { hour: '2-digit', minute: '2-digit', second: '2-digit', hour12: false });
-}
-
-function Feed({ items }: { items: FeedItem[] }) {
-  const [filter, setFilter] = useState('all');
-  const kinds = new Set(FILTERS.find((f) => f.id === filter)!.kinds);
-  const shown = items.filter((i) => kinds.has(i.kind)).slice(0, 200);
+function Segmented({ value, options, onChange, label }: { value: string; options: { id: string; label: string; n?: number }[]; onChange: (id: string) => void; label: string }) {
   return (
-    <section className="acc-panel" aria-labelledby="acc-feed-h">
-      <header className="acc-head">
-        <h2 id="acc-feed-h">As it happens</h2>
-        <div className="acc-filters" role="group" aria-label="Show">
-          {FILTERS.map((f) => (
-            <button key={f.id} type="button" className={`acc-filter ${f.id === filter ? 'acc-filter--on' : ''}`} aria-pressed={f.id === filter} onClick={() => setFilter(f.id)}>
-              {f.label}
-            </button>
-          ))}
-        </div>
-      </header>
-      {!shown.length && <p className="muted">Nothing yet. The feed fills as the replay runs.</p>}
-      <ol className="acc-feed">
-        {shown.map((i) => (
-          <li key={i.key} className={`acc-item acc-item--${i.kind}`}>
-            <span className="acc-time mono" title={i.raceAt ? `race time ${utcClock(i.raceAt)} UTC` : 'when it was decided'}>
-              {wallClock(i.order)}
-              {i.raceAt && <span className="acc-race muted">{utcClock(i.raceAt)}</span>}
-            </span>
-            <span className="acc-kind">{KIND_WORD[i.kind]}</span>
-            <span className="acc-what">
-              {i.what}
-              <span className="acc-who muted">
-                {i.kind === 'person' || i.kind === 'answer' ? <IconPerson size={11} /> : null} {i.who}
-              </span>
-            </span>
-            <span className="acc-amt mono">{i.amount !== null && i.amount !== 0n ? usdShort(i.amount) : ''}</span>
-          </li>
-        ))}
-      </ol>
-    </section>
-  );
-}
-
-// ---------------------------------------------------------------- the books
-function LinesTable({ e, lines }: { e: Entry; lines: readonly Line[] }) {
-  const erp = erpLines(e, lines);
-  return (
-    <div className="acc-lines">
-      <table className="entries">
-        <caption className="muted">Our entry</caption>
-        <thead>
-          <tr>
-            <th>Account</th>
-            <th className="num">Dr</th>
-            <th className="num">Cr</th>
-          </tr>
-        </thead>
-        <tbody>
-          {lines.map((l) => (
-            <tr key={l.lineKey}>
-              <td>
-                <span className="mono">{l.account}</span> {ACCOUNT_NAME[l.account] ?? ''}
-              </td>
-              <td className="num mono">{l.debitCents > 0n ? usdShort(l.debitCents) : ''}</td>
-              <td className="num mono">{l.creditCents > 0n ? usdShort(l.creditCents) : ''}</td>
-            </tr>
-          ))}
-          {!lines.length && (
-            <tr>
-              <td colSpan={3} className="muted">Lines not loaded yet.</td>
-            </tr>
-          )}
-        </tbody>
-      </table>
-      {lines.length > 0 && (
-        <table className="entries">
-          <caption className="muted">As the ERP journal gets it</caption>
-          <thead>
-            <tr>
-              <th>ERP account</th>
-              <th className="num">Dr</th>
-              <th className="num">Cr</th>
-            </tr>
-          </thead>
-          <tbody>
-            {erp.map((l, n) => (
-              <tr key={n}>
-                <td>
-                  <span className="mono">{l.account}</span> <span className="muted">{l.note}</span>
-                </td>
-                <td className="num mono">{l.debit > 0n ? usdShort(l.debit) : ''}</td>
-                <td className="num mono">{l.credit > 0n ? usdShort(l.credit) : ''}</td>
-              </tr>
-            ))}
-          </tbody>
-        </table>
-      )}
+    <div className="acc-seg" role="group" aria-label={label}>
+      {options.map((o) => (
+        <button key={o.id} type="button" className={o.id === value ? 'acc-seg--on' : ''} aria-pressed={o.id === value} onClick={() => onChange(o.id)}>
+          {o.label}
+          {o.n !== undefined && <span className="acc-seg-n">{o.n}</span>}
+        </button>
+      ))}
     </div>
   );
 }
 
-function BookRow({ e, p, lines }: { e: Entry; p: Posting | undefined; lines: readonly Line[] }) {
+function Feed({ items, loading }: { items: FeedItem[]; loading: boolean }) {
+  const [filter, setFilter] = useState('all');
+  const kinds = new Set(FILTERS.find((f) => f.id === filter)!.kinds);
+  const shown = items.filter((i) => kinds.has(i.kind)).slice(0, 200);
+  return (
+    <Panel title="As it happens" className="acc-feed-panel" aside={<Segmented label="Show" value={filter} onChange={setFilter} options={FILTERS} />}>
+      {loading && <div className="acc-skel" aria-label="Loading" />}
+      {!loading && !shown.length && <p className="acc-empty">Race events, decisions and postings appear here as the replay runs.</p>}
+      <ol className="acc-feed">
+        {shown.map((i) => (
+          <li
+            key={i.key}
+            className={`acc-item acc-item--${i.kind}`}
+            title={[i.more, `${i.who}${i.raceAt ? ` · race ${utcClock(i.raceAt)} UTC` : ''}`].filter(Boolean).join('\n')}
+          >
+            <span className="acc-time">{wallClock(i.order)}</span>
+            <span className="acc-kind">
+              <Pill tone={i.pill.tone}>{i.pill.word}</Pill>
+            </span>
+            <span className="acc-what">
+              {(i.kind === 'person' || (i.kind === 'answer' && i.pill.word === 'Answer')) && (
+                <span className="acc-who">
+                  <IconPerson size={11} />
+                  {i.who}
+                </span>
+              )}
+              <b className={i.kind === 'books' && i.pill.word === 'Posted' ? 'acc-mono' : ''}>{i.head}</b> <span className="acc-text">{i.text}</span>
+            </span>
+            <span className="acc-amt">{i.amount !== null && i.amount !== 0n ? usdShort(i.amount) : ''}</span>
+          </li>
+        ))}
+      </ol>
+    </Panel>
+  );
+}
+
+// ---------------------------------------------------------------- the weekend: when entries were booked and posted
+function Weekend({ race, posting }: { race: RaceData; posting: Map<string, Posting> }) {
+  const view = useMemo(() => {
+    const times = race.events.map((e) => sortTime(e.at)).filter(Boolean);
+    if (!times.length || !race.entries.length) return null;
+    const from = Math.min(...times);
+    const to = Math.max(...times);
+    // A posting carries the desk's clock; place it at the race moment the desk had reached when it posted.
+    const tape = race.events.map((e) => [sortTime(e.ingestedAt), sortTime(e.at)] as const).filter(([a, b]) => a && b).sort((a, b) => a[0] - b[0]);
+    const raceMoment = (sys: number) => {
+      let at = tape[0]?.[1] ?? from;
+      for (const [ing, r] of tape) {
+        if (ing > sys) break;
+        at = Math.max(at, r);
+      }
+      return at;
+    };
+    const entryAt = new Map(race.entries.map((e) => [e.entryKey, sortTime(e.at) || from]));
+    const booked = race.entries.map((e) => {
+      const s = statusOf(posting.get(e.entryKey));
+      return { t: entryAt.get(e.entryKey)!, tone: STATUS[s].bar, big: abs(e.amountCents) >= 25_000_000n, label: `${utcClock(e.at)} UTC · ${firstSentence(e.memo)} · ${usdShort(e.amountCents)} · ${STATUS[s].long}` };
+    });
+    const posted = race.postings
+      .filter((p) => p.status !== 'held')
+      .map((p) => {
+        const s = statusOf(p);
+        const t = Math.max(raceMoment(sortTime(p.at)), entryAt.get(p.entryKey) ?? from);
+        const tone: BarTone = s === 'posted' ? 'navy' : STATUS[s].bar;
+        return { t, tone, big: abs(p.amountCents) >= 25_000_000n, label: `${wallClock(sortTime(p.at))} · ${STATUS[s].long}${p.erpEntryId ? ` ${p.erpEntryId}` : ''} · ${usdShort(p.amountCents)}` };
+      });
+    // Time scale: a tick every 1/2/3/6/12/24 hours, whichever keeps it to eight or fewer; a day boundary names the day.
+    const HOUR = 3_600_000;
+    const span = to - from || 1;
+    const step = [1, 2, 3, 6, 12, 24].map((h) => h * HOUR).find((st) => span / st <= 8) ?? 24 * HOUR;
+    const dayWord = (t: number) => new Date(t).toLocaleDateString('en-GB', { weekday: 'short', day: 'numeric', month: 'short', timeZone: 'UTC' });
+    const ticks: { left: number; label: string }[] = [];
+    for (let t = Math.ceil(from / step) * step; t <= to; t += step) {
+      const midnight = t % (24 * HOUR) === 0;
+      ticks.push({ left: ((t - from) / span) * 100, label: midnight || step >= 24 * HOUR ? dayWord(t) : utcClock(new Date(t).toISOString()).slice(0, 5) });
+    }
+    const oneDay = dayWord(from) === dayWord(to);
+    const scaleLabel = oneDay ? dayWord(from) : 'UTC';
+    return { from, to, booked, posted, ticks, scaleLabel };
+  }, [race.events, race.entries, race.postings, posting]);
+
+  if (!view) return null;
+  return (
+    <Panel
+      title="Across the weekend"
+      className="acc-weekend"
+      aside={
+        <span className="acc-weekend-key">
+          <span><i className="k-dot k-seg--navy" />posted</span>
+          <span><i className="k-dot k-seg--sky" />approved</span>
+          <span><i className="k-dot k-seg--wait" />held</span>
+          <span><i className="k-dot k-seg--bad" />failed</span>
+        </span>
+      }
+    >
+      <div className="acc-axes">
+        <span className="acc-axis-label">Booked</span>
+        <Axis from={view.from} to={view.to} marks={view.booked} height={24} />
+        <span className="acc-axis-label">Posted</span>
+        <Axis from={view.from} to={view.to} marks={view.posted} height={24} />
+        <span className="acc-axis-label acc-axis-label--scale">{view.scaleLabel}</span>
+        <div className="acc-ticks" aria-hidden>
+          {view.ticks.map((t) => (
+            <span key={t.left} className={t.left > 88 ? 'acc-tick--end' : undefined} style={{ left: `${t.left}%` }}>
+              {t.label}
+            </span>
+          ))}
+        </div>
+      </div>
+    </Panel>
+  );
+}
+
+// ---------------------------------------------------------------- the ledger
+function LinesTable({ e, lines }: { e: Entry; lines: readonly Line[] }) {
+  if (!lines.length) return <p className="acc-empty">Lines not loaded yet.</p>;
+  const erp = erpLines(e, lines);
+  const table = (caption: string, rows: { k: string; acct: string; note: string; dr: bigint; cr: bigint }[]) => (
+    <table className="acc-jl">
+      <caption>{caption}</caption>
+      <thead>
+        <tr>
+          <th>Account</th>
+          <th className="num">Dr</th>
+          <th className="num">Cr</th>
+        </tr>
+      </thead>
+      <tbody>
+        {rows.map((r) => (
+          <tr key={r.k}>
+            <td title={r.note}>
+              <span className="acc-mono">{r.acct}</span> <span className="acc-note">{r.note}</span>
+            </td>
+            <td className="num">{r.dr > 0n ? usdShort(r.dr) : ''}</td>
+            <td className="num">{r.cr > 0n ? usdShort(r.cr) : ''}</td>
+          </tr>
+        ))}
+      </tbody>
+    </table>
+  );
+  return (
+    <div className="acc-lines">
+      {table('Our entry', lines.map((l) => ({ k: l.lineKey, acct: l.account, note: ACCOUNT_NAME[l.account] ?? '', dr: l.debitCents, cr: l.creditCents })))}
+      {table('ERP journal', erp.map((l, n) => ({ k: String(n), acct: l.account, note: l.note, dr: l.debit, cr: l.credit })))}
+    </div>
+  );
+}
+
+function AccountChips({ lines }: { lines: readonly Line[] }) {
+  const dr = [...new Set(lines.filter((l) => l.debitCents > 0n).map((l) => l.account))];
+  const cr = [...new Set(lines.filter((l) => l.creditCents > 0n).map((l) => l.account))];
+  if (!dr.length && !cr.length) return <span className="acc-dim">—</span>;
+  return (
+    <span className="acc-chips">
+      {dr.map((a) => (
+        <span key={`d${a}`} className="acc-chip" title={`Dr ${a} ${ACCOUNT_NAME[a] ?? ''}`}>
+          <i>Dr</i>
+          {a}
+        </span>
+      ))}
+      {cr.map((a) => (
+        <span key={`c${a}`} className="acc-chip acc-chip--cr" title={`Cr ${a} ${ACCOUNT_NAME[a] ?? ''}`}>
+          <i>Cr</i>
+          {a}
+        </span>
+      ))}
+    </span>
+  );
+}
+
+function LedgerRow({ e, p, lines }: { e: Entry; p: Posting | undefined; lines: readonly Line[] }) {
   const race = useRace();
   const [open, setOpen] = useState(false);
   const s = statusOf(p);
   const amt = signedCents(e, lines);
+  const rec = RECOGNITION_WORDS[e.recognition] ?? e.recognition;
+  const detailId = `acc-d-${e.entryKey}`;
   return (
-    <li className="acc-book">
-      <div className="acc-book-top">
-        <StatusTag s={s} />
-        <span className="acc-book-memo">{firstSentence(e.memo)}</span>
-        <span className="mono acc-book-amt">{usdShort(amt)}</span>
-      </div>
-      <div className="acc-book-meta">
-        <span className={e.capRelevant ? 'acc-cap' : 'acc-cap acc-cap--off'}>{e.capRelevant ? 'In the cap' : 'Outside the cap'}: {RECOGNITION_WORDS[e.recognition] ?? e.recognition}</span>
-        {p?.erpEntryId && <span className="mono acc-erp">ERP {p.erpEntryId}</span>}
-        {p && s === 'held' && <span className="acc-role">Review: {roleLabel(p.reviewRole)}</span>}
-        {p && s !== 'held' && p.by && <span className="muted">by {p.by}</span>}
-      </div>
-      {p?.reason && <p className="acc-reason muted">{p.reason}</p>}
-      {p && s === 'held' && (
-        <div className="acc-actions">
-          <ActButton label="Approve and post" busyLabel="Approving…" primary run={(by, at) => race.decidePosting({ entryKey: e.entryKey, status: 'approved', by, at })} title={`Approve as ${roleLabel(p.reviewRole)}: the desk posts it to the ERP`} />
-          <ActButton label="Reject" busyLabel="Rejecting…" run={(by, at) => race.decidePosting({ entryKey: e.entryKey, status: 'rejected', by, at })} title="Keep it out of the ERP" />
-        </div>
+    <Fragment>
+      <tr className={`acc-row acc-row--${s} ${open ? 'acc-row--open' : ''}`}>
+        <td className="acc-c-tog">
+          <button type="button" className="acc-tog" aria-expanded={open} aria-controls={detailId} aria-label={open ? 'Hide lines and reason' : 'Show lines and reason'} onClick={() => setOpen((o) => !o)}>
+            <svg width="10" height="10" viewBox="0 0 10 10" aria-hidden>
+              <path d="M3 1.5 6.5 5 3 8.5" fill="none" stroke="currentColor" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" />
+            </svg>
+          </button>
+        </td>
+        <td className="acc-c-status">
+          <StatusPill s={s} title={p?.reason || STATUS[s].long} />
+        </td>
+        <td className="acc-c-entry" title={`${e.memo}\n${rec}${p?.reason ? `\n${p.reason}` : ''}`}>
+          <span className="acc-memo">{firstSentence(e.memo)}</span>
+          {!e.capRelevant && <span className="acc-offcap">off cap</span>}
+        </td>
+        <td className="acc-c-acct">
+          <AccountChips lines={lines} />
+        </td>
+        <td className="acc-c-amt">{usdShort(amt)}</td>
+        <td className="acc-c-erp">
+          {p?.erpEntryId ? (
+            <span className="acc-mono acc-erp">{p.erpEntryId}</span>
+          ) : p && (s === 'held' || s === 'approved') && p.reviewRole ? (
+            <Pill tone="neutral" title={`${s === 'held' ? 'Waits for' : 'Approved by'} ${roleLabel(p.reviewRole)}: ${p.reason}`}>
+              <IconPerson size={12} />
+              {roleLabel(p.reviewRole)}
+            </Pill>
+          ) : (
+            <span className="acc-dim">—</span>
+          )}
+        </td>
+        <td className="acc-c-act">
+          {p && s === 'held' && (
+            <span className="acc-actions">
+              <ActButton label="Approve" busyLabel="Approving…" primary run={(by, at) => race.decidePosting({ entryKey: e.entryKey, status: 'approved', by, at })} title={`Approve as ${roleLabel(p.reviewRole)}: the desk posts it to the ERP`} />
+              <ActButton label="Reject" busyLabel="Rejecting…" run={(by, at) => race.decidePosting({ entryKey: e.entryKey, status: 'rejected', by, at })} title="Keep it out of the ERP" />
+            </span>
+          )}
+        </td>
+      </tr>
+      {open && (
+        <tr className="acc-detail" id={detailId}>
+          <td colSpan={7}>
+            <dl className="acc-facts">
+              <div>
+                <dt>Why</dt>
+                <dd>{p?.reason || 'Not routed to the ERP yet.'}</dd>
+              </div>
+              <div>
+                <dt>Cap</dt>
+                <dd>{e.capRelevant ? 'In the cap' : 'Outside the cap'}: {rec}</dd>
+              </div>
+              {p?.by && (
+                <div>
+                  <dt>By</dt>
+                  <dd>{p.by}</dd>
+                </div>
+              )}
+            </dl>
+            <LinesTable e={e} lines={lines} />
+          </td>
+        </tr>
       )}
-      <button type="button" className="acc-link" onClick={() => setOpen((o) => !o)} aria-expanded={open}>
-        {open ? 'Hide Dr / Cr lines' : 'Dr / Cr lines'}
-      </button>
-      {open && <LinesTable e={e} lines={lines} />}
-    </li>
+    </Fragment>
   );
 }
 
-const GROUPS: { s: Status; title: string; empty?: string }[] = [
-  { s: 'held', title: 'Held for review', empty: 'Nothing waits for a person.' },
-  { s: 'approved', title: 'Approved, posting' },
-  { s: 'failed', title: 'Failed' },
-  { s: 'posted', title: 'Posted to the ERP', empty: 'Nothing posted yet.' },
-  { s: 'rejected', title: 'Rejected' },
-  { s: 'unrouted', title: 'Booked, not routed yet' },
-];
+function Ledger({ race, lines, posting, loading }: { race: RaceData; lines: Map<string, Line[]>; posting: Map<string, Posting>; loading: boolean }) {
+  const [show, setShow] = useState('all');
+  const rows = useMemo(
+    () =>
+      race.entries
+        .map((e) => ({ e, s: statusOf(posting.get(e.entryKey)) }))
+        .sort((a, b) => STATUS[a.s].rank - STATUS[b.s].rank || sortTime(b.e.at) - sortTime(a.e.at) || a.e.entryKey.localeCompare(b.e.entryKey)),
+    [race.entries, posting]
+  );
+  const count = (s: Status) => rows.filter((r) => r.s === s).length;
+  const shown = rows.filter((r) => show === 'all' || r.s === show);
+  const options = [
+    { id: 'all', label: 'All', n: rows.length },
+    { id: 'held', label: 'Held', n: count('held') },
+    { id: 'posted', label: 'Posted', n: count('posted') },
+    ...(['approved', 'failed', 'rejected', 'unrouted'] as Status[]).filter((s) => count(s)).map((s) => ({ id: s, label: STATUS[s].word, n: count(s) })),
+  ];
+  return (
+    <Panel title="The books" className="acc-ledger" aside={<Segmented label="Show entries" value={show} onChange={setShow} options={options} />}>
+      {loading && <div className="acc-skel" aria-label="Loading" />}
+      {!loading && !rows.length && <p className="acc-empty">No entries booked yet. Each crash line the desk books lands here, posted or held.</p>}
+      {rows.length > 0 && (
+        <div className="acc-table-wrap">
+          <table className="acc-table">
+            <thead>
+              <tr>
+                <th className="acc-c-tog">
+                  <span className="acc-sr">Details</span>
+                </th>
+                <th className="acc-c-status">Status</th>
+                <th className="acc-c-entry">Entry</th>
+                <th className="acc-c-acct">Dr / Cr</th>
+                <th className="acc-c-amt">Amount</th>
+                <th className="acc-c-erp">ERP id / review</th>
+                <th className="acc-c-act">
+                  <span className="acc-sr">Action</span>
+                </th>
+              </tr>
+            </thead>
+            <tbody>
+              {shown.map(({ e }) => (
+                <LedgerRow key={e.entryKey} e={e} p={posting.get(e.entryKey)} lines={lines.get(e.entryKey) ?? []} />
+              ))}
+              {!shown.length && (
+                <tr>
+                  <td colSpan={7} className="acc-empty">
+                    None {show === 'held' ? 'waiting for a person' : 'here'}.
+                  </td>
+                </tr>
+              )}
+            </tbody>
+          </table>
+        </div>
+      )}
+      <details className="acc-basis">
+        <summary>Basis</summary>
+        <table>
+          <tbody>
+            <tr>
+              <th>Crash line waits for a person</th>
+              <td>Financial Controller</td>
+            </tr>
+            <tr>
+              <th>$250k or more (cost cap materiality)</th>
+              <td>Head of Cost Cap</td>
+            </tr>
+            <tr>
+              <th>$1m or more (finance K10)</th>
+              <td>CFO</td>
+            </tr>
+            <tr>
+              <th>FIA fine, outside the cap</th>
+              <td>Head of Cost Cap</td>
+            </tr>
+            <tr>
+              <th>Everything else</th>
+              <td>Desk posts it</td>
+            </tr>
+          </tbody>
+        </table>
+        <p>
+          Spares and inventory sit on <span className="acc-mono">capadj-</span> offset accounts: the ERP chart has no balance-sheet accounts.
+        </p>
+      </details>
+    </Panel>
+  );
+}
 
-function Books({ race, lines }: { race: RaceData; lines: Map<string, Line[]> }) {
-  const posting = useMemo(() => new Map(race.postings.map((p) => [p.entryKey, p])), [race.postings]);
-  const by = useMemo(() => {
-    const m = new Map<Status, Entry[]>();
+// ---------------------------------------------------------------- the top strip
+function Summary({ race, lines, posting }: { race: RaceData; lines: Map<string, Line[]>; posting: Map<string, Posting> }) {
+  const totals = useMemo(() => {
+    const amt = new Map<Status, bigint>();
+    const n = new Map<Status, number>();
+    let capPosted = 0n;
+    let capHeld = 0n;
     for (const e of race.entries) {
       const s = statusOf(posting.get(e.entryKey));
-      m.set(s, [...(m.get(s) ?? []), e]);
+      const v = signedCents(e, lines.get(e.entryKey));
+      amt.set(s, (amt.get(s) ?? 0n) + v);
+      n.set(s, (n.get(s) ?? 0) + 1);
+      if (e.capRelevant && s === 'posted') capPosted += v;
+      if (e.capRelevant && s === 'held') capHeld += v;
     }
-    for (const list of m.values()) list.sort((a, b) => sortTime(b.at) - sortTime(a.at) || a.entryKey.localeCompare(b.entryKey));
-    return m;
-  }, [race.entries, posting]);
-
-  const sum = (s: Status, capOnly = false) => (by.get(s) ?? []).filter((e) => !capOnly || e.capRelevant).reduce((t, e) => t + signedCents(e, lines.get(e.entryKey)), 0n);
-  const held = by.get('held') ?? [];
-  const roles = [...new Set(held.map((e) => posting.get(e.entryKey)?.reviewRole ?? ''))].filter(Boolean).map(roleLabel);
-
+    const heldRoles = [...new Set(race.entries.filter((e) => statusOf(posting.get(e.entryKey)) === 'held').map((e) => roleLabel(posting.get(e.entryKey)!.reviewRole)).filter(Boolean))];
+    return { amt, n, capPosted, capHeld, heldRoles };
+  }, [race.entries, lines, posting]);
+  const a = (s: Status) => totals.amt.get(s) ?? 0n;
+  const n = (s: Status) => totals.n.get(s) ?? 0;
+  const order: Status[] = ['posted', 'approved', 'held', 'failed', 'unrouted', 'rejected'];
+  const parts = order.filter((s) => n(s) > 0).map((s) => ({ label: STATUS[s].word, value: money(a(s)), tone: STATUS[s].bar }));
+  const booked = order.reduce((t, s) => t + a(s), 0n);
   return (
-    <section className="acc-panel" aria-labelledby="acc-books-h">
-      <header className="acc-head">
-        <h2 id="acc-books-h">The books</h2>
-        <span className="muted">{race.entries.length} race entries · ERP journal through the gateway key</span>
-      </header>
-      <dl className="acc-totals">
-        <div>
-          <dt>
-            <IconApproved size={12} /> Posted
-          </dt>
-          <dd className="mono">{usdShort(sum('posted'))}</dd>
-          <dd className="muted">{(by.get('posted') ?? []).length} entries</dd>
-        </div>
-        <div>
-          <dt>
-            <IconEntry size={12} /> Cap-relevant posted
-          </dt>
-          <dd className="mono">{usdShort(sum('posted', true))}</dd>
-          <dd className="muted">counts against the cap</dd>
-        </div>
-        <div className={held.length ? 'acc-total--hold' : ''}>
-          <dt>
-            <IconWaiting size={12} /> Held
-          </dt>
-          <dd className="mono">{usdShort(sum('held'))}</dd>
-          <dd className="muted">{held.length ? `${held.length} for ${roles.join(', ')}` : 'none'}</dd>
-        </div>
-        {(by.get('failed') ?? []).length > 0 && (
-          <div className="acc-total--alert">
-            <dt>
-              <IconFlag size={12} /> Failed
-            </dt>
-            <dd className="mono">{usdShort(sum('failed'))}</dd>
-            <dd className="muted">{(by.get('failed') ?? []).length} retried</dd>
-          </div>
-        )}
-      </dl>
-      {!race.entries.length && <p className="muted">No entries booked yet.</p>}
-      {GROUPS.map((g) => {
-        const list = by.get(g.s) ?? [];
-        if (!list.length && !(g.empty && race.entries.length)) return null;
-        return (
-          <div key={g.s} className="acc-group">
-            <h3>
-              <StatusTag s={g.s} /> <span className="mono muted">{list.length} · {usdShort(sum(g.s))}</span>
-            </h3>
-            {!list.length && <p className="muted">{g.empty}</p>}
-            <ul className="acc-books">
-              {list.map((e) => (
-                <BookRow key={e.entryKey} e={e} p={posting.get(e.entryKey)} lines={lines.get(e.entryKey) ?? []} />
-              ))}
-            </ul>
-          </div>
-        );
-      })}
-      <p className="muted acc-legend">
-        Held: a crash line that waits for a person goes to the Financial Controller; $250k or more to the Head of Cost Cap (the cost cap desk's materiality); $1m or more to the CFO (finance K10); an FIA fine to the Head of Cost Cap, who confirms it is outside the cap. Everything else the desk posts itself. Spares and inventory sit on <span className="mono">capadj-</span> offset accounts in the ERP because its chart has no balance-sheet accounts.
-      </p>
+    <section className="k-panel acc-summary" aria-label="The books at a glance">
+      <div className="acc-figs">
+        <Figure size="lg" label="Posted to ERP" value={usdShort(a('posted'))} sub={`${n('posted')} entries`} />
+        <Figure
+          size="lg"
+          label="Held for review"
+          value={usdShort(a('held'))}
+          delta={n('held') ? `${n('held')} waiting` : 'none waiting'}
+          deltaTone={n('held') ? 'wait' : 'neutral'}
+          sub={totals.heldRoles.length ? totals.heldRoles.join(' · ') : undefined}
+        />
+        <Figure size="lg" label="Cap-relevant posted" value={usdShort(totals.capPosted)} sub={totals.capHeld ? `${usdShort(totals.capHeld)} more held` : 'none held'} />
+        {n('failed') > 0 && <Figure size="lg" label="Failed" value={usdShort(a('failed'))} delta={`${n('failed')} retrying`} deltaTone="bad" />}
+        <Figure label="Booked" value={usdShort(booked)} sub={`${race.entries.length} entries`} />
+      </div>
+      {race.entries.length > 0 ? <Stack parts={parts} height={12} /> : <div className="acc-stack-empty" />}
     </section>
   );
 }
@@ -443,11 +607,17 @@ export function AccountingView() {
     for (const list of m.values()) list.sort((a, b) => a.lineNo - b.lineNo);
     return m;
   }, [race.entryLines]);
+  const posting = useMemo(() => new Map(race.postings.map((p) => [p.entryKey, p])), [race.postings]);
   const feed = useMemo(() => buildFeed(race, lines), [race, lines]);
+  const loading = !race.connected && !race.entries.length && !race.events.length;
   return (
     <div className="acc">
-      <Feed items={feed} />
-      <Books race={race} lines={lines} />
+      <Summary race={race} lines={lines} posting={posting} />
+      <Weekend race={race} posting={posting} />
+      <div className="acc-main">
+        <Ledger race={race} lines={lines} posting={posting} loading={loading} />
+        <Feed items={feed} loading={loading} />
+      </div>
     </div>
   );
 }

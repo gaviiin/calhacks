@@ -11,8 +11,9 @@ import { RespondPanel, respondHeadline } from './raceday/RespondPanel';
 import { Stage, clock, type Headline } from './raceday/shared';
 import { AccountingView } from './roles/AccountingView';
 import { CFOView } from './roles/CFOView';
-import { PitWallView } from './roles/PitWallView';
 import { PitWallProof } from './roles/PitWallProof';
+import { PitWallView } from './roles/PitWallView';
+import { ReplayControl } from './roles/ReplayControl';
 import { ServiceStrip } from './roles/ServiceStrip';
 import { StrategyView } from './roles/StrategyView';
 
@@ -22,7 +23,6 @@ const ROLES = [
   { id: 'strategy', label: 'Strategy', who: 'head of strategy', View: StrategyView },
   { id: 'cfo', label: 'CFO', who: 'CFO and Head of Cost Cap', View: CFOView },
   { id: 'accounting', label: 'Accounting', who: 'financial controller and accountants', View: AccountingView },
-  { id: 'flow', label: 'The flow', who: 'everyone: the seven stages in order', View: null },
 ] as const;
 
 // Race day: one weekend read as seven stages, from the moment a car stops to the CFO's brief. The rail shows one
@@ -44,36 +44,49 @@ const SESSIONS: Record<number, string> = { 9627: 'Qualifying', 9636: 'Race', 112
 export function RaceDayView({ role, nav }: { role: string | null; nav: (h: string) => void }) {
   const all = useRace();
   const meeting = useMemo(() => latestMeeting(all), [all]);
+  // #/day/flow: the seven stages in order, kept for the pitch deck and off the switcher.
+  if (role === 'flow') {
+    return (
+      <RaceScope meeting={meeting}>
+        <Weekend meeting={meeting} />
+      </RaceScope>
+    );
+  }
   const r = ROLES.find((x) => x.id === role) ?? ROLES[0];
   return (
     <RaceScope meeting={meeting}>
-      <nav className="subtabs roletabs" aria-label="Views">
-        {ROLES.map((x) => (
-          <a key={x.id} href={`#/day/${x.id}`} className={x.id === r.id ? 'subtab subtab--on' : 'subtab'} aria-current={x.id === r.id ? 'page' : undefined}
-             onClick={(e) => (e.preventDefault(), nav(`/day/${x.id}`))} title={`For the ${x.who}`}>
-            {x.label}
-          </a>
-        ))}
-      </nav>
-      {r.View ? <WeekendHeader meeting={meeting} who={r.who} /> : null}
-      {r.View ? <r.View /> : <Weekend meeting={meeting} />}
+      <div className="day-bar">
+        <nav className="day-tabs" aria-label="Views">
+          {ROLES.map((x) => (
+            <a key={x.id} href={`#/day/${x.id}`} className={x.id === r.id ? 'day-tab day-tab--on' : 'day-tab'} aria-current={x.id === r.id ? 'page' : undefined}
+               onClick={(e) => (e.preventDefault(), nav(`/day/${x.id}`))} title={`For the ${x.who}`}>
+              {x.label}
+            </a>
+          ))}
+        </nav>
+        <WeekendHeader meeting={meeting} />
+      </div>
+      <PitWallProof />
+      <r.View />
     </RaceScope>
   );
 }
 
-function WeekendHeader({ meeting, who }: { meeting: number | null; who: string }) {
+function WeekendHeader({ meeting }: { meeting: number | null }) {
   const race = useRace();
   const latest = useMemo(() => race.events.reduce<string>((m, e) => (sortTime(e.at) > sortTime(m || '1970-01-01T00:00:00Z') ? e.at : m), ''), [race.events]);
   const session = race.events.find((x) => x.at === latest)?.sessionKey ?? null;
   return (
-    <header className="raceday-head roles-head">
-      <p className="eyebrow">
-        Williams Racing{meeting && WEEKENDS[meeting] ? ` · ${WEEKENDS[meeting]}` : ''} · for the {who}
-      </p>
-      <p className="muted mono">{latest ? `${session !== null ? SESSIONS[session] ?? `session ${session}` : ''} · race time ${clock(latest)} UTC · live` : race.connected ? 'connected · no events yet' : 'connecting to pit-wall…'}</p>
+    <div className="day-meta">
+      <span className="day-weekend">{meeting && WEEKENDS[meeting] ? WEEKENDS[meeting] : 'No weekend yet'}</span>
+      {latest && (
+        <span className="day-clock mono" title="Race time of the latest event (UTC)">
+          {session !== null ? SESSIONS[session] ?? `S${session}` : ''} {clock(latest)}
+        </span>
+      )}
       <ServiceStrip />
-      <PitWallProof />
-    </header>
+      <ReplayControl />
+    </div>
   );
 }
 

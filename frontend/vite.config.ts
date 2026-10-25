@@ -20,7 +20,10 @@ const LOCAL_FILES: Record<string, string> = {
 // Simulations the dashboard can start on this machine: each is a Makefile target. The dev server
 // spawns `make <target>` and keeps the tail of its output; the dashboard polls /local/sim. Online
 // (Claude) when ANTHROPIC_API_KEY is in .env, offline (deterministic) otherwise.
-const SIM_TARGETS: Record<string, { label: string; desk: 'cost' | 'revenue' | 'evidence'; note: string }> = {
+const SIM_TARGETS: Record<string, { label: string; desk: 'cost' | 'revenue' | 'evidence' | 'race'; note: string }> = {
+  'race-demo': { label: 'Replay São Paulo 2024 live', desk: 'race', note: 'OpenF1 → telemetry → Jev → incidents → playbook → ERP → season → close, into pit-wall as it happens' },
+  'race-snapshot': { label: 'São Paulo at lap 32', desk: 'race', note: 'a clean pit-wall, then the weekend up to a few minutes after Colapinto\'s lap-32 crash, the team\'s earlier decisions replayed' },
+  'race-reset': { label: 'Clean slate for the replay', desk: 'race', note: 'wipes pit-wall, reloads the FIA evidence, relearns 2024, seats this browser' },
   'cost-cap-run': { label: 'Run January end to end', desk: 'cost', note: 'fresh module → bootstrap → sync → learner → approve policies → analyst → standing → gateway → red team → score' },
   sync: { label: 'Sync the systems of record', desk: 'cost', note: 'world → golden rows → work items' },
   learner: { label: 'Policy Learner onboarding', desk: 'cost', note: 'drafts house policies from 2025' },
@@ -149,6 +152,16 @@ function localFiles(): Plugin {
           const env = await readEnv();
           const procEnv: NodeJS.ProcessEnv = { ...process.env };
           for (const [k, v] of env) procEnv[k] = v;
+          // The race reset seats the browser that asked: its pit-wall identity, 64 hex characters, nothing else.
+          const asked = await body(req).catch(() => '');
+          const id = (() => {
+            try {
+              return String((JSON.parse(asked || '{}') as { browserId?: string }).browserId ?? '');
+            } catch {
+              return '';
+            }
+          })();
+          if (/^[0-9a-f]{64}$/.test(id)) procEnv.BROWSER_ID = id;
           if (!env.get('ANTHROPIC_API_KEY')) procEnv.OFFLINE = '1';
           else delete procEnv.OFFLINE;
           return json(res, 202, { started: startJob(target, procEnv).target });
