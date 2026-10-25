@@ -1,4 +1,5 @@
-"""Stage 6, re-plan (cap): year-end relevant costs, the chance of an overspend, and what must move.
+"""Stage 6, re-plan (cap): year-end relevant costs and the chance of each overspend outcome. Probabilities, not advice:
+what to cut or move is the Head of Cost Cap's call.
 
     forecast(state) -> dict
 
@@ -32,10 +33,8 @@ from capsim.assumptions import CrashModel, SpendModel
 RESULTS = Path(__file__).resolve().parents[1] / "world" / "results"
 N = 10_000
 CAP_BUCKETS = ("6050", "5200", "6300")
-TARGET_P_OVERSPEND = 0.10
-DEFER_STEP_CENTS = 50_000 * 100
+OVER_BY_CENTS = (500_000 * 100, 1_000_000 * 100, 2_000_000 * 100)  # the overspend sizes the outcomes table reports
 PAYROLL_SHARE = 0.55  # of the rest-of-year plan; the other 45% is parts, aero, freight and overheads
-DEFERRABLE_SHARE = 0.20  # of the rest-of-year plan: 2025-car development work that can slip into January (assumption)
 
 CAP_BASIS = {
     2024: ("FIA 2021-25 Financial Regulations Issue 22, Art. 2.3(a)(iii): $135m for 21 Competitions + $1.8m x 3 for 24 = $140.4m; "
@@ -50,11 +49,11 @@ VOWLES = ("Vowles, Nov 2024: the crashes meant the team would \"take a little bi
 
 # Relevant costs booked before the weekend, per replayable weekend. São Paulo 2024 is calibrated: with this weekend's
 # three crashes as the desk prices them (about $3.9m of cap-relevant entries in the ledger: spares fitted, labour, freight), the year-end P90 lands
-# about $0.4m over the cap, so a few hundred thousand dollars of Nov-Dec development spend moves into 2025, which is
-# what Vowles described in November 2024. It is an assumption, not a Williams figure.
+# a few hundred thousand dollars over the cap, consistent with Vowles in November 2024 (the team took a little from next
+# year's cap). It is an assumption, not a Williams figure.
 CALIBRATED_BEFORE_CENTS = {1249: 114_600_000 * 100}
 CALIBRATION_BASIS = ("ASSUMPTION calibrated to Vowles (Nov 2024): set so the São Paulo damage (about $3.9m as the ledger books it) pushes the "
-                     "year-end P90 just over the cap and forces a deferral of a few hundred thousand dollars of 2025 work")
+                     "year-end P90 a few hundred thousand dollars over the cap")
 
 
 # ---------------------------------------------------------------------- interface the other stages read
@@ -178,17 +177,16 @@ def forecast(state) -> dict:
     rng = np.random.default_rng(state.meeting_key)  # common draws: two weekend costs differ by the cost alone
     rest = _rest_and_crash(rng, plan, races, N)
 
-    def year_end(weekend: float, defer: float = 0.0) -> np.ndarray:
-        return before + weekend + rest - adj - defer
+    def year_end(weekend: float) -> np.ndarray:
+        return before + weekend + rest - adj
 
     ye = year_end(w["mid"])
-    p_over = float(np.mean(ye > cap))
-    q = float(np.quantile(ye, 1 - TARGET_P_OVERSPEND))
-    defer = max(0, math.ceil((q - cap) / DEFER_STEP_CENTS) * DEFER_STEP_CENTS) if q > cap else 0
-    deferrable = int(plan * DEFERRABLE_SHARE)
-    after = year_end(w["mid"], defer)
+    over = ye - cap
+    p_over = float(np.mean(over > 0))
+    p_material = float(np.mean(ye >= cap * (1 + material_pct)))
     hi = year_end(w["high"])
     p10, p50, p90 = (int(x) for x in np.percentile(ye, [10, 50, 90]))
+    minor = f"minor overspend (under {material_pct:.0%})"
     return {
         "year": year, "cap_cents": cap, "cap_basis": CAP_BASIS[2024 if year <= 2025 else 2026],
         "adjustments_cents": adj, "adjustments_basis": f"Art. 4.1(l): $300k per Competition with a Sprint, {_sprints(year)} in {year}" if adj else "",
@@ -198,12 +196,19 @@ def forecast(state) -> dict:
         "rest_of_year_plan_cents": int(plan), "races_left": races,
         "crash_risk_basis": f"Poisson {CrashModel().incidents_per_race}/race x capsim severity mix, {races} races left",
         "year_end": {"p10_cents": p10, "p50_cents": p50, "p90_cents": p90},
-        "headroom_p50_cents": cap - p50,
-        "p_overspend": round(p_over, 4), "p_material": round(float(np.mean(ye >= cap * (1 + material_pct))), 4),
+        "year_end_mid_cents": p50, "headroom_p50_cents": cap - p50,
+        "p_overspend": round(p_over, 4), "p_material": round(p_material, 4),
         "p_overspend_at_high": round(float(np.mean(hi > cap)), 4),
+        "outcomes": [
+            {"label": "under the cap", "p": round(1 - p_over, 4)},
+            {"label": minor, "p": round(p_over - p_material, 4)},
+            {"label": f"material overspend ({material_pct:.0%} or more)", "p": round(p_material, 4)},
+        ],
+        "overspend_by": [{"label": f"over by more than {_usd(x)}", "p": round(float(np.mean(over > x)), 4)} for x in OVER_BY_CENTS],
         "material_pct": material_pct, "rules": "Minor Overspend under 5% (Art. 8.10), Material 5% or more (Art. 8.12)" if year <= 2025 else "Minor under 2%, Material 2% or more (Section D)",
-        "defer_cents": int(defer), "deferral_cents": int(defer), "year_end_mid_cents": p50, "deferrable_cents": deferrable, "defer_covered": defer <= deferrable,
-        "p_overspend_after_defer": round(float(np.mean(after > cap)), 4),
-        "defer_basis": f"planned Nov-Dec development spend moved into {year + 1} so P(overspend) <= {TARGET_P_OVERSPEND:.0%}; it then counts against the {year + 1} cap",
         "context": CONTEXT, "vowles": VOWLES,
     }
+
+
+def _usd(cents: int) -> str:
+    return f"${cents / 1e8:.1f}m" if cents >= 1e8 else f"${cents / 1e5:.0f}k"

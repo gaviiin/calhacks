@@ -1015,8 +1015,9 @@ export const recordRaceSim = spacetimedb.reducer(
     requireRole(ctx, 'race');
     requireIso('at', row.at);
     requireLen('payloadJson', row.payloadJson, 16384);
-    if (ctx.db.raceSims.simKey.find(row.simKey)) return;
-    ctx.db.raceSims.insert(row);
+    // A re-run of the same weekend recomputes the same run: the newer model's numbers replace the old.
+    if (ctx.db.raceSims.simKey.find(row.simKey)) ctx.db.raceSims.simKey.update(row);
+    else ctx.db.raceSims.insert(row);
   }
 );
 

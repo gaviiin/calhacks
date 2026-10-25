@@ -117,3 +117,71 @@
 .replan-dist th.num {
   text-align: right;
 }
+
+/* facets: the chance of each outcome, per part of the team */
+.replan-why {
+  display: grid;
+  gap: 6px;
+  margin: 12px 0;
+}
+
+.facets {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+  gap: 10px;
+  margin: 8px 0 12px;
+}
+
+.facet {
+  padding: 10px 12px;
+  border: 1px solid var(--line-soft);
+  background: var(--panel-2);
+}
+
+.facet h4 {
+  margin: 0 0 8px;
+  font: 700 14px var(--display);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.facet h4 .muted {
+  font: 400 12px var(--body);
+  text-transform: none;
+}
+
+.facet ul {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.facet li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(40px, 1fr) 48px;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.facet-label {
+  overflow-wrap: anywhere;
+}
+
+.facet-bar {
+  height: 8px;
+  background: var(--line-soft);
+}
+
+.facet-bar span {
+  display: block;
+  height: 100%;
+  background: var(--lime);
+}
+
+.facet-p {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}

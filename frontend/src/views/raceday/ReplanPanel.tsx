@@ -19,11 +19,6 @@ interface Cap {
   year_end?: { p10_cents: number; p50_cents: number; p90_cents: number };
   p_overspend?: number;
   p_material?: number;
-  p_overspend_after_defer?: number;
-  defer_cents?: number;
-  deferrable_cents?: number;
-  defer_covered?: boolean;
-  defer_basis?: string;
   relevant_before_basis?: string;
   rules?: string;
   context?: string;
@@ -50,12 +45,20 @@ interface Payload {
   atr?: { expected_pct: number; delta_pct: number; most_likely_position: number; most_likely_pct: number; wind_tunnel_runs: number; period: string; source: string };
   sponsor?: { expected_cents: number; delta_cents: number; basis: string; source: string };
   cap?: Cap;
+  facets?: Facet[];
+}
+
+interface Facet {
+  facet: string;
+  owner: string;
+  basis?: string;
+  outcomes: { label: string; p: number }[];
 }
 
 const TONE = {
-  alert: { label: 'Off plan', cls: 'flag--alert', Icon: IconDenied },
-  hold: { label: 'Watch', cls: 'flag--hold', Icon: IconWaiting },
-  ok: { label: 'On plan', cls: 'flag--ok', Icon: IconApproved },
+  alert: { label: 'Big change', cls: 'flag--alert', Icon: IconDenied },
+  hold: { label: 'Some change', cls: 'flag--hold', Icon: IconWaiting },
+  ok: { label: 'Steady', cls: 'flag--ok', Icon: IconApproved },
 } as const;
 
 const later = (a: Sim, b: Sim) => a.at > b.at || (a.at === b.at && a.simKey > b.simKey);
@@ -152,41 +155,6 @@ function AttributionBars({ ours, rivals }: { ours: number; rivals: number }) {
   );
 }
 
-function Distribution({ team, dist, rivals }: { team: string; dist: number[]; rivals: NonNullable<Payload['rivals']> }) {
-  const all = [{ team, dist }, ...rivals];
-  const places = dist.map((_, i) => i).filter((i) => all.some((r) => (r.dist[i] ?? 0) >= 0.005));
-  if (!places.length) return null;
-  return (
-    <div className="table-wrap">
-      <table className="mini replan-dist">
-        <caption className="muted">Final constructors' place, share of 10,000 seasons</caption>
-        <thead>
-          <tr>
-            <th>Team</th>
-            {places.map((i) => (
-              <th key={i} className="num">
-                P{i + 1}
-              </th>
-            ))}
-          </tr>
-        </thead>
-        <tbody>
-          {all.map((r) => (
-            <tr key={r.team} className={r.team === team ? 'replan-us' : ''}>
-              <td>{r.team}</td>
-              {places.map((i) => (
-                <td key={i} className="num mono">
-                  {(r.dist[i] ?? 0) >= 0.005 ? pctTxt(r.dist[i]) : '·'}
-                </td>
-              ))}
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
 export function ReplanPanel() {
   const race = useRace();
   const s = useMemo(() => latestSim(race), [race]);
@@ -213,55 +181,34 @@ export function ReplanPanel() {
 
       <History sims={history} target={target} />
 
-      <dl className="replan-grid">
-        {p.prize && (
-          <div>
-            <dt>Expected prize money</dt>
-            <dd className="mono replan-big">{usdShort(p.prize.expected_cents)}</dd>
-            <dd className="mono muted">
-              P10–P90 {usdShort(p.prize.p10_cents)}–{usdShort(p.prize.p90_cents)}
-            </dd>
-            <dd className={p.prize.delta_cents < -5e6 ? 'tone-alert' : ''}>{change(p.prize.delta_cents)} since the baseline</dd>
-          </div>
-        )}
-        {p.attribution && (
-          <div>
-            <dt>Why it moved</dt>
-            <dd>
-              <AttributionBars ours={p.attribution.ours_cents} rivals={p.attribution.rivals_cents} />
-            </dd>
-          </div>
-        )}
-        {p.atr && (
-          <div>
-            <dt>Wind tunnel, {p.atr.period}</dt>
-            <dd className="mono replan-big">{p.atr.expected_pct.toFixed(0)}%</dd>
-            <dd className="muted">
-              most likely P{p.atr.most_likely_position} ({p.atr.most_likely_pct}%), about {p.atr.wind_tunnel_runs} runs a period
-              {Math.abs(p.atr.delta_pct) >= 0.5 ? ` · ${p.atr.delta_pct > 0 ? 'up' : 'down'} ${Math.abs(p.atr.delta_pct).toFixed(0)} pts (lower place, more tunnel time)` : ''}
-            </dd>
-          </div>
-        )}
-        <div>
-          <dt>Cost cap {cap.year ?? ''}</dt>
-          <dd className={`mono replan-big ${(cap.p_overspend ?? 0) > 0.1 ? 'tone-alert' : ''}`}>{pctTxt(cap.p_overspend)} overspend</dd>
-          <dd>
-            {cap.defer_cents ? (
-              <>
-                defer <b className="mono">{usdShort(cap.defer_cents)}</b> of Nov–Dec development into {(cap.year ?? 2024) + 1} → {pctTxt(cap.p_overspend_after_defer)}
-                {cap.defer_covered === false ? ' (more than the deferrable plan)' : ''}
-              </>
-            ) : (
-              'no deferral needed'
-            )}
-          </dd>
-          <dd className="muted">
-            weekend {usdShort(cap.weekend_cents ?? 0)} ({cap.weekend_source}) · year-end P50 {usdShort(cap.year_end?.p50_cents ?? 0)} vs cap {usdShort(cap.cap_cents ?? 0)} · material {pctTxt(cap.p_material, 1)}
-          </dd>
+      {p.attribution && (
+        <div className="replan-why">
+          <span className="muted">Why the expected prize moved {change(p.prize?.delta_cents ?? 0)} since the baseline</span>
+          <AttributionBars ours={p.attribution.ours_cents} rivals={p.attribution.rivals_cents} />
         </div>
-      </dl>
+      )}
 
-      {p.dist && p.team && <Distribution team={p.team} dist={p.dist} rivals={p.rivals ?? []} />}
+      <p className="muted small">What the weekend means for each part of the team: the chance of each outcome over 10,000 seasons. Probabilities, not advice: each owner decides what to do.</p>
+      <div className="facets">
+        {(p.facets ?? []).map((f) => (
+          <section key={f.facet} className="facet" aria-label={f.facet}>
+            <h4>
+              {f.facet} <span className="muted">· {f.owner}</span>
+            </h4>
+            <ul>
+              {f.outcomes.map((o) => (
+                <li key={o.label}>
+                  <span className="facet-label">{o.label}</span>
+                  <span className="facet-bar" aria-hidden>
+                    <span style={{ width: `${Math.max(o.p * 100, o.p > 0 ? 1 : 0)}%` }} />
+                  </span>
+                  <span className="mono facet-p">{pctTxt(o.p, o.p > 0 && o.p < 0.1 ? 1 : 0)}</span>
+                </li>
+              ))}
+            </ul>
+          </section>
+        ))}
+      </div>
 
       <ul className="replan-notes">
         {p.sponsor && (

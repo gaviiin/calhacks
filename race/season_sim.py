@@ -295,6 +295,27 @@ def _baseline(state) -> dict | None:
     return state.sims[0].payload if state.sims else None
 
 
+def facets(state, me: np.ndarray, places: int, lad: dict, pts: np.ndarray, pts_start: float, cap: dict) -> list[dict]:
+    """What the weekend means for each part of the team, as the probability of each outcome. No advice: the people who
+    own each facet decide what to do about it."""
+    p = lambda mask: round(float(np.mean(mask)), 4)  # noqa: E731
+    place_rows = [(k, p(me == k)) for k in range(1, places + 1)]
+    place_rows = [(k, q) for k, q in place_rows if q >= 0.005]
+    more = pts - pts_start
+    return [
+        {"facet": "Constructors' place", "owner": "Team Principal", "outcomes": [{"label": f"P{k}", "p": q} for k, q in place_rows]},
+        {"facet": f"Prize money (paid in {state.year + 1})", "owner": "CFO", "basis": prize_mod.basis(state.year),
+         "outcomes": [{"label": f"${lad.get(k, lad[max(lad)]) / 1e8:.1f}m (P{k})", "p": q} for k, q in place_rows]},
+        {"facet": f"Wind tunnel, H1 {state.year + 1}", "owner": "Technical Director", "basis": "7th = 100%, +5 points a place lower",
+         "outcomes": [{"label": f"{atr_pct(k)}% ({int(round(ATR_BASE_RUNS * atr_pct(k) / 100))} runs a period)", "p": q} for k, q in place_rows]},
+        {"facet": "Points still to score", "owner": "Commercial (sponsor clauses)", "basis": "drives the assumed per-point sponsor clause",
+         "outcomes": [{"label": "none", "p": p(more <= 0)}, {"label": "1 to 5", "p": p((more > 0) & (more <= 5))},
+                      {"label": "6 to 15", "p": p((more > 5) & (more <= 15))}, {"label": "more than 15", "p": p(more > 15)}]},
+        {"facet": f"Cost cap {state.year}", "owner": "Head of Cost Cap", "basis": cap.get("cap_basis", ""),
+         "outcomes": list(cap.get("outcomes") or []) + list(cap.get("overspend_by") or [])},
+    ]
+
+
 def run(state, trigger: str) -> SimRun | None:
     sim = simulate(state, trigger)
     if sim is None:
@@ -341,7 +362,7 @@ def run(state, trigger: str) -> SimRun | None:
         headline = f"{word} from {pb:.0%} before the weekend · {money}"
     mode = int(np.bincount(me).argmax())
     return SimRun(
-        sim_key=f"sim|{state.meeting_key}|{len(state.sims)}|{trigger}"[:256], meeting_key=state.meeting_key, trigger=trigger,
+        sim_key=f"sim|{state.meeting_key}|{trigger}"[:256], meeting_key=state.meeting_key, trigger=trigger,
         at=state.now or str(state.session.get("date_start") or ""),
         payload={
             "headline_value": f"P(P{target}) {p_target:.0%}", "headline": headline, "tone": tone, "trigger": trigger,
@@ -365,6 +386,7 @@ def run(state, trigger: str) -> SimRun | None:
                         "basis": "ASSUMPTION: $100k per championship point and $500k per place above 10th, the structure (not the amounts) "
                                  "of the only public case, Etihad/Aldar with Force India 2007-09", "source": SPONSOR_SOURCE},
             "cap": cap,
+            "facets": facets(state, me, places, lad, pts_us, sim["start"][state.team], cap),
             "assumptions": ["team-level finishing pools from this season's races before this round, recency half-life 6 rounds, DNFs at their rate",
                             "fastest-lap point ignored in simulated rounds; completed rounds use the points awarded",
                             "ties in the final table broken at random, not by countback"],

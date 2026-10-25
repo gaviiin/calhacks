@@ -27,11 +27,14 @@ def test_overspend_rises_with_the_weekend_cost():
     assert f["p_material"] > 0 and f["p_overspend"] > 0.5
 
 
-def test_sao_paulo_forces_a_small_deferral():
+def test_sao_paulo_gives_outcome_probabilities_not_advice():
     f = cap_forecast.forecast(_with_cost(3.92e6))
     assert f["weekend_source"] == "ledger"
-    assert 0.10 < f["p_overspend"] and f["p_overspend_after_defer"] <= 0.10
-    assert 100_000 * 100 <= f["defer_cents"] <= 900_000 * 100 and f["defer_covered"]
+    assert 0.10 < f["p_overspend"] < 0.5
+    assert abs(sum(o["p"] for o in f["outcomes"]) - 1) < 1e-3 and f["outcomes"][0]["label"] == "under the cap"
+    by = [o["p"] for o in f["overspend_by"]]
+    assert by == sorted(by, reverse=True) and by[0] <= f["p_overspend"]
+    assert not any(k.startswith("defer") for k in f), "the forecast states probabilities; what to move is a person's call"
     assert f["adjustments_cents"] == 6 * 300_000 * 100
     assert f["year_end"]["p10_cents"] <= f["year_end"]["p50_cents"] <= f["year_end"]["p90_cents"]
     assert "rejected" in f["context"] and "Art. 2.3" in f["cap_basis"]
@@ -45,4 +48,4 @@ def test_the_replayed_weekend():
     assert sims[0].payload["p_target"] - sims[-1].payload["p_target"] > 0.3 and sims[-1].payload["p_target"] < 0.10
     cap = sims[-1].payload["cap"]
     assert cap["p_overspend"] > sims[0].payload["cap"]["p_overspend"]
-    assert 100_000 * 100 <= cap["defer_cents"] <= 900_000 * 100, cap
+    assert not any("defer" in k for k in cap) and cap["outcomes"][0]["p"] < sims[0].payload["cap"]["outcomes"][0]["p"]

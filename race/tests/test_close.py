@@ -61,7 +61,7 @@ def make_state() -> WeekendState:
                        "attribution": {"ours_cents": -249_750, "rivals_cents": -602_480_250, "note": "split"},
                        "sponsor": {"expected_cents": 264_621_000},
                        "rivals": [{"team": "Alpine", "points_start": 16.0, "expected_points": 51.7}],
-                       "cap": {"p_overspend": 0.31, "deferral_cents": 120_000_000}})]
+                       "cap": {"p_overspend": 0.31, "p_material": 0.02}})]
     st.now = "2024-11-03T18:05:00Z"
     return st
 

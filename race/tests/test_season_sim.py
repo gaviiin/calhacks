@@ -88,7 +88,12 @@ def test_runtime_and_payload_size():
     assert {r["team"] for r in p["rivals"]} >= {"Alpine", "RB"}
     assert p["prize"]["p10_cents"] <= p["prize"]["p50_cents"] <= p["prize"]["p90_cents"] and p["prize"]["basis"]
     # the keys race/close.py reads
-    assert p["p_p8"] == p["p_target"] and p["cap"]["deferral_cents"] == p["cap"]["defer_cents"] and p["cap"]["year_end_mid_cents"] > 0
+    assert p["p_p8"] == p["p_target"] and p["cap"]["year_end_mid_cents"] > 0 and p["cap"]["p_material"] is not None
+    # every facet is a probability table, and none of it is advice
+    assert [f["facet"].split(" ")[0] for f in p["facets"]] == ["Constructors'", "Prize", "Wind", "Points", "Cost"]
+    for f in p["facets"][:4]:
+        assert abs(sum(o["p"] for o in f["outcomes"]) - 1) < 0.02, f
+    assert "recommend" not in json.dumps(p).lower() and "defer" not in json.dumps(p["cap"]).lower()
     assert any(r["team"] == "Alpine" for r in p["rivals"]) and "ours_cents" in p["attribution"] and "expected_cents" in p["sponsor"]
     assert 70 <= p["atr"]["expected_pct"] <= 115 and p["sponsor"]["assumption"] is True and "cap" in p
 
