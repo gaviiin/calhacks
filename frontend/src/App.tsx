@@ -101,7 +101,7 @@ export default function App() {
         ) : route.view === 'evidence' ? (
           <EvidenceView />
         ) : (
-          <AuditView window={auditWindow} clearWindow={() => nav('/audit')} />
+          <AuditView window={auditWindow} clearWindow={() => nav('/audit/books')} />
         )}
       </main>
       <footer className="colophon">

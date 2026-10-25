@@ -1,6 +1,6 @@
 import { useMemo, useState } from 'react';
 import { IconApproved, IconDenied } from '../components/icons';
-import { Spine } from '../components/Spine';
+import { Spine, useLedgerTime } from '../components/Spine';
 import { ROLE_LABEL } from '../components/Why';
 import { useCostCap } from '../lib/costcap';
 import { clock, refusalText } from '../lib/format';
@@ -19,8 +19,12 @@ const MATRIX: { action: string; who: string }[] = [
   { action: 'Approve your own proposal', who: 'Nobody' },
 ];
 
+const ledgerDay = (t: number | null) =>
+  t === null ? '—' : new Date(t).toLocaleDateString('en-GB', { day: 'numeric', month: 'short', year: 'numeric', timeZone: 'UTC' });
+
 export function AuditView({ window: win, clearWindow }: { window: [number, number] | null; clearWindow: () => void }) {
   const cc = useCostCap();
+  const ledgerTime = useLedgerTime();
   const [only, setOnly] = useState<'all' | 'refused'>(win ? 'all' : 'refused');
   const [role, setRole] = useState<string>('');
   const roles = useMemo(() => [...new Set(cc.audit.map((a) => a.actorRole))].sort(), [cc.audit]);
@@ -28,10 +32,14 @@ export function AuditView({ window: win, clearWindow }: { window: [number, numbe
     () =>
       cc.audit
         .filter((a) => (only === 'all' || !a.allowed) && (!role || a.actorRole === role))
-        .filter((a) => !win || (a.at.toDate().getTime() >= win[0] && a.at.toDate().getTime() < win[1]))
+        .filter((a) => {
+          if (!win) return true;
+          const t = ledgerTime(a);
+          return t !== null && t >= win[0] && t < win[1];
+        })
         .slice()
         .sort((a, b) => Number(b.id - a.id)),
-    [cc.audit, only, role, win]
+    [cc.audit, only, role, win, ledgerTime]
   );
   const refused = cc.audit.filter((a) => !a.allowed).length;
   const holders = useMemo(() => {
@@ -70,7 +78,7 @@ export function AuditView({ window: win, clearWindow }: { window: [number, numbe
           </label>
           {win && (
             <button className="filter filter--on" onClick={clearWindow}>
-              {clock(new Date(win[0]))} – {clock(new Date(win[1]))} <IconDenied size={11} title="clear the time window" />
+              {ledgerDay(win[0])} <IconDenied size={11} title="clear the time window" />
             </button>
           )}
         </div>
@@ -78,7 +86,8 @@ export function AuditView({ window: win, clearWindow }: { window: [number, numbe
           <table className="data audit-table">
             <thead>
               <tr>
-                <th>Time</th>
+                <th>Ledger date</th>
+                <th>Written</th>
                 <th>Actor</th>
                 <th>Action</th>
                 <th>Subject</th>
@@ -88,7 +97,8 @@ export function AuditView({ window: win, clearWindow }: { window: [number, numbe
             <tbody>
               {rows.slice(0, 300).map((a) => (
                 <tr key={String(a.id)} className={a.allowed ? undefined : 'row--denied'}>
-                  <td className="mono">{clock(a.at.toDate())}</td>
+                  <td className="mono">{ledgerDay(ledgerTime(a))}</td>
+                  <td className="mono muted">{clock(a.at.toDate())}</td>
                   <td>{ROLE_LABEL[a.actorRole] ?? a.actorRole}</td>
                   <td className="mono">{a.action}</td>
                   <td className="mono">
