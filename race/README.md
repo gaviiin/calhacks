@@ -60,9 +60,19 @@ are an assumption. Live revenue is therefore a change in *projected* season priz
 | Jev (System One) | typed answers with probabilities for anything no policy covers | `jev` chip with ms and P(severity) |
 | Claude (System Two) | the repair and money plan after an incident; policy drafts | forecast panel; `claude` chip |
 
-A policy starts as a SHADOW (effects dashed, "proposed"); the Head of Racing Finance grants autonomy. A
-correction in the dashboard writes a `race_precedents` row and counts a contradiction on the policy; three alike
+A policy starts as a SHADOW: it only watches, Jev decides, and the effect row names the draft that would have
+matched. The Head of Racing Finance grants autonomy; from then on the policy decides and the row is `autonomous`.
+A correction in the dashboard writes a `race_precedents` row and counts a contradiction on the policy; three alike
 corrections, or a contradiction rate over 20%, make the learner draft a child policy.
+
+The forecast agent runs twice when the evidence changes: once on our own retirement call (minutes before the
+stewards speak, so the first plan usually reads "no contact recorded, likely mechanical") and again when the
+stewards' collision message lands with who hit whom. Each run is its own `race_forecasts` row; the dashboard
+shows the latest. Measured on 2026 Canada: 15 Jev decisions at about 150 ms each, two Claude plans at 45-55 s.
+
+Replay vs replay: `#/replay` is the teammate's race replay (Meridian's sponsors on the car, the speed
+scoreboard, `racedesk/` API over Jolpica data); `#/race` is this live desk over OpenF1 and SpacetimeDB. The
+car drawing, figures strip, running order and line chart on `#/race` come from the replay's components.
 
 ## Future: quantitative finance on the event stream
 

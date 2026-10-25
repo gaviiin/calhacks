@@ -83,6 +83,7 @@ class Replay:
         self.pit_lap: dict[int, int] = {}
         self.retired_lap: dict[int, int] = {}
         self.forecasted: set[int] = set()
+        self.reforecasted: set[int] = set()
         self.threads: list[threading.Thread] = []
         self.stats = {"events": 0, "effects": 0, "jev_calls": 0, "jev_ms": [], "policy_hits": 0, "forecasts": 0}
 
@@ -160,6 +161,11 @@ class Replay:
             ev.kind in ("retirement_suspected", "retirement_confirmed") or (ev.kind == "incident" and jev.needs_forecast >= 0.5)
         ):
             self.forecasted.add(car)
+            self.start_forecast(ev, jev, effects)
+        elif (self.want_forecast and ours and car in self.forecasted and car not in self.reforecasted and ev.kind == "incident"
+              and ev.payload.get("damage_likely") and ev.payload.get("stage") == "NOTED"):
+            # The stewards' message arrives minutes after our own call: new evidence (who hit whom), new plan.
+            self.reforecasted.add(car)
             self.start_forecast(ev, jev, effects)
         return effects
 

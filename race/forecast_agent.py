@@ -197,14 +197,28 @@ class ForecastAgent:
                                "month_end": f["month_end"], "effects_so_far": f["effects_so_far"]})
 
         @beta_tool(strict=True)
-        def submit_forecast(summary: str, steps: list[dict], parts: list[dict], total_low_cents: int, total_mid_cents: int,
+        def submit_forecast(summary: str, steps_json: str, parts_json: str, total_low_cents: int, total_mid_cents: int,
                             total_high_cents: int, prize_position_after: int, cap_headroom_after_cents: int) -> str:
-            """Finish: the plan. steps = [{t: ISO time, label, detail, cents_low, cents_mid, cents_high}], 6 to 8 of them in time order;
-            parts = [{part, label, p, low, mid, high, basis, in_spares}]. Totals are the repair cost band in USD cents."""
+            """Finish: the plan. steps_json is a JSON array of 6 to 8 objects in time order, each
+            {"t": ISO time, "label": str, "detail": str, "cents_low": int, "cents_mid": int, "cents_high": int};
+            parts_json is a JSON array of {"part": id, "label": str, "p": 0..1, "low": int, "mid": int, "high": int, "basis": str, "in_spares": bool}.
+            Totals are the repair cost band in USD cents."""
+            try:
+                steps = json.loads(steps_json)
+                parts = json.loads(parts_json)
+            except json.JSONDecodeError as exc:
+                raise ToolError(f"steps_json / parts_json must be valid JSON arrays: {exc}") from exc
+            if not isinstance(steps, list) or not isinstance(parts, list):
+                raise ToolError("steps_json and parts_json must be JSON arrays")
             if not (total_low_cents <= total_mid_cents <= total_high_cents):
                 raise ToolError("totals must be low <= mid <= high")
             if not 4 <= len(steps) <= 10:
                 raise ToolError("give between 4 and 10 steps")
+            for st in steps:
+                if not {"t", "label", "detail", "cents_low", "cents_mid", "cents_high"} <= set(st):
+                    raise ToolError("every step needs t, label, detail, cents_low, cents_mid, cents_high")
+                if not (st["cents_low"] <= st["cents_mid"] <= st["cents_high"]):
+                    raise ToolError(f"step {st['label']!r}: band must be low <= mid <= high")
             result.update({
                 "summary": summary[:1024], "steps": steps, "parts": parts,
                 "totals": {"low": total_low_cents, "mid": total_mid_cents, "high": total_high_cents},
@@ -230,10 +244,13 @@ class ForecastAgent:
 
     # ------------------------------------------------------------------ run
     def run(self, event: RaceEvent, jev: JevAnswers, effects: list[Effect]) -> dict:
-        key = f"forecast|{event.session_key}|{event.driver_number}|{event.lap}"
+        created = now_iso()
+        # One row per run: a ready forecast is final in the module, so a re-run (or a retry after a failure)
+        # writes a new row and the dashboard shows the latest by created_at.
+        key = f"forecast|{event.session_key}|{event.driver_number}|{event.lap}|{created}"
         f = self.facts(event, jev, effects)
         row = {"forecast_key": key, "event_key": event.key, "driver_number": event.driver_number, "team_name": self.ctx.team,
-               "created_at": now_iso(), "status": "running", "summary": "", "payload_json": "{}", "model": "offline" if self.offline else "claude"}
+               "created_at": created, "status": "running", "summary": "", "payload_json": "{}", "model": "offline" if self.offline else "claude"}
         self._record(row)
         t0 = time.perf_counter()
         plan, status, model = None, "offline", "offline-rules"
@@ -245,10 +262,12 @@ class ForecastAgent:
                 log.warning("forecast agent failed: %s", exc)
                 plan, status, model = None, "failed", f"claude ({type(exc).__name__})"
         if plan is None:
+            # The deterministic plan always appears; a Claude failure keeps status "failed" so a retry can replace it.
             plan = self.offline_plan(f)
             if status == "failed":
                 plan["summary"] = "[Claude unavailable; deterministic plan] " + plan["summary"]
-            status = "offline" if status != "failed" else "ready"
+            else:
+                status = "offline"
         plan["elapsed_ms"] = int((time.perf_counter() - t0) * 1000)
         row.update({"status": status, "summary": plan["summary"][:1024], "payload_json": json.dumps(plan, default=str)[:16384], "model": model})
         self._record(row)

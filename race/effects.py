@@ -136,9 +136,14 @@ def crash_effects(event: RaceEvent, jev: JevAnswers, policy: Policy | None, ctx:
     sev_p = dict(jev.p("severity")) or {"none": 1.0}
     parts_p = dict(jev.parts)
     decided_by, status, basis_note = "jev", "proposed", ""
+    shadow = policy if (policy and policy.autonomy != "GRANTED") else None
+    if shadow:
+        # A shadow policy only watches: Jev decides, and the row says which draft would have matched.
+        basis_note = f" (shadow policy {shadow.policy_id} would have matched)"
+        policy = None
     if policy:
         decided_by = f"policy:{policy.policy_id}"
-        status = "autonomous" if policy.autonomy == "GRANTED" else "proposed"
+        status = "autonomous"
         tpl = policy.effect_template
         if "severity" in tpl:
             sev = tpl["severity"]

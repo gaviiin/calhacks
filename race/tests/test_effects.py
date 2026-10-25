@@ -108,5 +108,7 @@ def test_shadow_policy_yields_proposed():
     e = ev("incident", payload={"car_numbers": [23, 1], "team_involved": True, "reason": "CAUSING A COLLISION", "stage": "NOTED"})
     policy = book.resolve(e, {})
     assert policy.policy_id == "light-contact"
-    cost = next(x for x in effects_for(e, JevAnswers(), policy, c) if x.bucket == "6050")
-    assert cost.status == "proposed" and cost.decided_by == "policy:light-contact"
+    jev = offline_decide(e, {"team_cars": [23, 55]})
+    cost = next(x for x in effects_for(e, jev, policy, c) if x.bucket == "6050")
+    # a shadow only watches: Jev decides, the row names the draft that would have matched
+    assert cost.status == "proposed" and cost.decided_by == "jev" and "shadow policy light-contact" in cost.why

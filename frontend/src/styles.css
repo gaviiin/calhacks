@@ -5192,3 +5192,514 @@ code {
   top: 26px;
   bottom: auto;
 }
+
+/* ---------------------------------------------------------------- race desk: live (SpacetimeDB) */
+/* The live desk reuses the console's pills, car drawing and running-order strip; these rules lay out
+   its own panels: the two team cars, the tape beside the money column, and the figures inside. */
+
+.race--live .race-head {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.race--live .race-head h1 {
+  margin: 0;
+  font: 700 34px var(--display);
+  letter-spacing: 0.02em;
+}
+
+.race--live .race-head p {
+  margin: 4px 0 0;
+}
+
+.race-timing {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.race-timing > .empty {
+  grid-column: 1 / -1;
+}
+
+.car {
+  display: grid;
+  gap: 12px;
+  padding: 14px 18px 16px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg);
+  background:
+    radial-gradient(ellipse at 50% 60%, rgba(201, 255, 75, 0.06), transparent 60%),
+    linear-gradient(180deg, #0f151d, var(--panel));
+}
+
+.car--retired_suspected {
+  border-color: rgba(255, 181, 71, 0.4);
+}
+
+.car--retired {
+  border-color: rgba(255, 114, 95, 0.4);
+}
+
+.car-stage {
+  padding: 6px 4px 0;
+}
+
+.car-pos {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 10px 14px;
+}
+
+.car-pos > b {
+  font: 700 30px var(--display);
+  color: var(--lime);
+  line-height: 1;
+}
+
+.car--retired .car-pos > b {
+  color: var(--muted);
+}
+
+.car-id {
+  font: 700 18px var(--display);
+  letter-spacing: 0.05em;
+}
+
+.car-id .mono {
+  color: var(--muted);
+  font-weight: 500;
+}
+
+.car-pos .flag {
+  margin-left: auto;
+}
+
+.car-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 10px;
+  margin: 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.car-facts div {
+  display: grid;
+  gap: 2px;
+}
+
+.car-facts dt {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.car-facts dd {
+  margin: 0;
+  font-size: 14px;
+}
+
+.order-empty {
+  padding: 8px 18px 4px;
+}
+
+.race-cols {
+  display: grid;
+  grid-template-columns: minmax(0, 1.05fr) minmax(360px, 0.95fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.race-side {
+  display: grid;
+  gap: 16px;
+}
+
+.race-span {
+  margin: 0;
+  padding: 0;
+}
+
+.race--live h3 {
+  margin: 18px 0 10px;
+  font: 700 15px var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--steel);
+}
+
+/* the tape */
+
+.tape {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  max-height: 72vh;
+  overflow-y: auto;
+  scrollbar-width: thin;
+}
+
+.tape-row {
+  display: grid;
+  grid-template-columns: 66px 34px 72px 110px minmax(0, 1fr);
+  gap: 0 10px;
+  align-items: baseline;
+  padding: 6px 0;
+  border-bottom: 1px solid var(--line-soft);
+  font-size: 13px;
+}
+
+.tape-row--team {
+  background: linear-gradient(90deg, rgba(201, 255, 75, 0.05), transparent 70%);
+}
+
+.tape-row--loud {
+  background: linear-gradient(90deg, var(--alert-wash), transparent 70%);
+}
+
+.tape-time,
+.tape-lap {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.tape-car--team {
+  color: var(--lime);
+}
+
+.tape-kind {
+  display: inline-flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.tape-glyph {
+  min-width: 2.2em;
+  color: var(--steel);
+  font-size: 11px;
+}
+
+.tape-detail {
+  color: var(--steel);
+  overflow-wrap: anywhere;
+}
+
+.tape-tag {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: 999px;
+  background: var(--lime-wash);
+  color: var(--lime);
+  font: 600 11px var(--mono);
+}
+
+.tape-more {
+  margin-top: 12px;
+}
+
+/* the money column */
+
+.money-grid {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+  margin: 0;
+}
+
+.money-cell {
+  display: grid;
+  gap: 4px;
+  padding: 12px 14px;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--panel-2);
+}
+
+.money-cell--lead {
+  grid-column: 1 / -1;
+}
+
+.money-cell dt {
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.08em;
+  color: var(--muted);
+}
+
+.money-cell dd {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+}
+
+.money-cell dd > b {
+  font-size: 22px;
+}
+
+.money-cell--lead dd > b {
+  font-size: 30px;
+}
+
+.bonus-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.bonus-list li {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.struck {
+  text-decoration: line-through;
+  color: var(--muted);
+}
+
+.effects {
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.effect {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-soft);
+  border-left: 3px solid var(--line);
+  border-radius: var(--r-md);
+  background: var(--panel-2);
+  font-size: 13px;
+}
+
+.effect--policy {
+  border-left-color: var(--steel);
+}
+
+.effect--jev {
+  border-left-color: var(--lime);
+}
+
+.effect--claude {
+  border-left-color: var(--hold);
+}
+
+.effect--proposed {
+  border-style: dashed;
+}
+
+.effect--corrected {
+  opacity: 0.6;
+}
+
+.effect-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 10px;
+}
+
+.tier {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 8px;
+  padding: 1px 8px;
+  border-radius: 999px;
+  border: 1px solid var(--line);
+  font: 600 11px var(--body);
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.tier--jev {
+  border-color: rgba(201, 255, 75, 0.45);
+  color: var(--lime);
+}
+
+.tier--claude {
+  border-color: rgba(255, 181, 71, 0.45);
+  color: var(--hold);
+}
+
+.tier--policy {
+  color: var(--steel);
+}
+
+.tier-note {
+  text-transform: none;
+  letter-spacing: 0;
+  color: var(--muted);
+}
+
+.effect-time {
+  margin-left: auto;
+  font-size: 12px;
+}
+
+.effect-line {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 12px;
+}
+
+.effect-amount {
+  display: grid;
+  justify-items: end;
+  text-align: right;
+}
+
+.effect-amount b {
+  font-size: 16px;
+}
+
+.effect-why,
+.effect-foot {
+  margin: 0;
+  font-size: 12px;
+}
+
+.effect-foot {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  gap: 10px;
+}
+
+.correct {
+  display: grid;
+  gap: 10px;
+  padding-top: 8px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.correct-band {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+}
+
+/* forecast and learning */
+
+.forecast-summary {
+  margin: 0 0 10px;
+}
+
+.forecast-total {
+  display: flex;
+  align-items: baseline;
+  gap: 10px;
+  margin: 0 0 12px;
+}
+
+.forecast-total b {
+  font-size: 24px;
+}
+
+.steps {
+  display: grid;
+  gap: 6px;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.steps li {
+  display: grid;
+  grid-template-columns: 90px minmax(0, 1fr) auto;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.step-t {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.step-body {
+  display: grid;
+}
+
+.step-band {
+  display: grid;
+  justify-items: end;
+  text-align: right;
+}
+
+.forecast-kv {
+  margin-top: 12px;
+}
+
+.policy-list,
+.precedents {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.policy-line {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 2px 10px;
+}
+
+.policy-line .mono {
+  grid-column: 1 / -1;
+  font-size: 12px;
+}
+
+.precedents li {
+  display: grid;
+  gap: 2px;
+  padding-bottom: 8px;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+@media (max-width: 1180px) {
+  .race-cols {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 720px) {
+  .race-timing {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .car-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .money-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .tape-row {
+    grid-template-columns: 66px 34px minmax(0, 1fr);
+  }
+  .tape-kind {
+    grid-column: 1 / 3;
+  }
+  .tape-detail {
+    grid-column: 3;
+  }
+  .correct-band {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .steps li {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+  .step-t {
+    grid-column: 1 / -1;
+  }
+}

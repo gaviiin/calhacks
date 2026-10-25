@@ -1,4 +1,4 @@
-import type { RaceEffects, RaceEvents, RaceForecasts } from '../module_bindings/types';
+import type { CarState, RaceEffects, RaceEvents, RaceForecasts } from '../module_bindings/types';
 import { parseJson, usdShort } from './format';
 
 // Pure readings of the race desk's rows: what an event says in one line, where the track stands,
@@ -249,6 +249,8 @@ export interface JevReading {
   severity: string | null;
   topSeverity: { name: string; p: number } | null;
   model: string | null;
+  /** part -> P(damaged), as Jev answered it */
+  parts: Record<string, number>;
 }
 
 export function readJev(jevJson: string): JevReading | null {
@@ -263,7 +265,61 @@ export function readJev(jevJson: string): JevReading | null {
       if (p !== null && (!top || p > top.p)) top = { name, p };
     }
   }
-  return { ms: numOf(o.ms), severity: str(o.severity), topSeverity: top, model: str(o.model) };
+  const parts: Record<string, number> = {};
+  if (o.parts && typeof o.parts === 'object' && !Array.isArray(o.parts)) {
+    for (const [name, v] of Object.entries(o.parts as Record<string, unknown>)) {
+      const p = numOf(v);
+      if (p !== null) parts[name] = p;
+    }
+  }
+  return { ms: numOf(o.ms), severity: str(o.severity), topSeverity: top, model: str(o.model), parts };
+}
+
+/** "front wing · floor": the two parts Jev thinks most likely hit (p ≥ 0.5), or null when none. */
+export function damageLabel(parts: Record<string, number>, min = 0.5, top = 2): string | null {
+  const hit = Object.entries(parts)
+    .filter(([, p]) => p >= min)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, top)
+    .map(([name]) => name.replace(/_/g, ' '));
+  return hit.length ? hit.join(' · ') : null;
+}
+
+/** Mean Jev latency over the effects it decided, and how many decisions that was. */
+export function jevStats(effects: readonly RaceEffects[]): { n: number; meanMs: number | null } {
+  let n = 0;
+  let total = 0;
+  for (const e of effects) {
+    const ms = readJev(e.jevJson)?.ms;
+    if (ms !== null && ms !== undefined && ms > 0) {
+      n++;
+      total += ms;
+    }
+  }
+  return { n, meanMs: n ? total / n : null };
+}
+
+/** The car's drawing state from car_state.status: a stopped car is drawn crashed until it is confirmed out. */
+export type CarVisual = 'running' | 'crashed' | 'out';
+
+export function carVisual(status: string): CarVisual {
+  switch (status) {
+    case 'retired_suspected':
+      return 'crashed';
+    case 'retired':
+      return 'out';
+    default:
+      return 'running';
+  }
+}
+
+const CAR_ORDER: Record<string, number> = { running: 0, pit: 0, retired_suspected: 1, retired: 2 };
+
+/** The field by position; cars that have stopped go to the back, confirmed retirements last. */
+export function runningOrder(cars: readonly CarState[]): CarState[] {
+  return cars
+    .slice()
+    .sort((a, b) => (CAR_ORDER[a.status] ?? 0) - (CAR_ORDER[b.status] ?? 0) || (a.position || 99) - (b.position || 99) || a.driverNumber - b.driverNumber);
 }
 
 export const live = (e: RaceEffects) => e.status !== 'corrected';
@@ -300,6 +356,54 @@ export function ledger(effects: readonly RaceEffects[]): Ledger {
     bonuses: effects.filter((e) => e.kind === 'bonus').sort((a, b) => sortTime(b.at) - sortTime(a.at)),
     headroom,
   };
+}
+
+export interface CostByLap {
+  /** laps 0..fieldLap */
+  xs: number[];
+  /** cumulative race cost per lap, in cents as Numbers for the chart */
+  low: number[];
+  mid: number[];
+  high: number[];
+}
+
+/**
+ * Cumulative race cost lap by lap: live cost effects joined to their event's lap. Effects whose event
+ * is not on the tape are left out; laps before the first booking read 0.
+ */
+export function costByLap(effects: readonly RaceEffects[], events: readonly RaceEvents[], fieldLap: number): CostByLap {
+  const lapOf = new Map<string, number>();
+  for (const e of events) lapOf.set(e.eventKey, e.lap);
+  const perLap = new Map<number, { low: bigint; mid: bigint; high: bigint }>();
+  let maxLap = fieldLap;
+  for (const e of effects) {
+    if (e.kind !== 'cost' || !live(e)) continue;
+    const lap = lapOf.get(e.eventKey);
+    if (lap === undefined) continue;
+    maxLap = Math.max(maxLap, lap);
+    const cur = perLap.get(lap) ?? { low: 0n, mid: 0n, high: 0n };
+    perLap.set(lap, { low: cur.low + e.lowCents, mid: cur.mid + e.midCents, high: cur.high + e.highCents });
+  }
+  const xs: number[] = [];
+  const low: number[] = [];
+  const mid: number[] = [];
+  const high: number[] = [];
+  let l = 0n;
+  let m = 0n;
+  let h = 0n;
+  for (let lap = 0; lap <= maxLap; lap++) {
+    const d = perLap.get(lap);
+    if (d) {
+      l += d.low;
+      m += d.mid;
+      h += d.high;
+    }
+    xs.push(lap);
+    low.push(Number(l));
+    mid.push(Number(m));
+    high.push(Number(h));
+  }
+  return { xs, low, mid, high };
 }
 
 /** "$340k" with an explicit plus for gains; usdShort already prints the minus. */

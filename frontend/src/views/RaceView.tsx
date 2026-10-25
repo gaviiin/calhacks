@@ -1,4 +1,6 @@
 import { useMemo, useState, type FormEvent } from 'react';
+import { LineChart, type Marker } from '../charts/LineChart';
+import { F1Car } from '../components/F1Car';
 import { IconApproved, IconDenied, IconLive, IconWaiting } from '../components/icons';
 import { usdShort } from '../lib/format';
 import { useRace } from '../lib/race';
@@ -8,20 +10,28 @@ import {
   TRACK_LABEL,
   band,
   carLabel,
+  carVisual,
+  costByLap,
+  damageLabel,
   eventDetail,
   involvesTeam,
   isTeamCar,
+  jevStats,
   kindMeta,
   ledger,
   live,
   readForecast,
   readJev,
+  runningOrder,
   signed,
   sortTime,
+  stepClock,
   tierOf,
   trackStatus,
   utcClock,
-  type TrackStatus, stepClock } from '../lib/raceModel';
+  type Ledger,
+  type TrackStatus,
+} from '../lib/raceModel';
 import type { CarState, RaceEffects, RaceEvents, RaceForecasts } from '../module_bindings/types';
 import { useSeat } from '../lib/seat';
 
@@ -31,15 +41,6 @@ import { useSeat } from '../lib/seat';
 
 type Filter = 'all' | 'team' | 'money';
 
-const TRACK_TONE: Record<TrackStatus, string> = {
-  GREEN: 'flag--ok',
-  SC: 'flag--hold',
-  VSC: 'flag--hold',
-  RED: 'flag--alert',
-  CHEQUERED: '',
-  UNKNOWN: '',
-};
-
 const CAR_STATUS: Record<string, { label: string; tone: string }> = {
   running: { label: 'running', tone: 'flag--ok' },
   pit: { label: 'in pit', tone: 'flag--hold' },
@@ -47,12 +48,15 @@ const CAR_STATUS: Record<string, { label: string; tone: string }> = {
   retired: { label: 'OUT', tone: 'flag--alert' },
 };
 
-// ---------------------------------------------------------------- header + timing
+// ---------------------------------------------------------------- header + live figures
+
+/** The field's lap: the highest lap any event has reported. */
+function fieldLap(events: readonly RaceEvents[]): number {
+  return events.reduce((m, e) => Math.max(m, e.lap), 0);
+}
 
 function Header({ events }: { events: readonly RaceEvents[] }) {
   const latest = events[0];
-  const lap = events.reduce((m, e) => Math.max(m, e.lap), 0);
-  const status = trackStatus(events);
   return (
     <section className="race-head" aria-label="Session">
       <div>
@@ -70,35 +74,84 @@ function Header({ events }: { events: readonly RaceEvents[] }) {
           )}
         </p>
       </div>
-      <div className="race-head-figures">
-        <div className="race-figure">
-          <span className="race-figure-label">Lap</span>
-          <b className="mono">{lap || '—'}</b>
-        </div>
-        <span className={`flag ${TRACK_TONE[status]}`} role="status">
-          {status === 'RED' ? <IconDenied size={12} /> : status === 'GREEN' ? <IconLive size={12} /> : <IconWaiting size={12} />}
-          {status === 'UNKNOWN' ? TRACK_LABEL[status] : `${status} · ${TRACK_LABEL[status]}`}
-        </span>
-      </div>
     </section>
   );
 }
 
-function CarCard({ car }: { car: CarState }) {
+type PillTone = 'ok' | 'alert' | 'hold';
+
+const TRACK_PILL: Record<TrackStatus, PillTone | undefined> = {
+  GREEN: 'ok',
+  SC: 'alert',
+  VSC: 'alert',
+  RED: 'alert',
+  CHEQUERED: undefined,
+  UNKNOWN: undefined,
+};
+
+/** The strip of live figures: the same pills as the replay desk, read from the SpacetimeDB tables. */
+function LiveStrip({ events, effects, led, status }: { events: readonly RaceEvents[]; effects: readonly RaceEffects[]; led: Ledger; status: TrackStatus }) {
+  const latest = events[0];
+  const lap = fieldLap(events);
+  const jev = useMemo(() => jevStats(effects), [effects]);
+  const bonuses = led.bonuses.filter(live).reduce((sum, b) => sum + b.midCents, 0n);
+  const pills: { k: string; label: string; value: string; tone?: PillTone }[] = [
+    { k: 'clock', label: 'UTC', value: latest ? utcClock(latest.at) : '—' },
+    { k: 'lap', label: 'Lap', value: lap ? `${lap} / ?` : '— / ?' },
+    { k: 'track', label: 'Track', value: status === 'UNKNOWN' ? TRACK_LABEL[status] : status, tone: TRACK_PILL[status] },
+    { k: 'cost', label: 'Race cost', value: led.cost.n ? usdShort(led.cost.mid) : '$0', tone: led.cost.mid > 0n ? 'alert' : undefined },
+    { k: 'prize', label: 'Prize projection', value: led.prize.n ? signed(led.prize.mid) : '—', tone: led.prize.mid < 0n ? 'alert' : led.prize.mid > 0n ? 'ok' : undefined },
+    { k: 'cap', label: 'Cap headroom', value: led.headroom ? usdShort(led.headroom.midCents) : '—', tone: led.headroom && led.headroom.midCents < 0n ? 'alert' : undefined },
+    { k: 'bonus', label: 'Sponsor bonuses', value: bonuses ? signed(bonuses) : '$0', tone: bonuses > 0n ? 'ok' : undefined },
+    { k: 'jev', label: 'Jev', value: jev.meanMs === null ? 'offline' : `${Math.round(jev.meanMs)}ms · ${jev.n} decisions`, tone: jev.meanMs === null ? undefined : 'ok' },
+  ];
+  return (
+    <ul className="pills" aria-label="Live figures">
+      {pills.map((p) => (
+        <li key={p.k} className={`pill${p.tone ? ` pill--${p.tone}` : ''}`}>
+          <span className="pill-label">{p.label}</span>
+          <b className="mono">{p.value}</b>
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+// ---------------------------------------------------------------- the team's cars
+
+/** What the race did to the car, from Jev's part probabilities on its latest cost booking. */
+function carDamage(car: CarState, effects: readonly RaceEffects[]): string | null {
+  const cost = effects
+    .filter((e) => e.driverNumber === car.driverNumber && e.kind === 'cost' && e.bucket === '6050' && live(e))
+    .sort((a, b) => sortTime(b.at) - sortTime(a.at));
+  for (const e of cost) {
+    const label = damageLabel(readJev(e.jevJson)?.parts ?? {});
+    if (label) return label;
+  }
+  if (cost.length) return 'damage booked';
+  return carVisual(car.status) === 'running' ? null : 'assessing';
+}
+
+function CarCard({ car, effects }: { car: CarState; effects: readonly RaceEffects[] }) {
   const st = CAR_STATUS[car.status] ?? { label: car.status.replace(/_/g, ' '), tone: '' };
   const code = DRIVERS[car.driverNumber] ?? '';
+  const visual = carVisual(car.status);
+  const damage = carDamage(car, effects);
   return (
     <article className={`car car--${car.status}`} aria-label={`Car ${car.driverNumber} ${code}`}>
+      <div className="car-stage">
+        <F1Car number={String(car.driverNumber)} state={visual} spinning={car.status === 'running'} damage={damage} title={`${TEAM} car ${car.driverNumber}${code ? `, ${code}` : ''}`} />
+      </div>
       <div className="car-pos">
         <b className="mono">P{car.position || '—'}</b>
         <span className="car-id">
           <span className="mono">#{car.driverNumber}</span> {code}
         </span>
+        <span className={`flag ${st.tone}`}>
+          {car.status === 'retired' ? <IconDenied size={12} /> : car.status === 'running' ? <IconLive size={12} /> : <IconWaiting size={12} />}
+          {st.label}
+        </span>
       </div>
-      <span className={`flag ${st.tone}`}>
-        {car.status === 'retired' ? <IconDenied size={12} /> : car.status === 'running' ? <IconLive size={12} /> : <IconWaiting size={12} />}
-        {st.label}
-      </span>
       <dl className="car-facts">
         <div>
           <dt>Tyre</dt>
@@ -118,16 +171,66 @@ function CarCard({ car }: { car: CarState }) {
           <dt>Last pit</dt>
           <dd className="mono">{car.lastPitLap ? `L${car.lastPitLap}` : '—'}</dd>
         </div>
+        {damage && visual !== 'crashed' && (
+          <div>
+            <dt>Damage</dt>
+            <dd className="tone-alert">{damage}</dd>
+          </div>
+        )}
       </dl>
     </article>
   );
 }
 
-function Timing({ cars }: { cars: readonly CarState[] }) {
+function Timing({ cars, effects }: { cars: readonly CarState[]; effects: readonly RaceEffects[] }) {
   const team = cars.filter((c) => c.teamName === TEAM || isTeamCar(c.driverNumber)).sort((a, b) => a.driverNumber - b.driverNumber);
   return (
     <section className="race-timing" aria-label="Team cars">
-      {team.length ? team.map((c) => <CarCard key={c.driverNumber} car={c} />) : <p className="muted">No car state yet.</p>}
+      {team.length ? team.map((c) => <CarCard key={c.driverNumber} car={c} effects={effects} />) : <p className="muted empty">No car state yet.</p>}
+    </section>
+  );
+}
+
+// ---------------------------------------------------------------- running order
+
+function RunningOrder({ cars, events }: { cars: readonly CarState[]; events: readonly RaceEvents[] }) {
+  const rows = useMemo(() => runningOrder(cars), [cars]);
+  const latest = events[0];
+  const lap = fieldLap(events);
+  return (
+    <section className="order" aria-labelledby="order-h">
+      <div className="order-head">
+        <h2 id="order-h">Running order</h2>
+        <span className="small muted">
+          {lap ? `Lap ${lap}` : 'Grid'} · {latest ? utcClock(latest.at) : '—'} UTC · {TEAM} in lime
+        </span>
+      </div>
+      {rows.length ? (
+        <ol className="order-strip">
+          {rows.map((c) => {
+            const ours = c.teamName === TEAM || isTeamCar(c.driverNumber);
+            const visual = carVisual(c.status);
+            const out = visual !== 'running';
+            return (
+              <li key={c.driverNumber} className={`order-card${ours ? ' order-card--ours' : ''}${out ? ' order-card--out' : ''}`}>
+                <span className="order-top">
+                  <b className="mono">{out ? 'OUT' : c.position ? `P${c.position}` : '—'}</b>
+                  <span className="mono muted">#{c.driverNumber}</span>
+                </span>
+                <span className="order-car">
+                  <F1Car mini number={String(c.driverNumber)} state={visual} tone={ours ? 'team' : 'field'} title={`${c.teamName || 'Car'} ${c.driverNumber}`} />
+                </span>
+                <span className="order-who">
+                  <b>{DRIVERS[c.driverNumber] ?? `#${c.driverNumber}`}</b>
+                  <span className="small muted">{c.teamName || '—'}</span>
+                </span>
+              </li>
+            );
+          })}
+        </ol>
+      ) : (
+        <p className="muted empty order-empty">No cars on the timing screen yet.</p>
+      )}
     </section>
   );
 }
@@ -143,7 +246,7 @@ function Tape({ events, moneyKeys }: { events: readonly RaceEvents[]; moneyKeys:
   }, [events, filter, all, moneyKeys]);
   const teamCount = useMemo(() => events.filter(involvesTeam).length, [events]);
   return (
-    <section className="race-tape" aria-labelledby="tape-h">
+    <section className="race-tape panel" aria-labelledby="tape-h">
       <div className="sec-head">
         <h2 id="tape-h">Event tape</h2>
         <div className="filters" role="group" aria-label="Filter the tape">
@@ -337,11 +440,58 @@ function EffectRow({ effect, connected }: { effect: RaceEffects; connected: bool
   );
 }
 
-function Money({ effects, connected }: { effects: readonly RaceEffects[]; connected: boolean }) {
-  const led = useMemo(() => ledger(effects), [effects]);
+const OUT_KINDS: Record<string, string> = { incident: 'incident', retirement_suspected: 'stopped', retirement_confirmed: 'out' };
+
+/** Cumulative race cost by lap, with the team's incidents marked on the laps they happened. */
+function CostChart({ effects, events }: { effects: readonly RaceEffects[]; events: readonly RaceEvents[] }) {
+  const data = useMemo(() => costByLap(effects, events, fieldLap(events)), [effects, events]);
+  const markers = useMemo(() => {
+    const seen = new Set<string>();
+    const out: Marker[] = [];
+    for (const e of events) {
+      const word = OUT_KINDS[e.kind];
+      if (!word || !isTeamCar(e.driverNumber)) continue;
+      const label = `#${e.driverNumber} ${word}`;
+      if (seen.has(label)) continue;
+      seen.add(label);
+      out.push({ x: e.lap, label, tone: 'alert' });
+    }
+    return out;
+  }, [events]);
+  const booked = data.mid[data.mid.length - 1] > 0;
+  if (!booked || data.xs.length < 2) {
+    return <p className="muted small">Nothing booked yet. The line starts when an event costs the team money.</p>;
+  }
+  return (
+    <LineChart
+      xs={data.xs}
+      series={[
+        { key: 'mid', label: 'mid', values: data.mid, color: '--lime', area: 0.1 },
+        { key: 'low', label: 'low', values: data.low, color: '--s1', dashed: true },
+        { key: 'high', label: 'high', values: data.high, color: '--s1', dashed: true },
+      ]}
+      xLabel={(x) => `L${x}`}
+      yLabel={(y) => usdShort(y)}
+      yMin={0}
+      height={200}
+      markers={markers}
+      tooltip={(i) => (
+        <div className="tooltip-row">
+          <span className="tooltip-line" style={{ background: 'var(--lime)' }} />
+          <span>
+            Lap {data.xs[i]} · <b className="mono">{usdShort(data.mid[i])}</b> <span className="muted mono">{usdShort(data.low[i])} – {usdShort(data.high[i])}</span>
+          </span>
+        </div>
+      )}
+      ariaLabel="Race cost by lap"
+    />
+  );
+}
+
+function Money({ effects, events, led, connected }: { effects: readonly RaceEffects[]; events: readonly RaceEvents[]; led: Ledger; connected: boolean }) {
   const latest = useMemo(() => effects.slice().sort((a, b) => sortTime(b.at) - sortTime(a.at)).slice(0, 20), [effects]);
   return (
-    <section className="race-money" aria-labelledby="money-h">
+    <section className="race-money panel" aria-labelledby="money-h">
       <div className="sec-head">
         <h2 id="money-h">Money</h2>
         <span className="muted">{effects.filter(live).length} live effects</span>
@@ -388,6 +538,8 @@ function Money({ effects, connected }: { effects: readonly RaceEffects[]; connec
           </dd>
         </div>
       </dl>
+      <h3>Race cost by lap</h3>
+      <CostChart effects={effects} events={events} />
       <h3>Latest effects</h3>
       {latest.length ? (
         <ul className="effects">
@@ -415,7 +567,7 @@ function Forecast({ forecast }: { forecast: RaceForecasts | null }) {
   const f = useMemo(() => (forecast ? readForecast(forecast) : null), [forecast]);
   if (!forecast || !f) {
     return (
-      <section className="race-forecast" aria-labelledby="fc-h">
+      <section className="race-forecast panel" aria-labelledby="fc-h">
         <div className="sec-head">
           <h2 id="fc-h">Incident forecast</h2>
         </div>
@@ -426,7 +578,7 @@ function Forecast({ forecast }: { forecast: RaceForecasts | null }) {
   const st = FORECAST_STATUS[forecast.status] ?? { label: forecast.status, tone: '' };
   const money = (c: number) => usdShort(c);
   return (
-    <section className="race-forecast" aria-labelledby="fc-h">
+    <section className="race-forecast panel" aria-labelledby="fc-h">
       <div className="sec-head">
         <h2 id="fc-h">Incident forecast</h2>
         <span className={`flag ${st.tone} ${st.pulse ? 'flag--pulse' : ''}`} role="status">
@@ -531,7 +683,7 @@ function Learning() {
   const policies = useMemo(() => race.policies.slice().sort((a, b) => b.hits - a.hits), [race.policies]);
   const precedents = useMemo(() => race.precedents.slice().sort((a, b) => sortTime(b.at) - sortTime(a.at)).slice(0, 5), [race.precedents]);
   return (
-    <section className="race-learning" aria-labelledby="learn-h">
+    <section className="race-learning panel" aria-labelledby="learn-h">
       <div className="sec-head">
         <h2 id="learn-h">Learning</h2>
         <span className="muted">
@@ -580,18 +732,24 @@ export function RaceView() {
     () => race.forecasts.reduce<RaceForecasts | null>((best, f) => (!best || sortTime(f.createdAt) >= sortTime(best.createdAt) ? f : best), null),
     [race.forecasts]
   );
+  const led = useMemo(() => ledger(race.effects), [race.effects]);
+  const status = useMemo(() => trackStatus(events), [events]);
   return (
-    <div className="race">
+    <div className="race race--live">
       <Header events={events} />
-      <Timing cars={race.cars} />
+      <LiveStrip events={events} effects={race.effects} led={led} status={status} />
+      <Timing cars={race.cars} effects={race.effects} />
+      <RunningOrder cars={race.cars} events={events} />
       {!race.connected && (
         <p className="muted loading race-span">Connecting to pit-wall on SpacetimeDB…</p>
       )}
-      <Tape events={events} moneyKeys={moneyKeys} />
-      <Money effects={race.effects} connected={race.connected} />
-      <div className="race-side">
-        <Forecast forecast={forecast} />
-        <Learning />
+      <div className="race-cols">
+        <Tape events={events} moneyKeys={moneyKeys} />
+        <div className="race-side">
+          <Money effects={race.effects} events={events} led={led} connected={race.connected} />
+          <Forecast forecast={forecast} />
+          <Learning />
+        </div>
       </div>
     </div>
   );
