@@ -399,6 +399,17 @@ export const RaceForecasts = __t.object("RaceForecasts", {
 });
 export type RaceForecasts = __Infer<typeof RaceForecasts>;
 
+export const RaceHealth = __t.object("RaceHealth", {
+  service: __t.string(),
+  status: __t.string(),
+  detail: __t.string(),
+  calls: __t.u32(),
+  errors: __t.u32(),
+  latencyMs: __t.u32(),
+  at: __t.string(),
+});
+export type RaceHealth = __Infer<typeof RaceHealth>;
+
 export const RaceIncidentInput = __t.object("RaceIncidentInput", {
   incidentKey: __t.string(),
   meetingKey: __t.u32(),

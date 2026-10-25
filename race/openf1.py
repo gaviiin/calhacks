@@ -31,6 +31,7 @@ SESSION_ENDPOINTS = (
 )
 
 _last_call = 0.0
+STATS = {"reads": 0, "cache": 0, "fetched": 0, "errors": 0}  # what this process asked the API for, shown on the dashboard
 
 
 class OpenF1Error(RuntimeError):
@@ -47,7 +48,9 @@ def get(path: str, *, refresh: bool = False, **params) -> list[dict]:
     global _last_call
     params = {k: v for k, v in params.items() if v is not None}
     cp = _cache_path(path, params)
+    STATS["reads"] += 1
     if cp.exists() and not refresh:
+        STATS["cache"] += 1
         return json.loads(cp.read_text())
     url = f"{BASE}/{path.strip('/')}"
     delay = 20.0
@@ -75,9 +78,11 @@ def get(path: str, *, refresh: bool = False, **params) -> list[dict]:
             raise OpenF1Error(f"{url}: HTTP {r.status_code} {r.text[:200]}")
         else:
             data = r.json()
+        STATS["fetched"] += 1
         CACHE.mkdir(parents=True, exist_ok=True)
         cp.write_text(json.dumps(data))
         return data
+    STATS["errors"] += 1
     raise OpenF1Error(f"{url}: rate limited after retries")
 
 

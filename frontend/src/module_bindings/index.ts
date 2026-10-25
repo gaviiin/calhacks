@@ -54,6 +54,7 @@ import RecordRaceActionsReducer from "./record_race_actions_reducer";
 import RecordRaceCloseReducer from "./record_race_close_reducer";
 import RecordRaceEffectsReducer from "./record_race_effects_reducer";
 import RecordRaceEventReducer from "./record_race_event_reducer";
+import RecordRaceHealthReducer from "./record_race_health_reducer";
 import RecordRaceOptionsReducer from "./record_race_options_reducer";
 import RecordRacePostingReducer from "./record_race_posting_reducer";
 import RecordRaceSimReducer from "./record_race_sim_reducer";
@@ -81,6 +82,7 @@ import RaceEntriesRow from "./race_entries_table";
 import RaceEntryLinesRow from "./race_entry_lines_table";
 import RaceEventsRow from "./race_events_table";
 import RaceForecastsRow from "./race_forecasts_table";
+import RaceHealthRow from "./race_health_table";
 import RaceIncidentsRow from "./race_incidents_table";
 import RaceOptionsRow from "./race_options_table";
 import RacePoliciesRow from "./race_policies_table";
@@ -278,6 +280,17 @@ const tablesSchema = __schema({
       { name: 'race_forecasts_forecast_key_key', constraint: 'unique', columns: ['forecastKey'] },
     ],
   }, RaceForecastsRow),
+  raceHealth: __table({
+    name: 'race_health',
+    indexes: [
+      { accessor: 'service', name: 'race_health_service_idx_btree', algorithm: 'btree', columns: [
+        'service',
+      ] },
+    ],
+    constraints: [
+      { name: 'race_health_service_key', constraint: 'unique', columns: ['service'] },
+    ],
+  }, RaceHealthRow),
   raceIncidents: __table({
     name: 'race_incidents',
     indexes: [
@@ -400,6 +413,7 @@ const reducersSchema = __reducers(
   __reducerSchema("record_race_close", RecordRaceCloseReducer),
   __reducerSchema("record_race_effects", RecordRaceEffectsReducer),
   __reducerSchema("record_race_event", RecordRaceEventReducer),
+  __reducerSchema("record_race_health", RecordRaceHealthReducer),
   __reducerSchema("record_race_options", RecordRaceOptionsReducer),
   __reducerSchema("record_race_posting", RecordRacePostingReducer),
   __reducerSchema("record_race_sim", RecordRaceSimReducer),

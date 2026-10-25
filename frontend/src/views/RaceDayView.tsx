@@ -12,6 +12,7 @@ import { Stage, clock, type Headline } from './raceday/shared';
 import { AccountingView } from './roles/AccountingView';
 import { CFOView } from './roles/CFOView';
 import { PitWallView } from './roles/PitWallView';
+import { ServiceStrip } from './roles/ServiceStrip';
 import { StrategyView } from './roles/StrategyView';
 
 // One weekend, a view for each person who works it. Every view reads the same live rows; none of them recommends.
@@ -69,6 +70,7 @@ function WeekendHeader({ meeting, who }: { meeting: number | null; who: string }
         Williams Racing{meeting && WEEKENDS[meeting] ? ` · ${WEEKENDS[meeting]}` : ''} · for the {who}
       </p>
       <p className="muted mono">{latest ? `${session !== null ? SESSIONS[session] ?? `session ${session}` : ''} · race time ${clock(latest)} UTC · live` : race.connected ? 'connected · no events yet' : 'connecting to pit-wall…'}</p>
+      <ServiceStrip />
     </header>
   );
 }

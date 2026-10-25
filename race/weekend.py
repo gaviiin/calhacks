@@ -229,8 +229,54 @@ class Weekend:
             self.replan(f"answer:{inc.incident_key}@v{inc.version}")
 
     # ------------------------------------------------------------------ run
+    def report_health(self, final: bool = False) -> None:
+        """What each outside service did on this run, written so every view can say what is live and what is not."""
+        if not self.sink:
+            return
+        from race import jev as jev_mod, openf1
+
+        now = now_iso()
+        st = self.state
+        o = openf1.STATS
+        src = "the checked-in fixtures (no network)" if self.fixtures_only else "api.openf1.org REST"
+        self.sink.call("record_race_health", ["openf1", "offline" if self.fixtures_only else ("degraded" if o["errors"] else "live"),
+                       f"{src}: {o['reads']} endpoint reads, {o['cache']} served from the cache of earlier API responses, {o['fetched']} fetched now"
+                       + ("; live MQTT needs the paid tier (race/live.py)" if not self.fixtures_only else ""), o["reads"], o["errors"], 0, now])
+        d = self._done
+        calls, errs = d["jev_calls"], d["jev_errors"]
+        mean = int(d["jev_ms_sum"] / calls) if calls else 0
+        jev_status = "offline" if self.offline else "not_configured" if not jev_mod.available() else "degraded" if errs else "live"
+        self.sink.call("record_race_health", ["jev", jev_status,
+                       f"TypeSafe System One: {calls} typed decisions" + (f", mean {mean} ms" if calls else "")
+                       + (f", {errs} fell back to the rule table" if errs else ""), calls, errs, mean, now])
+        has_claude = bool(os.environ.get("ANTHROPIC_API_KEY") or os.environ.get("ANTHROPIC_AUTH_TOKEN"))
+        by = (st.close.totals.get("briefs_by") if st.close else None) or {}
+        written = sum(1 for v in by.values() if v != "offline")
+        self.sink.call("record_race_health", ["claude", "offline" if self.offline else ("live" if has_claude else "not_configured"),
+                       f"repair and money plans after incidents: {d['forecasts']}; close briefs written by Claude: {written} of {len(by) or 4}",
+                       d["forecasts"] + written, 0, 0, now])
+        posted = sum(1 for p in st.postings.values() if p.status == "posted")
+        failed = sum(1 for p in st.postings.values() if p.status == "failed")
+        held = sum(1 for p in st.postings.values() if p.status == "held")
+        self.sink.call("record_race_health", ["erp", "offline" if (failed and not posted) else "degraded" if failed else "live",
+                       f"ERP journal via the gateway: {posted} posted, {held} held for review, {failed} failed", posted, failed, 0, now])
+        self.sink.call("record_race_health", ["spacetimedb", "degraded" if self.sink.errors else "live",
+                       f"pit-wall at {self.sink.url.split('/v1/')[0]}: {self.sink.calls} reducer calls, {self.sink.errors} refused", self.sink.calls,
+                       self.sink.errors, 0, now])
+        try:
+            from finance.notify.channels import ALL
+
+            configured = [name for name, cls in ALL.items() if cls(env=os.environ).configured()]
+        except Exception:  # the channel module is optional for the race desk
+            configured = []
+        mode = os.environ.get("PITWALL_NOTIFY", "dry")
+        self.sink.call("record_race_health", ["notify", "not_configured" if not configured else ("live" if mode == "live" else "dry_run"),
+                       ("channels: " + ", ".join(configured) if configured else "no Slack, email, Teams or SMS credentials yet (add them in Connect)")
+                       + f"; PITWALL_NOTIFY={mode}", len(configured), 0, 0, now])
+
     def run(self) -> dict:
         stats = {}
+        self._done = {"jev_calls": 0, "jev_ms_sum": 0.0, "jev_errors": 0, "forecasts": 0}  # totals of the finished sessions
         booked_before = 0
         for key in self.sessions:
             r = Replay(key, self.state.team, pace=self.pace, from_lap=0, sink=self.sink, offline=self.offline, forecast=self.forecast,
@@ -245,8 +291,15 @@ class Weekend:
             self.state.session_type = r.session_type
             if key == self.sessions[0]:
                 self.replan("baseline")
+                self.report_health()
             stats[key] = r.run()
             booked_before += r.ctx.race_cost_mid
+            done = stats[key]
+            self._done["jev_calls"] += done.get("jev_calls", 0)
+            self._done["jev_ms_sum"] += (done.get("jev_mean_ms") or 0) * done.get("jev_calls", 0)
+            self._done["jev_errors"] += done.get("jev_errors", 0)
+            self._done["forecasts"] += done.get("forecasts", 0)
+            self.report_health()
         waited = 0.0
         while self.linger and waited < self.linger and (any(q.status == "open" for q in self.state.questions.values())
                                                          or any(p.status == "held" for p in self.state.postings.values())):
@@ -261,6 +314,7 @@ class Weekend:
             if self.sink:
                 self.sink.close(c)
             self.say(f"[close] sealed {c.leaves} rows, root {c.root_hash[:12]}…, briefs for {', '.join(c.briefs)}")
+        self.report_health(final=True)
         stats["timings_ms"] = {k: round(sum(v) / len(v), 2) for k, v in self.timings.items() if v}
         if not self.quiet:
             print("weekend:", {k: v for k, v in stats.items() if k == "timings_ms"},
@@ -281,12 +335,14 @@ def main() -> None:
     ap.add_argument("--no-forecast", action="store_true")
     ap.add_argument("--quiet", action="store_true")
     ap.add_argument("--linger", type=float, default=0.0, help="seconds to wait for answers to open questions before the close")
+    ap.add_argument("--fixtures", action="store_true", default=os.environ.get("RACE_SOURCE", "openf1") == "fixtures",
+                    help="read the checked-in fixtures instead of the OpenF1 API (no network)")
     args = ap.parse_args()
     from_at = {int(k): v for k, v in (x.split("=", 1) for x in args.from_at)}
     sink = None if args.no_sink else RaceSink()
     Weekend(args.meeting, pace=args.pace, sink=sink, offline=args.offline, forecast=not args.no_forecast, max_sleep=args.max_sleep,
             quiet=args.quiet, from_at=from_at, sessions=[int(s) for s in args.sessions.split(",")] if args.sessions else None,
-            linger=args.linger).run()
+            linger=args.linger, fixtures_only=args.fixtures).run()
 
 
 if __name__ == "__main__":

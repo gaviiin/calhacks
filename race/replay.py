@@ -33,15 +33,21 @@ EUROPE = {"Spain", "Monaco", "Austria", "United Kingdom", "Great Britain", "Hung
           "Germany", "France", "Portugal", "San Marino"}
 
 
-def load_rows(session_key: int, fixtures_only: bool = False) -> dict[str, list[dict]]:
-    try:
-        return openf1.load_fixture(session_key, FIXTURES)
-    except openf1.OpenF1Error:
-        if fixtures_only:
-            raise
-    rows = openf1.load_session(session_key)
-    rows["session"] = [openf1.session(session_key)]
-    return rows
+def load_rows(session_key: int, fixtures_only: bool = False, team_cars: list[int] | None = None) -> dict[str, list[dict]]:
+    """The session's rows. From the OpenF1 API (api.openf1.org, every response cached under race/.cache) unless
+    fixtures_only, which reads the checked-in fixtures and never the network; a failed API read falls back to them."""
+    if not fixtures_only:
+        try:
+            rows = openf1.load_session(session_key)
+            s = openf1.session(session_key)
+            rows["session"] = [s]
+            cars = team_cars or [int(d["driver_number"]) for d in rows.get("drivers", []) if d.get("team_name") == os.environ.get("RACE_TEAM", "Williams")]
+            rows["car_data"] = {car: openf1.load_telemetry(s, car) for car in cars}
+            if rows.get("laps"):
+                return rows
+        except openf1.OpenF1Error as exc:
+            print(f"  openf1: API read failed ({exc}); using the checked-in fixture")
+    return openf1.load_fixture(session_key, FIXTURES)
 
 
 def next_race(session: dict) -> tuple[int | None, bool]:
@@ -173,6 +179,8 @@ class Replay:
                 if not jev.offline:
                     self.stats["jev_calls"] += 1
                     self.stats["jev_ms"].append(jev.latency_ms)
+                elif getattr(jev, "error", ""):
+                    self.stats["jev_errors"] = self.stats.get("jev_errors", 0) + 1
         if self.session_type != "Race" and ev.kind in ("position", "standings"):
             effects = []  # a qualifying order is not a result: no prize or bonus projection from it
         else:

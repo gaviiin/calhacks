@@ -15,6 +15,7 @@ import type {
   RaceOptions,
   RacePolicies,
   RacePostings,
+  RaceHealth,
   RacePrecedents,
   RaceQuestions,
   RaceSims,
@@ -66,6 +67,7 @@ export interface RaceData {
   closes: readonly RaceCloses[];
   options: readonly RaceOptions[];
   postings: readonly RacePostings[];
+  health: readonly RaceHealth[];
   /** A person reviews an entry held back from the ERP: approved (the desk posts it) or rejected. */
   decidePosting: (args: { entryKey: string; status: string; by: string; at: string }) => Promise<void>;
   /** A person decides an action that waits for them (approved | rejected | done | cancelled). */
@@ -103,6 +105,7 @@ const Ctx = createContext<RaceData>({
   closes: [],
   options: [],
   postings: [],
+  health: [],
   decidePosting: () => Promise.reject(new Error('not connected to pit-wall')),
   decideAction: () => Promise.reject(new Error('not connected to pit-wall')),
   chooseOption: () => Promise.reject(new Error('not connected to pit-wall')),
@@ -128,6 +131,7 @@ export function RaceBridge({ children }: { children: ReactNode }) {
   const [closes] = useTable(tables.raceCloses);
   const [options] = useTable(tables.raceOptions);
   const [postings] = useTable(tables.racePostings);
+  const [health] = useTable(tables.raceHealth);
   const identityHex = conn.identity?.toHexString() ?? null;
   const getConnection = conn.getConnection;
 
@@ -167,10 +171,10 @@ export function RaceBridge({ children }: { children: ReactNode }) {
   const value = useMemo<RaceData>(
     () => ({
       connected: conn.isActive, identityHex, events, cars, effects, forecasts, policies, precedents, correct, confirm,
-      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, options, postings, decidePosting, decideAction, chooseOption, answer, approveClose,
+      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, options, postings, health, decidePosting, decideAction, chooseOption, answer, approveClose,
     }),
     [conn.isActive, identityHex, events, cars, effects, forecasts, policies, precedents, correct, confirm,
-      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, options, postings, decidePosting, decideAction, chooseOption, answer, approveClose]
+      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, options, postings, health, decidePosting, decideAction, chooseOption, answer, approveClose]
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

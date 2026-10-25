@@ -6044,3 +6044,49 @@ code {
   display: inline-grid;
   gap: 2px;
 }
+
+/* ---------------------------------------------------------------- role views: services strip */
+
+.services {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+
+.service {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+}
+
+.service-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--muted);
+}
+
+.service--live .service-dot {
+  background: var(--lime);
+}
+
+.service--degraded .service-dot,
+.service--dry_run .service-dot {
+  background: var(--hold);
+}
+
+.service--offline .service-dot {
+  background: var(--alert);
+}
+
+.roles-head {
+  margin-bottom: 10px;
+}
+
+.roletabs {
+  margin-top: 0;
+}

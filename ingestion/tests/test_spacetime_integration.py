@@ -203,4 +203,7 @@ def test_module_tables_are_the_evidence_and_finance_mirror(owner_db):
         "raceQuestions",
         "raceSims",
         "raceCloses",
+        "raceOptions",
+        "racePostings",
+        "raceHealth",
     }

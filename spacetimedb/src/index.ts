@@ -404,6 +404,21 @@ const racePostings = table(
   }
 );
 
+// Which outside services the desk actually used on this run, and how they did: OpenF1, Jev, Claude, the ERP,
+// SpacetimeDB itself, the notification channels. Shown on every view so nothing claims to be live that is not.
+const raceHealth = table(
+  { name: 'race_health', public: true },
+  {
+    service: t.string().primaryKey(), // openf1 | jev | claude | erp | spacetimedb | notify
+    status: t.string(), // live | degraded | offline | dry_run | not_configured
+    detail: t.string(),
+    calls: t.u32(),
+    errors: t.u32(),
+    latencyMs: t.u32(), // mean, when it makes sense
+    at: t.string(),
+  }
+);
+
 const spacetimedb = schema({
   fiaDocuments,
   config,
@@ -428,6 +443,7 @@ const spacetimedb = schema({
   raceCloses,
   raceOptions,
   racePostings,
+  raceHealth,
 });
 export default spacetimedb;
 
@@ -1184,5 +1200,18 @@ export const decideRacePosting = spacetimedb.reducer(
     if (!cur) throw new SenderError('no such posting');
     if (cur.status !== 'held') throw new SenderError('invalid decision: the entry is not held for review');
     ctx.db.racePostings.entryKey.update({ ...cur, status, by, at, reason: `${status} by ${by}: ${cur.reason}`.slice(0, 512) });
+  }
+);
+
+const HEALTH = ['live', 'degraded', 'offline', 'dry_run', 'not_configured'];
+export const recordRaceHealth = spacetimedb.reducer(
+  { service: t.string(), status: t.string(), detail: t.string(), calls: t.u32(), errors: t.u32(), latencyMs: t.u32(), at: t.string() },
+  (ctx, row) => {
+    requireRole(ctx, 'race');
+    if (!HEALTH.includes(row.status)) throw new SenderError('invalid health: unknown status');
+    requireIso('at', row.at);
+    requireLen('detail', row.detail, 512);
+    if (ctx.db.raceHealth.service.find(row.service)) ctx.db.raceHealth.service.update(row);
+    else ctx.db.raceHealth.insert(row);
   }
 );
