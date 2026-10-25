@@ -1,10 +1,10 @@
-import { lazy, Suspense, useCallback, useMemo, useRef, useState, type ReactNode } from 'react';
+import { lazy, Suspense, useCallback, useMemo, useRef, useState } from 'react';
 import { Callout, ExplodeIcon, Legend, assessing, tonesFor, type StageCar } from '../../blueprint/CarBlueprint';
 import { COST_LABELS, groupOf, type CostId } from '../../blueprint/catalog';
 import { HEALTH_WORDS, LIKELY, POSSIBLE, healthOf, partsFor, type CarCondition, type CarStatus } from '../../blueprint/condition';
 import type { BlueprintEngine } from '../../blueprint/engine/engine';
 import { hasWebGL2 } from '../../blueprint/load';
-import { IconApproved, IconDenied, IconFlag, IconLive, IconQuestion, IconRestart, IconWaiting } from '../../components/icons';
+import { IconRestart } from '../../components/icons';
 import { pct, usdShort } from '../../lib/format';
 import { useRace, type RaceData } from '../../lib/race';
 import { DRIVERS, TEAM, TRACK_LABEL, payloadOf, sortTime, trackStatus, type TrackStatus } from '../../lib/raceModel';
@@ -12,13 +12,13 @@ import type { CarState, RaceActions, RaceBeliefs, RaceEvents, RaceIncidents } fr
 import { QuestionCard } from '../raceday/AskPanel';
 import { ActButton, clock, parse, roleLabel } from '../raceday/shared';
 import { SEVERITIES, incidentCondition, readBelief, repairedCondition, sparesFor, topSeverity, type Belief, type IncidentInput, type SpareReading } from './incidentCondition';
+import { Axis, Figure, Meter, Panel, Pill, Stack, type Tone } from './kit';
 import './pitwall.css';
 
-// The pit wall: for the pit crew and the race engineers. One card per Williams car, the blueprint lit by what the desk
-// believes about the car right now (the incident belief, version by version), the car's state in words, its timing
-// line, the parts likely damaged with where each replacement comes from, the garage check, the chief mechanic's damage
-// question and any start-or-withdraw decision waiting for the Team Principal. Beside them, the track and the order.
-// Nothing here is about another team's money.
+// The pit wall: for the pit crew and the race engineers. Three questions, per Williams car: what is its condition now
+// (the blueprint lit by the incident belief, version by version), which parts are likely broken and is there a spare,
+// and will it run (the garage check, the damage question, the start-or-withdraw options). Beside them, the track and
+// the order. Explanations live in hover titles; nothing here is about another team's money.
 
 const Sheet = lazy(() => import('../../blueprint/Sheet'));
 
@@ -121,16 +121,23 @@ export function readTape(events: readonly RaceEvents[]): Tape {
 
 type Words = 'running' | 'pit' | 'garage' | 'stopped' | 'out' | 'dns' | 'dsq' | 'finished' | 'waiting';
 
-const WORDS: Record<Words, { word: string; tone: string; icon: ReactNode }> = {
-  running: { word: 'Running', tone: 'ok', icon: <IconLive size={13} /> },
-  finished: { word: 'Finished', tone: 'ok', icon: <IconApproved size={13} /> },
-  pit: { word: 'In the pit', tone: 'hold', icon: <IconWaiting size={13} /> },
-  garage: { word: 'In the garage', tone: 'hold', icon: <IconWaiting size={13} /> },
-  stopped: { word: 'Stopped', tone: 'alert', icon: <IconWaiting size={13} /> },
-  out: { word: 'Out', tone: 'alert', icon: <IconDenied size={13} /> },
-  dsq: { word: 'Disqualified', tone: 'alert', icon: <IconDenied size={13} /> },
-  dns: { word: 'Did not start', tone: 'alert', icon: <IconDenied size={13} /> },
-  waiting: { word: 'Not on track yet', tone: 'muted', icon: <IconWaiting size={13} /> },
+// Blue is kept for a person's action, so a healthy car reads in sky; amber waits, red is off.
+const WORDS: Record<Words, { word: string; tone: Tone }> = {
+  running: { word: 'Running', tone: 'info' },
+  finished: { word: 'Finished', tone: 'info' },
+  pit: { word: 'In the pit', tone: 'wait' },
+  garage: { word: 'In the garage', tone: 'wait' },
+  stopped: { word: 'Stopped', tone: 'bad' },
+  out: { word: 'Out', tone: 'bad' },
+  dsq: { word: 'Disqualified', tone: 'bad' },
+  dns: { word: 'Did not start', tone: 'bad' },
+  waiting: { word: 'Not on track yet', tone: 'neutral' },
+};
+
+/** The 2024 entry list, only to name a car the tape never named (the tape's own acronym always wins). */
+const GRID_2024: Record<number, string> = {
+  1: 'VER', 11: 'PER', 4: 'NOR', 81: 'PIA', 16: 'LEC', 55: 'SAI', 44: 'HAM', 63: 'RUS', 14: 'ALO', 18: 'STR',
+  10: 'GAS', 31: 'OCO', 23: 'ALB', 43: 'COL', 22: 'TSU', 30: 'LAW', 27: 'HUL', 50: 'BEA', 20: 'MAG', 77: 'BOT', 24: 'ZHO', 2: 'SAR',
 };
 
 const DRAW: Record<Words, CarStatus> = { running: 'running', finished: 'running', pit: 'pit', garage: 'pit', stopped: 'stopped', out: 'out', dsq: 'dsq', dns: 'out', waiting: 'running' };
@@ -295,73 +302,106 @@ export function PitWallView() {
 
 // ------------------------------------------------------------------------------------------ track and order
 
-const TRACK_TONE: Record<TrackStatus, string> = { GREEN: 'ok', SC: 'hold', VSC: 'hold', RED: 'alert', CHEQUERED: 'muted', UNKNOWN: 'muted' };
-
 function TrackPanel({ tape, cars }: { tape: Tape; cars: CarRead[] }) {
   const ours = new Map(cars.map((c) => [c.number, c]));
   const order = useMemo(() => {
     const rows = [...tape.cars.entries()]
       .filter(([, t]) => t.position)
-      .map(([n, t]) => ({ n, pos: t.position!, team: t.team, out: !!t.retired || ours.get(n)?.words === 'out' || ours.get(n)?.words === 'stopped' || ours.get(n)?.words === 'dns' }));
+      .map(([n, t]) => {
+        const w = ours.get(n)?.words;
+        const dns = !!t.retired?.dns || w === 'dns';
+        return { n, pos: t.position!, team: t.team, dns, out: dns || !!t.retired || w === 'out' || w === 'stopped' };
+      });
     rows.sort((a, b) => Number(a.out) - Number(b.out) || a.pos - b.pos || a.n - b.n);
     return rows;
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tape, cars]);
-  const tone = TRACK_TONE[tape.track];
   return (
-    <aside className="pw-track" aria-label="Track and running order">
-      <div className={`pw-flag pw-flag--${tone}`} role="status">
-        <IconFlag size={16} />
-        <span className="pw-flag-word">{TRACK_LABEL[tape.track]}</span>
-      </div>
-      <p className="pw-track-meta mono">
-        {tape.sessionName}
-        {tape.fieldLap ? ` · lap ${tape.fieldLap}` : ''}
-        {tape.last ? ` · ${clock(tape.last)} UTC` : ''}
-      </p>
-      <h3 className="pw-h">Running order</h3>
-      {order.length ? (
-        <ol className="pw-order">
-          {order.map((r, i) => {
-            const mine = r.team === TEAM;
-            return (
-              <li key={r.n} className={`${mine ? 'pw-order--ours' : ''} ${r.out ? 'pw-order--out' : ''}`}>
-                <span className="pw-order-pos mono">{r.out ? 'OUT' : i + 1}</span>
-                <span className="pw-order-car mono">
-                  {r.n} {tape.codes.get(r.n) ?? ''}
-                </span>
-                <span className="pw-order-team">{mine ? 'Williams' : r.team}</span>
-              </li>
-            );
-          })}
-        </ol>
-      ) : (
-        <p className="muted small">No positions on the tape yet.</p>
-      )}
-      {cars.some((c) => c.words === 'dns') && (
-        <p className="muted small pw-dns">
-          {cars
-            .filter((c) => c.words === 'dns')
-            .map((c) => `${c.number} ${c.code}`)
-            .join(', ')}{' '}
-          did not start.
-        </p>
-      )}
+    <aside className="pw-rail" aria-label="Track and running order">
+      <Panel title="Track" aside={tape.last ? `${clock(tape.last)} UTC` : undefined} className="pw-trackp">
+        <div className={`pw-flag pw-flag--${tape.track}`} role="status">
+          <i className="pw-flagmark" aria-hidden />
+          <b>{TRACK_LABEL[tape.track]}</b>
+        </div>
+        <div className="pw-track-figs">
+          <Figure size="sm" label="Session" value={tape.sessionName} />
+          <Figure size="sm" label="Lap" value={tape.fieldLap ?? '—'} />
+        </div>
+      </Panel>
+      <Panel title="Running order" aside={order.length ? `${order.filter((r) => !r.out).length} running` : undefined} className="pw-orderp">
+        {order.length ? (
+          <ol className="pw-order">
+            {order.map((r, i) => {
+              const mine = r.team === TEAM;
+              return (
+                <li key={r.n} className={`${mine ? 'pw-order--ours' : ''} ${r.out ? 'pw-order--out' : ''}`} title={r.team}>
+                  <span className="pw-order-pos">{r.out ? (r.dns ? 'DNS' : 'OUT') : i + 1}</span>
+                  <span className="pw-order-num">{r.n}</span>
+                  <span className="pw-order-code">{tape.codes.get(r.n) ?? GRID_2024[r.n] ?? ''}</span>
+                  <span className="pw-order-team">{mine ? 'Williams' : r.team}</span>
+                </li>
+              );
+            })}
+          </ol>
+        ) : (
+          <p className="pw-empty">Positions appear with the first lap.</p>
+        )}
+      </Panel>
     </aside>
   );
 }
 
 // ------------------------------------------------------------------------------------------ one car card
 
-function timingLine(c: CarRead): string {
-  const bits: string[] = [];
-  if (c.words === 'dns') bits.push('no grid slot');
-  else bits.push(c.position ? `P${c.position}` : 'P—');
-  if (c.lap) bits.push(`lap ${c.lap}`);
-  if (c.tyre && c.words !== 'dns') bits.push(`${c.tyre.compound} ${c.tyre.age} lap${c.tyre.age === 1 ? '' : 's'}`);
-  if (c.gap) bits.push(c.gap);
-  if (c.lastPit) bits.push(`pit L${c.lastPit}`);
-  return bits.join(' · ');
+const COMPOUND: Record<string, string> = { SOFT: 'S', MEDIUM: 'M', HARD: 'H', INTERMEDIATE: 'I', WET: 'W' };
+
+function TimingStrip({ c }: { c: CarRead }) {
+  const source = c.timing === 'tape' ? 'From the timing tape (positions, laps, stints)' : c.timing === 'car_state' ? 'From car_state' : 'No timing yet';
+  if (c.words === 'dns')
+    return (
+      <dl className="pw-timing" title={source}>
+        <div>
+          <dt>Grid</dt>
+          <dd>No slot</dd>
+        </div>
+      </dl>
+    );
+  return (
+    <dl className="pw-timing" title={source}>
+      <div>
+        <dt>Pos</dt>
+        <dd>{c.position ? `P${c.position}` : '—'}</dd>
+      </div>
+      <div>
+        <dt>Lap</dt>
+        <dd>{c.lap ?? '—'}</dd>
+      </div>
+      {c.tyre ? (
+        <div title={`${c.tyre.compound.toLowerCase()}, ${c.tyre.age} lap${c.tyre.age === 1 ? '' : 's'} old`}>
+          <dt>Tyre</dt>
+          <dd>
+            <i className={`pw-tyre pw-tyre--${COMPOUND[c.tyre.compound] ?? 'X'}`} aria-hidden>
+              {COMPOUND[c.tyre.compound] ?? c.tyre.compound.slice(0, 1)}
+            </i>
+            {c.tyre.age}
+            <span className="pw-sr"> laps on {c.tyre.compound.toLowerCase()}</span>
+          </dd>
+        </div>
+      ) : null}
+      {c.gap ? (
+        <div>
+          <dt>Gap</dt>
+          <dd>{c.gap}</dd>
+        </div>
+      ) : null}
+      {c.lastPit ? (
+        <div>
+          <dt>Pit</dt>
+          <dd>L{c.lastPit}</dd>
+        </div>
+      ) : null}
+    </dl>
+  );
 }
 
 /** Keep a condition by value, so a new event that changes nothing about the car does not re-tone the drawing. */
@@ -400,63 +440,62 @@ function CarCard({ car }: { car: CarRead }) {
   );
   const w = WORDS[car.words];
   const actions = inc ? race.actions.filter((a) => a.incidentKey === inc.incidentKey) : [];
+  const hasQuestion = !!inc && race.questions.some((q) => q.incidentKey === inc.incidentKey && q.kind === 'damage');
+  const hasDecision = actions.some((x) => x.kind === 'withdraw_car' && (x.status === 'awaiting_approval' || x.status === 'approved'));
 
   return (
-    <article className={`pw-car pw-car--${w.tone}`} aria-labelledby={`pw-car-${car.number}`}>
+    <article className="k-panel pw-car" aria-labelledby={`pw-car-${car.number}`}>
       <header className="pw-car-head">
+        <span className="pw-car-num" aria-hidden>
+          {car.number}
+        </span>
         <div className="pw-car-id">
-          <span className="pw-car-num mono">{car.number}</span>
-          <div>
-            <h2 id={`pw-car-${car.number}`}>
-              {car.code}
-              {car.name ? <span className="pw-car-name"> {car.name}</span> : null}
-            </h2>
-            <p className="pw-timing mono" title={car.timing === 'tape' ? 'From the timing tape (positions, laps, stints)' : car.timing === 'car_state' ? 'From car_state' : 'No timing yet'}>
-              {timingLine(car)}
-            </p>
-          </div>
+          <h2 id={`pw-car-${car.number}`}>
+            <span className="pw-sr">Car {car.number} </span>
+            {car.code}
+            {car.name ? <span className="pw-car-name">{car.name}</span> : null}
+          </h2>
+          <TimingStrip c={car} />
         </div>
-        <div className={`pw-status pw-status--${w.tone}`} role="status">
-          {w.icon}
-          <b>{w.word}</b>
-          {car.note ? <span className="pw-status-note">{car.note}</span> : null}
+        <div className="pw-car-state" role="status" title={car.note || undefined}>
+          <Pill tone={w.tone}>{w.word}</Pill>
+          {car.note ? <span className="pw-car-note">{car.note}</span> : null}
         </div>
       </header>
 
       <div className="pw-car-body">
         <div className="pw-car-sheet">
           <PitSheet car={stageCar} highlightCost={hoverPart} />
-          {pickedRow ? (
-            <p className="pw-replaying" role="status">
-              <IconRestart size={12} /> Showing belief v{pickedRow.version} as at {clock(pickedRow.at)}.{' '}
-              <button type="button" className="pw-linkbtn" onClick={() => setPicked(null)}>
-                Back to live
-              </button>
-            </p>
-          ) : null}
-          {inc ? <BeliefHistory history={history} live={inc.version} picked={picked} onPick={setPicked} /> : null}
+          {inc ? <BeliefHistory history={history} live={inc.version} picked={pickedRow ? picked : null} onPick={setPicked} /> : null}
         </div>
 
         <div className="pw-car-side">
           {car.repairedSince ? (
-            <p className="pw-quiet">
-              <IconApproved size={13} /> Repaired after the {car.repairedSince}; every part reads nominal.
+            <p className="pw-quiet" title={`Repaired after the ${car.repairedSince}; every part reads nominal.`}>
+              <Pill tone="info">All parts nominal</Pill>
+              <span>Repaired after the {car.repairedSince}</span>
             </p>
           ) : !inc ? (
-            <p className="pw-quiet">
-              <IconApproved size={13} /> No incident this weekend. {condition.source !== 'none' ? `${condition.label}.` : 'Every part reads nominal.'}
+            <p className="pw-quiet" title={condition.source !== 'none' ? condition.label : 'Every part reads nominal.'}>
+              <Pill tone="info">No incident</Pill>
+              <span>{condition.source !== 'none' ? condition.label : 'Every part reads nominal'}</span>
             </p>
           ) : (
             <>
               <BeliefNow key={`${inc.incidentKey}:${input!.version}`} inc={inc} belief={belief!} version={input!.version} status={input!.status} at={input!.at} live={!pickedRow} />
-              <PartsList condition={condition} spares={sparesFor(race.actions, inc.incidentKey)} onHover={setHoverPart} />
+              <PartsTable condition={condition} spares={sparesFor(race.actions, inc.incidentKey)} onHover={setHoverPart} />
               <GarageCheck actions={actions} />
-              <DamageQuestions incidentKey={inc.incidentKey} />
-              <WithdrawDecision actions={actions} />
             </>
           )}
         </div>
       </div>
+
+      {inc && (hasQuestion || hasDecision) ? (
+        <div className={`pw-car-foot ${hasQuestion && hasDecision ? 'pw-car-foot--two' : ''}`}>
+          <DamageQuestions incidentKey={inc.incidentKey} />
+          <WithdrawDecision actions={actions} />
+        </div>
+      ) : null}
     </article>
   );
 }
@@ -478,7 +517,11 @@ function PitSheet({ car, highlightCost }: { car: StageCar; highlightCost: CostId
   const onPick = useCallback((id: string | null) => setPin((cur) => (!id || (cur && groupOf(cur).includes(id)) ? null : id)), []);
 
   if (!webgl || failed) {
-    return <p className="muted small pw-nogl">{failed ? `The 3D drawing could not start: ${failed}` : 'This browser has no WebGL 2, so the 3D drawing is off; the parts list beside it reads the same belief.'}</p>;
+    return (
+      <p className="pw-nogl" title={failed ?? 'This browser has no WebGL 2; the parts table reads the same belief.'}>
+        {failed ? 'The 3D drawing could not start.' : 'No WebGL 2 here: the drawing is off; the parts table reads the same belief.'}
+      </p>
+    );
   }
   return (
     <div className="bp-stage bp-stage--replay pw-stage" onKeyDown={(e) => (e.key === 'Escape' ? setPin(null) : e.key === 'e' || e.key === 'E' ? setExploded((x) => !x) : null)}>
@@ -524,102 +567,108 @@ function PitSheet({ car, highlightCost }: { car: StageCar; highlightCost: CostId
 
 // ------------------------------------------------------------------------------------------ what we believe now
 
-const SEV_TONE: Record<string, string> = { heavy: 'alert', moderate: 'hold', light: 'steel', none: 'line' };
+const SEV_TONE: Record<string, 'bad' | 'wait' | 'neutral' | 'gray'> = { heavy: 'bad', moderate: 'wait', light: 'neutral', none: 'gray' };
+const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);
 
-function SeverityBar({ belief }: { belief: Belief }) {
-  const sev = belief.severity ?? {};
-  const total = SEVERITIES.reduce((s, k) => s + (sev[k] ?? 0), 0);
-  if (!total) return null;
-  return (
-    <div className="pw-sev" aria-label="P(severity)">
-      <div className="pw-sev-bar" aria-hidden>
-        {SEVERITIES.map((k) => (sev[k] ? <i key={k} className={`pw-sev--${SEV_TONE[k]}`} style={{ flexGrow: sev[k] }} /> : null))}
-      </div>
-      <p className="pw-sev-keys mono">
-        {SEVERITIES.filter((k) => sev[k]).map((k) => (
-          <span key={k}>
-            {k} {pct(sev[k]!, 0)}
-          </span>
-        ))}
-      </p>
-    </div>
-  );
+function sevParts(b: Belief) {
+  const sev = b.severity ?? {};
+  return SEVERITIES.filter((k) => (sev[k] ?? 0) > 0).map((k) => ({ label: cap(k), value: sev[k]!, tone: SEV_TONE[k] }));
 }
 
 function BeliefNow({ inc, belief, version, status, at, live }: { inc: RaceIncidents; belief: Belief; version: number; status: string; at: string; live: boolean }) {
   const top = topSeverity(belief);
-  const what: string[] = [];
-  if (belief.impact_kph) what.push(`stopped from ${belief.impact_kph} km/h${belief.decel_g ? `, ${belief.decel_g} g` : ''}`);
-  else what.push('race-control incident');
-  if (belief.where) what.push(belief.where.startsWith('L') ? `lap ${belief.where.slice(1)}` : belief.where);
-  if (belief.session_type) what.push(belief.session_type.toLowerCase());
+  const parts = sevParts(belief);
+  const lap = belief.where?.startsWith('L') ? belief.where.slice(1) : belief.lap ? String(belief.lap) : null;
+  const place = belief.where && !belief.where.startsWith('L') ? belief.where : null;
   return (
-    <section className={`pw-now ${live ? 'pw-now--live' : ''}`}>
-      <p className="pw-now-top">
-        <span className="pw-chip mono">
-          v{version} · {status}
+    <section className={`pw-now ${live ? 'pw-now--live' : ''}`} title={inc.cause && live ? `Last change: ${inc.cause}` : undefined}>
+      <h3 className="pw-h">
+        Damage belief
+        {live ? <Pill tone="info">Live</Pill> : <Pill tone="wait">Replay</Pill>}
+        <span className="pw-h-aside">
+          v{version} · {status} · {clock(at)}
         </span>
-        <span className="muted mono">{clock(at)} UTC</span>
-        {live ? <span className="pw-livechip">live</span> : null}
-      </p>
-      <p className="pw-now-what">
-        {what.join(' · ')}
-        {top ? (
-          <>
-            {' · '}
-            <b>
-              {belief.assessed_as ? `assessed ${belief.assessed_as}` : `${top.name} ${pct(top.p, 0)}`}
-            </b>
-          </>
-        ) : null}
-      </p>
-      <SeverityBar belief={belief} />
-      {inc.cause && live ? <p className="muted small pw-cause">Last change: {inc.cause}</p> : null}
+      </h3>
+      <div className="pw-now-figs">
+        <Figure
+          size="sm"
+          label="Impact"
+          value={belief.impact_kph ? `${belief.impact_kph} km/h` : '—'}
+          sub={belief.impact_kph ? (belief.decel_g ? `${belief.decel_g} g` : undefined) : 'race control'}
+        />
+        <Figure size="sm" label={lap ? 'Lap' : 'Where'} value={lap ?? place ?? '—'} sub={belief.session_type ? cap(belief.session_type.toLowerCase()) : undefined} />
+        <Figure
+          size="sm"
+          label={belief.assessed_as ? 'Assessed' : 'Likeliest'}
+          value={belief.assessed_as ? cap(belief.assessed_as) : top ? cap(top.name) : '—'}
+          sub={!belief.assessed_as && top ? pct(top.p, 0) : belief.assessed_by ? `by ${belief.assessed_by}` : undefined}
+        />
+      </div>
+      {parts.length ? <Stack parts={parts} height={8} /> : <p className="pw-empty">Severity appears once the desk reads the stop.</p>}
     </section>
   );
 }
 
 // ------------------------------------------------------------------------------------------ parts and spares
 
-const HEALTH_MARK: Record<string, string> = { damaged: '✕', watch: '△', ok: '○' };
+const HEALTH_TONE: Record<string, Tone> = { damaged: 'bad', watch: 'wait', ok: 'neutral' };
 
-function spareWords(s: SpareReading | undefined, p: number): { text: string; tone: string } {
-  if (!s) return p >= LIKELY ? { text: 'not reserved yet', tone: 'hold' } : { text: 'not reserved (P under 50%)', tone: 'muted' };
-  if (s.released) return { text: 'reservation released', tone: 'muted' };
-  if (s.source === 'at_track') return { text: `at track${s.atTrackAfter !== null ? `, ${s.atTrackAfter} left after this` : ''}`, tone: 'ok' };
-  if (s.source === 'factory') return { text: 'from the factory (Grove)', tone: 'hold' };
-  return { text: 'to be made', tone: 'alert' };
+function sparePill(s: SpareReading | undefined, p: number): { text: string; tone: Tone; title: string } {
+  if (!s)
+    return p >= LIKELY
+      ? { text: 'Not reserved', tone: 'wait', title: 'Likely damaged and no spare reserved yet' }
+      : { text: 'Not reserved', tone: 'neutral', title: `Not reserved: P under ${pct(LIKELY, 0)}` };
+  if (s.released) return { text: 'Released', tone: 'neutral', title: 'Reservation released: the belief dropped below the line' };
+  if (s.source === 'at_track')
+    return { text: s.atTrackAfter !== null ? `At track · ${s.atTrackAfter} left` : 'At track', tone: 'info', title: `Spare at the track${s.atTrackAfter !== null ? `; ${s.atTrackAfter} left after this one` : ''}` };
+  if (s.source === 'factory') return { text: 'Grove', tone: 'wait', title: `From the factory (Grove)${s.factoryAfter !== null ? `; ${s.factoryAfter} left there after this` : ''}` };
+  return { text: 'To be made', tone: 'bad', title: 'No spare: the part has to be made' };
 }
 
-function PartsList({ condition, spares, onHover }: { condition: CarCondition; spares: Partial<Record<CostId, SpareReading>>; onHover: (c: CostId | null) => void }) {
+function PartsTable({ condition, spares, onHover }: { condition: CarCondition; spares: Partial<Record<CostId, SpareReading>>; onHover: (c: CostId | null) => void }) {
   const rows = (Object.entries(condition.parts) as [CostId, { p: number; repair?: boolean }][])
     .filter(([k, r]) => r.p >= POSSIBLE || spares[k])
     .sort((a, b) => b[1].p - a[1].p);
-  if (!rows.length) return <p className="muted small">No part above {pct(POSSIBLE, 0)} in this belief.</p>;
+  const likely = rows.filter(([, r]) => r.p >= LIKELY).length;
   return (
-    <section>
-      <h3 className="pw-h">Parts likely damaged</h3>
-      <ul className="pw-parts" onMouseLeave={() => onHover(null)}>
-        {rows.map(([k, r]) => {
-          const h = healthOf(r.p);
-          const s = spareWords(spares[k], r.p);
-          return (
-            <li key={k} className={`pw-part pw-part--${h}`} onMouseEnter={() => onHover(k)} onFocus={() => onHover(k)} tabIndex={0}>
-              <span className="pw-part-mark" aria-hidden>
-                {HEALTH_MARK[h]}
-              </span>
-              <span className="pw-part-name">
-                {COST_LABELS[k]}
-                {r.repair ? <span className="muted"> (repair)</span> : null}
-                <span className="pw-sr"> {HEALTH_WORDS[h]}</span>
-              </span>
-              <span className="pw-part-p mono">P {pct(r.p, 0)}</span>
-              <span className={`pw-part-spare pw-tone--${s.tone}`}>{s.text}</span>
-              <i className="pw-part-bar" style={{ width: `${Math.round(r.p * 100)}%` }} aria-hidden />
-            </li>
-          );
-        })}
-      </ul>
+    <section className="pw-parts-wrap">
+      <h3 className="pw-h" title={`Parts at or above ${pct(POSSIBLE, 0)} P(damaged), or with a spare reservation. Hover a row to find it on the car.`}>
+        Parts
+        <span className="pw-h-aside">{rows.length ? `${likely} likely · ${rows.length - likely} possible` : ''}</span>
+      </h3>
+      {rows.length ? (
+        <ul className="pw-parts" onMouseLeave={() => onHover(null)}>
+          <li className="pw-parts-head" aria-hidden>
+            <span>Part</span>
+            <span>P(damaged)</span>
+            <span>Spare</span>
+          </li>
+          {rows.map(([k, r]) => {
+            const h = healthOf(r.p);
+            const s = sparePill(spares[k], r.p);
+            return (
+              <li key={k} className={`pw-part pw-part--${h}`} onMouseEnter={() => onHover(k)} onFocus={() => onHover(k)} tabIndex={0}>
+                <span className="pw-part-name" title={COST_LABELS[k]}>
+                  {COST_LABELS[k]}
+                  {r.repair ? <span className="pw-part-tag">repair</span> : null}
+                  <span className="pw-sr"> {HEALTH_WORDS[h]}</span>
+                </span>
+                <span className="pw-part-p" title={`${HEALTH_WORDS[h]}: P ${pct(r.p, 0)} (ticks at ${pct(POSSIBLE, 0)} and ${pct(LIKELY, 0)})`}>
+                  <Meter value={r.p} max={1} tone={HEALTH_TONE[h]} ticks={[{ at: POSSIBLE, label: `possible ${pct(POSSIBLE, 0)}` }, { at: LIKELY, label: `likely ${pct(LIKELY, 0)}` }]} />
+                  <b>{pct(r.p, 0)}</b>
+                </span>
+                <span className="pw-part-spare">
+                  <Pill tone={s.tone} title={s.title}>
+                    {s.text}
+                  </Pill>
+                </span>
+              </li>
+            );
+          })}
+        </ul>
+      ) : (
+        <p className="pw-empty">No part above {pct(POSSIBLE, 0)} in this belief.</p>
+      )}
     </section>
   );
 }
@@ -633,21 +682,31 @@ function GarageCheck({ actions }: { actions: RaceActions[] }) {
   const d = parse<{ why?: string }>(a.detailJson, {});
   const done = a.status === 'done' || a.status === 'approved';
   const off = a.status === 'cancelled' || a.status === 'rejected';
+  const by = a.decidedBy.startsWith('person:') ? a.decidedBy.slice(7) : null;
   return (
-    <section className={`pw-box ${done ? 'pw-box--ok' : off ? '' : 'pw-box--hold'}`}>
+    <section className="pw-garage" title={d.why ?? a.title}>
       <h3 className="pw-h">
-        Garage check <span className="pw-owner">for the {roleLabel(a.ownerRole)}</span>
+        Garage check
+        <span className="pw-h-aside">{roleLabel(a.ownerRole)}</span>
       </h3>
-      <p className="small">{d.why ?? a.title}</p>
-      {done ? (
-        <p className="small pw-tone--ok">
-          <IconApproved size={12} /> Checked{a.decidedBy.startsWith('person:') ? ` by ${a.decidedBy.slice(7)}` : ''} at {clock(a.updatedAt)}
-        </p>
-      ) : off ? (
-        <p className="small muted">Cancelled.</p>
-      ) : (
-        <ActButton label="Mark the car checked" run={(by, at) => race.decideAction({ actionKey: a.actionKey, status: 'done', by, at })} />
-      )}
+      <div className="pw-garage-row">
+        {done ? (
+          <>
+            <Pill tone="ok">Checked</Pill>
+            <span className="pw-mono-sm">
+              {by ? `${by} · ` : ''}
+              {clock(a.updatedAt)}
+            </span>
+          </>
+        ) : off ? (
+          <Pill tone="neutral">Cancelled</Pill>
+        ) : (
+          <>
+            <Pill tone="wait">Not checked</Pill>
+            <ActButton label="Mark the car checked" run={(by2, at) => race.decideAction({ actionKey: a.actionKey, status: 'done', by: by2, at })} />
+          </>
+        )}
+      </div>
     </section>
   );
 }
@@ -659,9 +718,10 @@ function DamageQuestions({ incidentKey }: { incidentKey: string }) {
   const open = qs.filter((q) => q.status === 'open');
   const shut = qs.filter((q) => q.status !== 'open');
   return (
-    <section>
+    <section className="pw-block pw-q">
       <h3 className="pw-h">
-        <IconQuestion size={13} /> Damage question
+        Damage question
+        {open.length ? <Pill tone="wait">Open</Pill> : null}
       </h3>
       {open.length ? (
         <ul className="questions pw-questions">
@@ -674,9 +734,11 @@ function DamageQuestions({ incidentKey }: { incidentKey: string }) {
         const opts = parse<{ id: string; label: string }[]>(q.optionsJson, []);
         const ans = parse<{ option?: string; defaulted?: boolean }>(q.answerJson, {});
         const label = opts.find((o) => o.id === ans.option)?.label ?? ans.option ?? 'answered';
+        const full = ans.defaulted ? `Nobody answered by ${clock(q.deadlineAt)}; the desk took the default: ${label}.` : `Answered by ${q.answeredBy}: ${label}.`;
         return (
-          <p key={q.questionKey} className="small muted">
-            {ans.defaulted ? `Nobody answered by ${clock(q.deadlineAt)}; the desk took the default: ${label}.` : `Answered by ${q.answeredBy}: ${label}.`}
+          <p key={q.questionKey} className="pw-answer" title={`${q.prompt}\n${full}`}>
+            {ans.defaulted ? <Pill tone="neutral">Default {clock(q.deadlineAt)}</Pill> : <Pill tone="ok">{q.answeredBy}</Pill>}
+            <span>{label}</span>
           </p>
         );
       })}
@@ -714,33 +776,59 @@ function WithdrawDecision({ actions }: { actions: RaceActions[] }) {
   if (!a) return null;
   const d = parse<WithdrawDetail>(a.detailJson, {});
   const waiting = a.status === 'awaiting_approval' && !d.chosen;
+  const opts = d.options ?? [];
+  const avail = d.hours_available;
+  const max = Math.max(avail ?? 0, ...opts.map((o) => o.hours_needed[2] ?? 0), 1) * 1.05;
   return (
-    <section className={`pw-box ${waiting ? 'pw-box--hold' : 'pw-box--ok'}`}>
+    <section className="pw-block pw-wd" title={d.summary}>
       <h3 className="pw-h">
-        Start or withdraw <span className="pw-owner">the {roleLabel(a.ownerRole)} decides{a.dueAt ? ` by ${clock(a.dueAt)}` : ''}</span>
+        Start or withdraw
+        {waiting ? <Pill tone="wait">Waiting</Pill> : null}
+        <span className="pw-h-aside">
+          {roleLabel(a.ownerRole)}
+          {a.dueAt ? ` · by ${clock(a.dueAt)}` : ''}
+        </span>
       </h3>
-      <p className="small">
-        {d.hours_available !== undefined ? `${d.hours_available.toFixed(1)} h from the crash to the start` : ''}
-        {d.grid ? ` · grid P${d.grid} (${d.grid_basis})` : ''}
-        {d.p_tub !== undefined ? ` · P(tub damaged) ${pct(d.p_tub, 0)}` : ''}
-      </p>
+      <div className="pw-wd-facts">
+        {avail !== undefined ? <Figure size="sm" label="Hours to start" value={`${avail.toFixed(1)} h`} /> : null}
+        {d.grid ? (
+          <span title={d.grid_basis}>
+            <Figure size="sm" label="Grid" value={`P${d.grid}`} />
+          </span>
+        ) : null}
+        {d.p_tub !== undefined ? <Figure size="sm" label="P(tub damaged)" value={pct(d.p_tub, 0)} /> : null}
+      </div>
       <ol className="pw-options">
-        {(d.options ?? []).map((o) => (
-          <li key={o.id} className={`pw-option ${o.feasible ? '' : 'pw-option--no'} ${d.chosen === o.id ? 'pw-option--chosen' : ''}`}>
-            <p className="pw-option-top">
-              <b>{o.label}</b>
-              <span className={`pw-chip ${o.feasible ? 'pw-tone--ok' : 'pw-tone--alert'}`}>{o.feasible ? 'fits the time' : 'does not fit'}</span>
-              {d.chosen === o.id ? <span className="pw-chip pw-tone--ok">chosen by {d.chosen_by ?? 'the Team Principal'}</span> : null}
-            </p>
-            <p className="mono small">
-              {o.hours_needed[1] ? `${o.hours_needed[1].toFixed(1)} h (${o.hours_needed[0].toFixed(1)}–${o.hours_needed[2].toFixed(1)})` : 'no garage time'} · {o.expected_points.toFixed(1)} pts expected
-              {o.cost_cents[1] ? ` · ${usdShort(o.cost_cents[1])}` : ''}
-            </p>
-            <p className="small muted">{o.risk}</p>
-          </li>
-        ))}
+        {opts.map((o) => {
+          const [lo, mid, hi] = o.hours_needed;
+          const chosen = d.chosen === o.id;
+          return (
+            <li key={o.id} className={`pw-option ${o.feasible ? '' : 'pw-option--no'} ${chosen ? 'pw-option--chosen' : ''}`} title={o.risk}>
+              <p className="pw-option-label">{o.label}</p>
+              <div className="pw-option-pills">
+                <Pill tone={o.feasible ? 'info' : 'bad'}>{o.feasible ? 'Fits' : 'Does not fit'}</Pill>
+                {chosen ? <Pill tone="ok">Chosen · {d.chosen_by ?? 'Team Principal'}</Pill> : null}
+              </div>
+              <Meter
+                value={mid}
+                max={max}
+                limit={avail}
+                tone={o.feasible ? 'info' : 'bad'}
+                ticks={mid ? [{ at: lo, label: `low ${lo.toFixed(1)} h` }, { at: hi, label: `high ${hi.toFixed(1)} h` }] : undefined}
+                label={mid ? `${mid.toFixed(1)} h (${lo.toFixed(1)}–${hi.toFixed(1)})${avail !== undefined ? ` / ${avail.toFixed(1)}` : ''}` : 'No garage time'}
+              />
+              <p className="pw-option-nums">
+                <span>{o.expected_points.toFixed(1)} pts</span>
+                {o.cost_cents[1] ? <span>{usdShort(o.cost_cents[1])}</span> : null}
+              </p>
+            </li>
+          );
+        })}
       </ol>
-      <p className="small muted">The desk priced three options and recommends none.{d.outcome ? ` Outcome: ${d.outcome}.` : ''}</p>
+      <p className="pw-wd-foot" title="The desk priced the options and recommends none.">
+        <Pill tone="neutral">No recommendation</Pill>
+        {d.outcome ? <span>{cap(d.outcome)}</span> : null}
+      </p>
     </section>
   );
 }
@@ -760,32 +848,65 @@ function topParts(b: Belief, n = 3): string {
   return parts.map(([k, p]) => `${SHORT[k] ?? k.replace(/_/g, ' ')} ${pct(p, 0)}`).join(', ');
 }
 
+function readLine(b: Belief): string {
+  const top = topSeverity(b);
+  return `${top ? (b.assessed_as ? `assessed ${b.assessed_as}` : `${top.name} ${pct(top.p, 0)}`) : 'no severity'}${b.parts && Object.keys(b.parts).length ? ` · ${topParts(b)}` : ''}`;
+}
+
 function BeliefHistory({ history, live, picked, onPick }: { history: RaceBeliefs[]; live: number; picked: number | null; onPick: (v: number | null) => void }) {
   if (!history.length) return null;
+  const shown = picked ?? live;
+  const row = history.find((h) => h.version === shown) ?? history[history.length - 1]!;
+  const t0 = sortTime(history[0]!.at);
+  const t1 = sortTime(history[history.length - 1]!.at);
   return (
-    <section>
-      <h3 className="pw-h">What we believed when</h3>
-      <ol className="pw-history">
+    <section className="pw-hist" aria-label="What we believed when">
+      <h3 className="pw-h">
+        Belief versions
+        <span className="pw-h-aside">
+          {clock(history[0]!.at)} → {clock(history[history.length - 1]!.at)}
+        </span>
+      </h3>
+      {history.length > 1 ? (
+        <Axis
+          from={t0}
+          to={t1}
+          height={16}
+          marks={history.map((h) => ({ t: sortTime(h.at), label: `v${h.version} · ${clock(h.at)} · ${h.status}`, tone: h.version === shown ? 'navy' : 'gray', big: h.version === shown }))}
+        />
+      ) : null}
+      <ol className="pw-steps">
         {history.map((h) => {
           const b = readBelief(h.beliefJson);
-          const top = topSeverity(b);
-          const on = picked === h.version || (picked === null && h.version === live);
+          const on = h.version === shown;
+          const sev = sevParts(b);
           return (
-            <li key={h.beliefKey} className={on ? 'pw-history--on' : ''}>
-              <button type="button" onClick={() => onPick(h.version === live ? null : h.version)} aria-pressed={on} title="Light the car with this belief">
-                <span className="pw-history-v mono">v{h.version}</span>
-                <span className="pw-history-at mono">{clock(h.at)}</span>
-                <span className="pw-history-status">{h.status}</span>
-                <span className="pw-history-cause">{h.cause}</span>
-                <span className="pw-history-read mono muted">
-                  {top ? `${b.assessed_as ? `assessed ${b.assessed_as}` : `${top.name} ${pct(top.p, 0)}`}` : 'no severity'}
-                  {b.parts && Object.keys(b.parts).length ? ` · ${topParts(b)}` : ''}
-                </span>
+            <li key={h.beliefKey}>
+              <button
+                type="button"
+                className={on ? 'is-on' : ''}
+                onClick={() => onPick(h.version === live ? null : h.version)}
+                aria-pressed={on}
+                title={`v${h.version} · ${clock(h.at)} · ${h.status}\n${h.cause}\n${readLine(b)}\nLight the car with this belief`}
+              >
+                <span className="pw-step-v">v{h.version}</span>
+                {sev.length ? <Stack parts={sev} height={4} legend={false} /> : <span className="pw-step-none" />}
               </button>
             </li>
           );
         })}
       </ol>
+      <p className={`pw-hist-now ${picked !== null ? 'pw-hist-now--replay' : ''}`} role="status" title={`${row.cause}\n${readLine(readBelief(row.beliefJson))}`}>
+        <span className="pw-mono-sm">
+          v{row.version} · {clock(row.at)}
+        </span>
+        <span className="pw-hist-cause">{row.cause}</span>
+        {picked !== null ? (
+          <button type="button" className="pw-linkbtn" onClick={() => onPick(null)}>
+            <IconRestart size={11} /> Back to live
+          </button>
+        ) : null}
+      </p>
     </section>
   );
 }

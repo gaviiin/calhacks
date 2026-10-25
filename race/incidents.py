@@ -110,6 +110,9 @@ class IncidentBook:
         if status and RANK[status] > RANK[inc.status]:
             inc.status = status
         if belief:
+            if inc.status in ("assessed", "closed") and status != "assessed":
+                # A person's assessment outranks later machine reads: keep their severity and parts.
+                belief = {k: v for k, v in belief.items() if k not in ("severity", "parts", "severity_by")}
             inc.belief.update(belief)
         if ev is not None:
             inc.evidence.append(self._evidence(ev))
