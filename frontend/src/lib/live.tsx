@@ -308,6 +308,8 @@ export interface LiveState {
   /** the SSE stream is open */
   streaming: boolean;
   replay: ReplayStatus | null;
+  /** when the current replay's first status was published; '' until the stream has said */
+  replayStartedAt: string;
   race: RaceStateUpdate | null;
   /** state updates of the current replay that carried a forecast change, in order */
   moves: Published<RaceStateUpdate>[];
@@ -342,9 +344,23 @@ interface Store {
   jev: Map<string, Published<JevDecisionRecord>>;
   impacts: Map<string, Published<FinanceImpactUpdate>>;
   lastSeq: number;
+  /** when the current replay's first status was published; state updates from before it are another story */
+  replayStartedAt: string;
 }
 
-const empty = (): Store => ({ replay: null, race: null, moves: [], incidents: new Map(), results: new Map(), jev: new Map(), impacts: new Map(), lastSeq: 0 });
+/** The stream and the snapshot name the same decision differently; key both by what it is. */
+const jevKey = (p: JevDecisionRecord) => `${p.kind}:${p.at}:${p.incident_id ?? ''}`;
+const impactKey = (p: FinanceImpactUpdate) => `${p.incident_id}:${p.received_at_utc ?? ''}:${p.financial_status}`;
+
+const empty = (): Store => ({ replay: null, race: null, moves: [], incidents: new Map(), results: new Map(), jev: new Map(), impacts: new Map(), lastSeq: 0, replayStartedAt: '' });
+
+/** A new replay: the exposure story starts again and the previous race's state is not this one's. */
+function newReplay(s: Store, p: ReplayStatus, startedAt: string): void {
+  if (s.replay && s.replay.replay_id === p.replay_id) return;
+  s.moves = [];
+  s.race = null;
+  s.replayStartedAt = startedAt;
+}
 
 const publishedAt = (r: RaceStateUpdate | null) => r?.timestamps?.state_published ?? r?.observed_at_utc ?? '';
 
@@ -357,16 +373,13 @@ function fold(s: Store, r: Published<unknown>): void {
   switch (r.kind) {
     case 'replay_status': {
       const p = r.payload as ReplayStatus;
-      if (s.replay && s.replay.replay_id !== p.replay_id) {
-        // a new replay: the exposure story starts again and the previous race's state is not this one's
-        s.moves = [];
-        s.race = null;
-      }
+      newReplay(s, p, r.published_at_utc);
       if (newerReplay(s.replay, p)) s.replay = p;
       break;
     }
     case 'race_state': {
       const p = r.payload as RaceStateUpdate;
+      if (r.published_at_utc < s.replayStartedAt) break; // an earlier replay's state, still in the stream's buffer
       if (!s.race || publishedAt(p) >= publishedAt(s.race)) s.race = p;
       const ch = p.forecast_change;
       if (ch && ch.text && !s.moves.some((m) => m.payload.forecast_change?.text === ch.text && m.payload.forecast.as_of_utc === p.forecast.as_of_utc)) {
@@ -381,17 +394,20 @@ function fold(s: Store, r: Published<unknown>): void {
       s.results = new Map(s.results).set(`${r.id}#${r.version}`, r as Published<ResultChangeSignal>);
       break;
     case 'jev_decision':
-      s.jev = new Map(s.jev).set(r.id, r as Published<JevDecisionRecord>);
+      s.jev = new Map(s.jev).set(jevKey(r.payload as JevDecisionRecord), r as Published<JevDecisionRecord>);
       break;
     case 'finance_impact':
-      s.impacts = new Map(s.impacts).set(r.id, r as Published<FinanceImpactUpdate>);
+      s.impacts = new Map(s.impacts).set(impactKey(r.payload as FinanceImpactUpdate), r as Published<FinanceImpactUpdate>);
       break;
   }
 }
 
 /** The snapshot has only the latest version of each record; it fills whatever the stream has not sent. */
 function seed(s: Store, snap: Snapshot): void {
-  if (snap.replay && newerReplay(s.replay, snap.replay)) s.replay = snap.replay;
+  if (snap.replay) {
+    newReplay(s, snap.replay, s.replayStartedAt); // the snapshot carries no publish time; the stream's status record sets it
+    if (newerReplay(s.replay, snap.replay)) s.replay = snap.replay;
+  }
   if (snap.race_state && (!s.race || publishedAt(snap.race_state) >= publishedAt(s.race))) s.race = snap.race_state;
   const seedSeq = -1; // unknown position in the stream; stream records always win
   for (const p of snap.incidents) {
@@ -407,16 +423,16 @@ function seed(s: Store, snap: Snapshot): void {
     }
   }
   for (const p of snap.jev_decisions) {
-    const k = `${p.kind}:${p.at}`;
+    const k = jevKey(p);
     if (!s.jev.has(k)) s.jev = new Map(s.jev).set(k, { kind: 'jev_decision', id: k, version: 1, status: p.decision.status, published_at_utc: p.timestamps?.state_published ?? p.at, payload: p, seq: seedSeq });
   }
-  for (const [i, p] of snap.finance_impacts.entries()) {
-    const k = `${p.incident_id}:${i}`;
+  for (const p of snap.finance_impacts) {
+    const k = impactKey(p);
     if (!s.impacts.has(k)) s.impacts = new Map(s.impacts).set(k, { kind: 'finance_impact', id: k, version: 1, status: p.financial_status, published_at_utc: p.received_at_utc ?? '', payload: p, seq: seedSeq });
   }
 }
 
-const bySeq = <T,>(a: Published<T>, b: Published<T>) => a.seq - b.seq || a.published_at_utc.localeCompare(b.published_at_utc);
+const bySeq = <T,>(a: Published<T>, b: Published<T>) => (a.seq < 0 || b.seq < 0 ? a.published_at_utc.localeCompare(b.published_at_utc) : a.seq - b.seq);
 
 /** Python's json writes `Infinity` for a replay at `--speed inf`; JSON.parse refuses it. */
 function parseLoose<T>(text: string): T {
@@ -544,7 +560,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     const jevDecisions = [...store.jev.values()].sort(bySeq);
     const financeImpacts = [...store.impacts.values()].sort(bySeq);
     return {
-      online, streaming, replay: store.replay, race: store.race, moves: store.moves, incidents, resultChanges, jevDecisions, financeImpacts, metrics, log, busy, error,
+      online, streaming, replay: store.replay, replayStartedAt: store.replayStartedAt, race: store.race, moves: store.moves, incidents, resultChanges, jevDecisions, financeImpacts, metrics, log, busy, error,
       startBrazil: (pauseAtLap) =>
         act('Starting the São Paulo replay', () => post('/live/replay', { race_id: BRAZIL, ...BRAZIL_WINDOW, pause_at_lap: pauseAtLap })),
       startSpa: () => act('Starting the Spa replay', () => post('/live/replay', { race_id: SPA, speed: SPA_SPEED })),

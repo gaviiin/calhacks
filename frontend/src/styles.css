@@ -3573,3 +3573,11 @@ code {
     justify-self: start;
   }
 }
+
+.earlier {
+  margin-top: 14px;
+}
+
+.earlier > summary {
+  margin-bottom: 10px;
+}

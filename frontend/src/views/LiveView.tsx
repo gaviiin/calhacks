@@ -115,26 +115,27 @@ function Chip({ tone = 'neutral', icon, title, children }: { tone?: Tone; icon?:
 }
 
 function JevChip({ j }: { j: JevDecision }) {
-  const route = ROUTE[j.chosen_route] ?? words(j.chosen_route);
-  if (j.used) {
-    const bits = [`Jev routed to ${route}`];
-    if (j.route_confidence !== null) bits.push(`confidence ${(j.route_confidence * 100).toFixed(0)}%`);
-    if (j.urgency) bits.push(`urgency ${j.urgency}`);
-    if (j.latency_ms !== null) bits.push(`${j.latency_ms} ms`);
-    if (j.status !== 'ok') bits.push(JEV_STATUS[j.status] ?? words(j.status));
-    return (
-      <Chip icon={<IconAgent size={12} />} title={j.reason}>
-        {bits.join(' · ')}
-      </Chip>
-    );
+  const chosen = ROUTE[j.chosen_route] ?? words(j.chosen_route);
+  const said = j.route ? ROUTE[j.route] ?? words(j.route) : null;
+  const conf = j.route_confidence !== null ? `${(j.route_confidence * 100).toFixed(0)}%` : null;
+  const tail = [j.urgency ? `urgency ${j.urgency}` : null, j.latency_ms !== null ? `${j.latency_ms} ms` : null].filter(Boolean).join(' · ');
+  let label: string;
+  if (!j.used) {
+    label =
+      j.status === 'disabled'
+        ? `Jev not called · route by rule: ${chosen}`
+        : `Jev ${JEV_STATUS[j.status] ?? words(j.status)} · deterministic fallback: ${chosen}`;
+  } else if (j.status === 'low_confidence') {
+    label = `Jev said ${said ?? chosen}${conf ? ` at ${conf}` : ''}, below the gate · a person decides`;
+  } else if (j.status === 'overridden') {
+    label = `Jev said ${said ?? 'no action'}${conf ? ` at ${conf}` : ''} · overridden by code to ${chosen}`;
+  } else {
+    label = `Jev routed to ${chosen}${conf ? ` · confidence ${conf}` : ''}${j.status === 'cached' ? ' · from cache' : ''}`;
   }
-  const label =
-    j.status === 'disabled'
-      ? `Jev not called · route by rule: ${route}`
-      : `Jev ${JEV_STATUS[j.status] ?? words(j.status)} · deterministic fallback: ${route}`;
   return (
     <Chip icon={<IconAgent size={12} />} title={j.reason}>
       {label}
+      {tail ? ` · ${tail}` : ''}
     </Chip>
   );
 }
@@ -396,7 +397,7 @@ function RaceClock({ race, replay }: { race: RaceStateUpdate | null; replay: Rep
           {utcClock(t)}
         </span>
         <span className="muted mono">UTC · {utcDay(t)}</span>
-        <span className="race-lap">Lap {race?.lap ?? replay?.lap ?? '—'}</span>
+        <span className="race-lap">Lap {(replay?.race_id === race?.race_id ? replay?.lap : null) ?? race?.lap ?? '—'}</span>
         <Chip icon={<IconFlag size={12} />}>{flagWord(race?.flag_status)}</Chip>
         <Chip icon={<IconLive size={12} />}>{(race?.mode ?? replay?.mode) === 'live' ? 'Live' : 'Replay'}</Chip>
       </div>
@@ -602,23 +603,134 @@ function ImpactUpdate({ u }: { u: FinanceImpactUpdate }) {
   );
 }
 
-function Incidents({ incidents, impacts, currentRace }: { incidents: Published<IncidentSignal>[]; impacts: Published<FinanceImpactUpdate>[]; currentRace: string | null }) {
-  const groups = useMemo(() => {
-    const m = new Map<string, Published<IncidentSignal>[]>();
-    for (const r of incidents) {
-      const a = m.get(r.id) ?? [];
-      a.push(r);
-      m.set(r.id, a);
-    }
-    const list = [...m.values()].map((vs) => [...vs].sort((a, b) => a.version - b.version));
-    list.sort((a, b) => {
-      const ca = a[0].payload.race_id === currentRace ? 0 : 1;
-      const cb = b[0].payload.race_id === currentRace ? 0 : 1;
-      return ca - cb || a[0].payload.event_time_utc.localeCompare(b[0].payload.event_time_utc);
-    });
-    return list;
-  }, [incidents, currentRace]);
+/** The API's memory bus keeps every replay's records; this replay's come first, the rest fold away. */
+function splitByReplay<T>(list: Published<T>[], startedAt: string): [Published<T>[], Published<T>[]] {
+  if (!startedAt) return [list, []];
+  return [list.filter((r) => r.published_at_utc >= startedAt), list.filter((r) => r.published_at_utc < startedAt)];
+}
 
+function Earlier({ count, children }: { count: number; children: ReactNode }) {
+  if (count === 0) return null;
+  return (
+    <details className="earlier">
+      <summary className="log-summary">From earlier replays in this API process · {count}</summary>
+      {children}
+    </details>
+  );
+}
+
+function IncidentCards({ groups, impacts }: { groups: Published<IncidentSignal>[][]; impacts: Published<FinanceImpactUpdate>[] }) {
+  return (
+    <div className="incidents">
+      {groups.map((versions) => {
+        const latest = versions[versions.length - 1].payload;
+        const updates = impacts.filter((i) => i.payload.incident_id === latest.incident_id);
+        return (
+          <article className="incident" key={latest.incident_id} aria-label={latest.incident_id}>
+            <div className="incident-head">
+              <h3 className="incident-title">
+                {TYPE_WORDS[latest.type]} · lap {latest.lap ?? '—'}
+                {latest.driver_number ? ` · car ${latest.driver_number}` : ' · no car named'}
+                {latest.driver_name ? `, ${latest.driver_name}` : ''}
+                {latest.historical_team ? ` (${latest.historical_team}, the real team)` : ''}
+              </h3>
+              <span className="mono muted">{latest.incident_id}</span>
+            </div>
+            <p className="muted small">
+              {RACE_NAMES[latest.race_id] ?? words(latest.race_id)} · sporting source date {latest.sporting_source_date} · financial world: {latest.synthetic_financial_world}
+            </p>
+            <ol className="versions">
+              {versions.map((v) => {
+                const p = v.payload;
+                const waiting = p.handoff.status === 'requested' || p.handoff.status === 'acknowledged' || p.handoff.status === 'pending';
+                return (
+                  <li key={v.version} className={`version ${waiting ? 'version--hold' : ''}`}>
+                    <div className="version-head">
+                      <b className="mono">v{p.version}</b>
+                      <span className="mono muted">
+                        {utcClock(p.event_time_utc)} UTC at source · observed {utcClock(p.observed_at_utc)}
+                      </span>
+                      <span>
+                        {TYPE_WORDS[p.type]}; driver {ATTRIBUTION[p.driver_attribution]}
+                        {p.urgency ? `; urgency ${p.urgency}` : ''}
+                      </span>
+                    </div>
+                    <div className="chip-row">
+                      <Chip icon={p.sporting_confirmation === 'verified_historical_incident' ? <IconApproved size={12} /> : <IconQuestion size={12} />}>
+                        {CONFIRMATION[p.sporting_confirmation]}
+                      </Chip>
+                      <JevChip j={p.jev} />
+                      <ImpactChip fi={p.financial_impact} />
+                      <HandoffChip h={p.handoff} />
+                    </div>
+                    <p className="version-message">{p.message}</p>
+                    <p className="muted small">
+                      Damage: {DAMAGE[p.damage_confirmation]}.{p.jev.reason ? ` Jev: ${p.jev.reason}.` : ''}
+                      {p.jev.error ? ` Error: ${p.jev.error}.` : ''}
+                    </p>
+                    <ul className="evidence-list" aria-label="source evidence">
+                      {p.source_evidence.map((e, i) => (
+                        <li key={`${e.endpoint}:${e.event_time_utc ?? ''}:${i}`}>
+                          <span className="mono">{utcClock(e.event_time_utc)}</span>
+                          <span className="mono">
+                            {e.system}/{e.endpoint}
+                          </span>
+                          <span>
+                            {e.note ?? (e.record_id ? `record ${e.record_id}` : 'record')}{' '}
+                            <a className="link" href={e.url} target="_blank" rel="noreferrer">
+                              re-fetch <IconExternal size={11} />
+                            </a>
+                          </span>
+                        </li>
+                      ))}
+                      {p.corroborating_source_url && (
+                        <li>
+                          <span className="mono">—</span>
+                          <span className="mono">public report</span>
+                          <span>
+                            {p.corroboration_note}{' '}
+                            <a className="link" href={p.corroborating_source_url} target="_blank" rel="noreferrer">
+                              read it <IconExternal size={11} />
+                            </a>
+                          </span>
+                        </li>
+                      )}
+                    </ul>
+                  </li>
+                );
+              })}
+            </ol>
+            {updates.map((u) => (
+              <ImpactUpdate key={u.id} u={u.payload} />
+            ))}
+          </article>
+        );
+      })}
+    </div>
+  );
+}
+
+function groupIncidents(incidents: Published<IncidentSignal>[], currentRace: string | null): Published<IncidentSignal>[][] {
+  const m = new Map<string, Published<IncidentSignal>[]>();
+  for (const r of incidents) {
+    const a = m.get(r.id) ?? [];
+    a.push(r);
+    m.set(r.id, a);
+  }
+  const list = [...m.values()].map((vs) => [...vs].sort((a, b) => a.version - b.version));
+  list.sort((a, b) => {
+    const ca = a[0].payload.race_id === currentRace ? 0 : 1;
+    const cb = b[0].payload.race_id === currentRace ? 0 : 1;
+    return ca - cb || a[0].payload.event_time_utc.localeCompare(b[0].payload.event_time_utc);
+  });
+  return list;
+}
+
+function Incidents({ incidents, impacts, currentRace, startedAt }: { incidents: Published<IncidentSignal>[]; impacts: Published<FinanceImpactUpdate>[]; currentRace: string | null; startedAt: string }) {
+  const [now, earlier] = useMemo(() => {
+    const [a, b] = splitByReplay(incidents, startedAt);
+    return [groupIncidents(a, currentRace), groupIncidents(b, currentRace)];
+  }, [incidents, currentRace, startedAt]);
   return (
     <section aria-labelledby="inc-h">
       <div className="sec-head">
@@ -628,101 +740,39 @@ function Incidents({ incidents, impacts, currentRace }: { incidents: Published<I
           control message, and confirmed only after the public report. The financial impact stays unknown until a garage report answers.
         </p>
       </div>
-      {groups.length === 0 ? (
-        <p className="muted small">No incident signal yet.</p>
-      ) : (
-        <div className="incidents">
-          {groups.map((versions) => {
-            const latest = versions[versions.length - 1].payload;
-            const updates = impacts.filter((i) => i.payload.incident_id === latest.incident_id);
-            return (
-              <article className="incident" key={latest.incident_id} aria-label={latest.incident_id}>
-                <div className="incident-head">
-                  <h3 className="incident-title">
-                    {TYPE_WORDS[latest.type]} · lap {latest.lap ?? '—'}
-                    {latest.driver_number ? ` · car ${latest.driver_number}` : ' · no car named'}
-                    {latest.driver_name ? `, ${latest.driver_name}` : ''}
-                    {latest.historical_team ? ` (${latest.historical_team}, the real team)` : ''}
-                  </h3>
-                  <span className="mono muted">{latest.incident_id}</span>
-                </div>
-                <p className="muted small">
-                  {RACE_NAMES[latest.race_id] ?? words(latest.race_id)} · sporting source date {latest.sporting_source_date} · financial world: {latest.synthetic_financial_world}
-                </p>
-                <ol className="versions">
-                  {versions.map((v) => {
-                    const p = v.payload;
-                    const waiting = p.handoff.status === 'requested' || p.handoff.status === 'acknowledged' || p.handoff.status === 'pending';
-                    return (
-                      <li key={v.version} className={`version ${waiting ? 'version--hold' : ''}`}>
-                        <div className="version-head">
-                          <b className="mono">v{p.version}</b>
-                          <span className="mono muted">
-                            {utcClock(p.event_time_utc)} UTC at source · observed {utcClock(p.observed_at_utc)}
-                          </span>
-                          <span>
-                            {TYPE_WORDS[p.type]}; driver {ATTRIBUTION[p.driver_attribution]}
-                            {p.urgency ? `; urgency ${p.urgency}` : ''}
-                          </span>
-                        </div>
-                        <div className="chip-row">
-                          <Chip icon={p.sporting_confirmation === 'verified_historical_incident' ? <IconApproved size={12} /> : <IconQuestion size={12} />}>
-                            {CONFIRMATION[p.sporting_confirmation]}
-                          </Chip>
-                          <JevChip j={p.jev} />
-                          <ImpactChip fi={p.financial_impact} />
-                          <HandoffChip h={p.handoff} />
-                        </div>
-                        <p className="version-message">{p.message}</p>
-                        <p className="muted small">
-                          Damage: {DAMAGE[p.damage_confirmation]}.{p.jev.reason ? ` Jev: ${p.jev.reason}.` : ''}
-                          {p.jev.error ? ` Error: ${p.jev.error}.` : ''}
-                        </p>
-                        <ul className="evidence-list" aria-label="source evidence">
-                          {p.source_evidence.map((e, i) => (
-                            <li key={`${e.endpoint}:${e.event_time_utc ?? ''}:${i}`}>
-                              <span className="mono">{utcClock(e.event_time_utc)}</span>
-                              <span className="mono">
-                                {e.system}/{e.endpoint}
-                              </span>
-                              <span>
-                                {e.note ?? (e.record_id ? `record ${e.record_id}` : 'record')}{' '}
-                                <a className="link" href={e.url} target="_blank" rel="noreferrer">
-                                  re-fetch <IconExternal size={11} />
-                                </a>
-                              </span>
-                            </li>
-                          ))}
-                          {p.corroborating_source_url && (
-                            <li>
-                              <span className="mono">—</span>
-                              <span className="mono">public report</span>
-                              <span>
-                                {p.corroboration_note}{' '}
-                                <a className="link" href={p.corroborating_source_url} target="_blank" rel="noreferrer">
-                                  read it <IconExternal size={11} />
-                                </a>
-                              </span>
-                            </li>
-                          )}
-                        </ul>
-                      </li>
-                    );
-                  })}
-                </ol>
-                {updates.map((u) => (
-                  <ImpactUpdate key={u.id} u={u.payload} />
-                ))}
-              </article>
-            );
-          })}
-        </div>
-      )}
+      {now.length === 0 ? <p className="muted small">No incident signal yet in this replay.</p> : <IncidentCards groups={now} impacts={impacts} />}
+      <Earlier count={earlier.length}>
+        <IncidentCards groups={earlier} impacts={impacts} />
+      </Earlier>
     </section>
   );
 }
 
-function Routing({ list }: { list: Published<JevDecisionRecord>[] }) {
+function RoutingList({ list }: { list: Published<JevDecisionRecord>[] }) {
+  return (
+    <ol className="moments">
+      {list.map((d) => (
+        <li key={d.id} className="moment">
+          <span className="mono">
+            {utcClock(d.payload.at)}
+            {d.payload.lap !== null && d.payload.lap !== undefined ? ` · lap ${d.payload.lap}` : ' · document'}
+          </span>
+          <span className="routing-body">
+            <b>{sentence(words(d.payload.kind))}</b>
+            {d.payload.drivers?.length ? <span className="muted"> · cars {d.payload.drivers.join(', ')}</span> : null}
+            <span className="chip-row">
+              <JevChip j={d.payload.decision} />
+            </span>
+            <span className="muted small block">{d.payload.message}</span>
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function Routing({ list, startedAt }: { list: Published<JevDecisionRecord>[]; startedAt: string }) {
+  const [now, earlier] = splitByReplay(list, startedAt);
   return (
     <section aria-labelledby="jev-h">
       <div className="sec-head">
@@ -732,33 +782,69 @@ function Routing({ list }: { list: Published<JevDecisionRecord>[] }) {
           goes to a person, "no action" on a material event is overridden, and no key means the deterministic route, said so.
         </p>
       </div>
-      {list.length === 0 ? (
-        <p className="muted small">No material candidate yet.</p>
-      ) : (
-        <ol className="moments">
-          {list.map((d) => (
-            <li key={d.id} className="moment">
-              <span className="mono">
-                {utcClock(d.payload.at)}
-                {d.payload.lap !== null && d.payload.lap !== undefined ? ` · lap ${d.payload.lap}` : ' · document'}
-              </span>
-              <span className="routing-body">
-                <b>{sentence(words(d.payload.kind))}</b>
-                {d.payload.drivers?.length ? <span className="muted"> · cars {d.payload.drivers.join(', ')}</span> : null}
-                <span className="chip-row">
-                  <JevChip j={d.payload.decision} />
-                </span>
-                <span className="muted small block">{d.payload.message}</span>
-              </span>
-            </li>
-          ))}
-        </ol>
-      )}
+      {now.length === 0 ? <p className="muted small">No material candidate yet in this replay.</p> : <RoutingList list={now} />}
+      <Earlier count={earlier.length}>
+        <RoutingList list={earlier} />
+      </Earlier>
     </section>
   );
 }
 
-function ResultChanges({ list }: { list: Published<ResultChangeSignal>[] }) {
+function ResultList({ list }: { list: Published<ResultChangeSignal>[] }) {
+  return (
+    <ol className="results-list">
+      {list.map((r) => {
+        const p = r.payload;
+        const waiting = p.status === 'at_risk' || p.status.startsWith('provisional_expected');
+        return (
+          <li key={`${r.id}#${r.version}`} className={`result ${waiting ? 'result--hold' : ''}`}>
+            <div className="version-head">
+              <span className="mono muted">{utcClock(p.event_time_utc)} UTC</span>
+              <b>{p.document?.title ?? sentence(words(p.type))}</b>
+              {p.document?.url && (
+                <a className="link" href={p.document.url} target="_blank" rel="noreferrer">
+                  FIA PDF <IconExternal size={11} />
+                </a>
+              )}
+              {p.document?.cars?.length ? <span className="mono muted">cars {p.document.cars.join(', ')}</span> : null}
+              {p.document?.likely_outcome ? <span className="muted">likely outcome: {words(p.document.likely_outcome)}</span> : null}
+            </div>
+            <div className="before-after">
+              <div>
+                <span className="muted small">Before · {words(p.before.type)}, {words(p.before.status)}</span>
+                <b className="mono big">{money(p.before.amount_cents)}</b>
+                <span className="muted small">{p.before.basis}</span>
+              </div>
+              <span className="mono delta" aria-label="change">
+                {delta(p.change.delta_cents)}
+              </span>
+              <div>
+                <span className="muted small">After · {words(p.after.type)}, {words(p.after.status)}</span>
+                <b className="mono big">{money(p.after.amount_cents)}</b>
+                <span className="muted small">{p.after.basis}</span>
+              </div>
+            </div>
+            <div className="chip-row">
+              <ResultStatusChip status={p.status} />
+              <JevChip j={p.jev} />
+              {p.handoff.status !== 'not_requested' && <HandoffChip h={p.handoff} />}
+            </div>
+            <p className="version-message">{p.message}</p>
+            {(p.change.lost.length > 0 || p.change.gained.length > 0) && (
+              <p className="muted small">
+                {p.change.lost.length > 0 ? `Lost: ${p.change.lost.join('; ')}. ` : ''}
+                {p.change.gained.length > 0 ? `Gained: ${p.change.gained.join('; ')}.` : ''}
+              </p>
+            )}
+          </li>
+        );
+      })}
+    </ol>
+  );
+}
+
+function ResultChanges({ list, startedAt }: { list: Published<ResultChangeSignal>[]; startedAt: string }) {
+  const [now, earlier] = splitByReplay(list, startedAt);
   return (
     <section aria-labelledby="rc-h">
       <div className="sec-head">
@@ -768,58 +854,14 @@ function ResultChanges({ list }: { list: Published<ResultChangeSignal>[] }) {
           documents; the revenue desk books only from the final classification and its own policy gate.
         </p>
       </div>
-      {list.length === 0 ? (
-        <p className="muted small">No result change yet. Replay Spa from the FIA documents to see one.</p>
+      {now.length === 0 ? (
+        <p className="muted small">No result change in this replay. Replay Spa from the FIA documents to see one.</p>
       ) : (
-        <ol className="results-list">
-          {list.map((r) => {
-            const p = r.payload;
-            const waiting = p.status === 'at_risk' || p.status.startsWith('provisional_expected');
-            return (
-              <li key={`${r.id}#${r.version}`} className={`result ${waiting ? 'result--hold' : ''}`}>
-                <div className="version-head">
-                  <span className="mono muted">{utcClock(p.event_time_utc)} UTC</span>
-                  <b>{p.document?.title ?? sentence(words(p.type))}</b>
-                  {p.document?.url && (
-                    <a className="link" href={p.document.url} target="_blank" rel="noreferrer">
-                      FIA PDF <IconExternal size={11} />
-                    </a>
-                  )}
-                  {p.document?.cars?.length ? <span className="mono muted">cars {p.document.cars.join(', ')}</span> : null}
-                  {p.document?.likely_outcome ? <span className="muted">likely outcome: {words(p.document.likely_outcome)}</span> : null}
-                </div>
-                <div className="before-after">
-                  <div>
-                    <span className="muted small">Before · {words(p.before.type)}, {words(p.before.status)}</span>
-                    <b className="mono big">{money(p.before.amount_cents)}</b>
-                    <span className="muted small">{p.before.basis}</span>
-                  </div>
-                  <span className="mono delta" aria-label="change">
-                    {delta(p.change.delta_cents)}
-                  </span>
-                  <div>
-                    <span className="muted small">After · {words(p.after.type)}, {words(p.after.status)}</span>
-                    <b className="mono big">{money(p.after.amount_cents)}</b>
-                    <span className="muted small">{p.after.basis}</span>
-                  </div>
-                </div>
-                <div className="chip-row">
-                  <ResultStatusChip status={p.status} />
-                  <JevChip j={p.jev} />
-                  {p.handoff.status !== 'not_requested' && <HandoffChip h={p.handoff} />}
-                </div>
-                <p className="version-message">{p.message}</p>
-                {(p.change.lost.length > 0 || p.change.gained.length > 0) && (
-                  <p className="muted small">
-                    {p.change.lost.length > 0 ? `Lost: ${p.change.lost.join('; ')}. ` : ''}
-                    {p.change.gained.length > 0 ? `Gained: ${p.change.gained.join('; ')}.` : ''}
-                  </p>
-                )}
-              </li>
-            );
-          })}
-        </ol>
+        <ResultList list={now} />
       )}
+      <Earlier count={earlier.length}>
+        <ResultList list={earlier} />
+      </Earlier>
     </section>
   );
 }
@@ -872,9 +914,9 @@ export function LiveView() {
       <ReplayPanel />
       <RaceClock race={live.race} replay={live.replay} />
       <Cars race={live.race} moves={live.moves} />
-      <Incidents incidents={live.incidents} impacts={live.financeImpacts} currentRace={currentRace} />
-      <Routing list={live.jevDecisions} />
-      <ResultChanges list={live.resultChanges} />
+      <Incidents incidents={live.incidents} impacts={live.financeImpacts} currentRace={currentRace} startedAt={live.replayStartedAt} />
+      <Routing list={live.jevDecisions} startedAt={live.replayStartedAt} />
+      <ResultChanges list={live.resultChanges} startedAt={live.replayStartedAt} />
       <LogPanel log={live.log} />
     </div>
   );
