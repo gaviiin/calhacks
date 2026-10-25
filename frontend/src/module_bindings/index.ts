@@ -37,6 +37,7 @@ import {
 import AnswerRaceQuestionReducer from "./answer_race_question_reducer";
 import ApproveRaceCloseReducer from "./approve_race_close_reducer";
 import AskRaceQuestionReducer from "./ask_race_question_reducer";
+import ChooseRaceActionOptionReducer from "./choose_race_action_option_reducer";
 import ConfirmRaceEffectReducer from "./confirm_race_effect_reducer";
 import CorrectRaceEffectReducer from "./correct_race_effect_reducer";
 import DefaultRaceQuestionReducer from "./default_race_question_reducer";
@@ -349,6 +350,7 @@ const reducersSchema = __reducers(
   __reducerSchema("answer_race_question", AnswerRaceQuestionReducer),
   __reducerSchema("approve_race_close", ApproveRaceCloseReducer),
   __reducerSchema("ask_race_question", AskRaceQuestionReducer),
+  __reducerSchema("choose_race_action_option", ChooseRaceActionOptionReducer),
   __reducerSchema("confirm_race_effect", ConfirmRaceEffectReducer),
   __reducerSchema("correct_race_effect", CorrectRaceEffectReducer),
   __reducerSchema("default_race_question", DefaultRaceQuestionReducer),

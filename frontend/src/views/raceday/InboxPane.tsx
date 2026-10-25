@@ -29,16 +29,32 @@ export function RaceInboxPane({ item }: { item: RaceInbox }) {
           <b>{a.title}</b>
         </p>
         {typeof d.why === 'string' && <p className="muted">{d.why}</p>}
-        {typeof d.recommendation === 'string' && <p>Recommended: {d.recommendation}</p>}
+        {Array.isArray(d.options) && (
+          <ul className="questions">
+            {(d.options as { id: string; label: string; feasible: boolean; hours_needed: number[]; cost_cents: number[]; expected_points: number }[]).map((o) => (
+              <li key={o.id} className="question">
+                <b>{o.label}</b>{' '}
+                <span className="muted mono">
+                  {o.hours_needed[1]} h · {usdShort(o.cost_cents[1] ?? 0)} · {o.expected_points.toFixed(1)} pts · {o.feasible ? 'fits the time' : 'does not fit'}
+                </span>
+                {a.status === 'awaiting_approval' && (
+                  <div>
+                    <ActButton label={`Choose: ${o.label.toLowerCase()}`} run={(by, at) => race.chooseOption({ actionKey: a.actionKey, option: o.id, by, at })} />
+                  </div>
+                )}
+              </li>
+            ))}
+          </ul>
+        )}
         <p className="muted">{a.outward ? 'Outward-facing' : 'Internal'} · {a.reversible ? 'reversible' : 'cannot be undone'} · the desk never does this on its own authority.</p>
-        {a.status === 'awaiting_approval' ? (
+        {a.status === 'awaiting_approval' && !Array.isArray(d.options) ? (
           <div className="decide-actions">
             <ActButton label="Approve" primary run={(by, at) => race.decideAction({ actionKey: a.actionKey, status: 'approved', by, at })} />
             <ActButton label="Reject" run={(by, at) => race.decideAction({ actionKey: a.actionKey, status: 'rejected', by, at })} />
           </div>
-        ) : (
-          <p>Decided: {a.status} ({a.decidedBy}).</p>
-        )}
+        ) : a.status !== 'awaiting_approval' ? (
+          <p>Decided: {typeof d.chosen === 'string' ? `chose ${d.chosen.replace('_', ' ')}` : a.status} ({a.decidedBy}).</p>
+        ) : null}
         <p className="muted">
           Full context on <a href="#/">Race day</a>, stage 3.
         </p>

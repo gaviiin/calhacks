@@ -115,7 +115,7 @@ def _race_key(state) -> int | None:
 
 def _out_of_race(state, race_key: int | None) -> set[int]:
     """Our cars that will not take (or have not taken) the start: the race result says DNS, an incident's belief says
-    the car is out of the race once the incident is confirmed, or a withdraw-the-car action was approved."""
+    the car is out of the race once the incident is confirmed, or the Team Principal chose to withdraw it."""
     out: set[int] = set()
     for r in state.results.get(race_key, []) if race_key else []:
         if r.get("dns"):
@@ -127,7 +127,7 @@ def _out_of_race(state, race_key: int | None) -> set[int]:
         if b.get("dns") or b.get("out_of_race") or b.get("starts_race") is False or (b.get("out_of_session") and inc.session_key == race_key):
             out.add(int(inc.driver_number))
     for a in state.actions.values():
-        if a.kind == "withdraw_car" and a.status in ("approved", "done"):
+        if a.kind == "withdraw_car" and a.status in ("approved", "done") and a.detail.get("chosen", "withdraw") == "withdraw":
             inc = state.incidents.get(a.incident_key)
             car = (a.detail or {}).get("car") or (inc.driver_number if inc else None)
             if car:

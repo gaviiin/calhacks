@@ -66,6 +66,8 @@ export interface RaceData {
   decideAction: (args: { actionKey: string; status: string; by: string; at: string }) => Promise<void>;
   /** A person answers a question: answerJson is {"option": id} or {"option": "neither", "band": [lo, mid, hi], "note": ...}. */
   answer: (args: { questionKey: string; answerJson: string; by: string; at: string }) => Promise<void>;
+  /** A person picks one of a decision's priced options (the desk never picks). */
+  chooseOption: (args: { actionKey: string; option: string; by: string; at: string }) => Promise<void>;
   /** A person approves the sealed weekend so its briefs may go out. */
   approveClose: (args: { closeKey: string; by: string; at: string }) => Promise<void>;
   /** Calls the correct_race_effect reducer; rejects with the module's refusal when not permitted. */
@@ -94,6 +96,7 @@ const Ctx = createContext<RaceData>({
   sims: [],
   closes: [],
   decideAction: () => Promise.reject(new Error('not connected to pit-wall')),
+  chooseOption: () => Promise.reject(new Error('not connected to pit-wall')),
   answer: () => Promise.reject(new Error('not connected to pit-wall')),
   approveClose: () => Promise.reject(new Error('not connected to pit-wall')),
 });
@@ -145,16 +148,17 @@ export function RaceBridge({ children }: { children: ReactNode }) {
     [getConnection]
   );
   const decideAction = useMemo(() => withConn((c, a: { actionKey: string; status: string; by: string; at: string }) => c.reducers.setRaceActionStatus(a)), [withConn]);
+  const chooseOption = useMemo(() => withConn((c, a: { actionKey: string; option: string; by: string; at: string }) => c.reducers.chooseRaceActionOption(a)), [withConn]);
   const answer = useMemo(() => withConn((c, a: { questionKey: string; answerJson: string; by: string; at: string }) => c.reducers.answerRaceQuestion(a)), [withConn]);
   const approveClose = useMemo(() => withConn((c, a: { closeKey: string; by: string; at: string }) => c.reducers.approveRaceClose(a)), [withConn]);
 
   const value = useMemo<RaceData>(
     () => ({
       connected: conn.isActive, identityHex, events, cars, effects, forecasts, policies, precedents, correct, confirm,
-      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, decideAction, answer, approveClose,
+      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, decideAction, chooseOption, answer, approveClose,
     }),
     [conn.isActive, identityHex, events, cars, effects, forecasts, policies, precedents, correct, confirm,
-      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, decideAction, answer, approveClose]
+      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, decideAction, chooseOption, answer, approveClose]
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

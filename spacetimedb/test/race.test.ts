@@ -260,3 +260,20 @@ describe('the race-day flow tables', () => {
     expect(d.h.db.raceCloses.closeKey.find('c1')?.status).toBe('sent');
   });
 });
+
+describe('a decision with priced options', () => {
+  it('records the option a person chose, and only one of the priced options', () => {
+    const d = makeDesk();
+    const detail = JSON.stringify({ options: [{ id: 'repair' }, { id: 'spare_tub' }, { id: 'withdraw' }], summary: 's' });
+    const a = { actionKey: 'w1', incidentKey: 'i', kind: 'withdraw_car', title: 'Car 23: repair, spare tub or withdraw?', detailJson: detail, dueAt: '',
+      status: 'awaiting_approval', ownerRole: 'team_principal', reversible: false, outward: true, decidedBy: 'code', updatedAt: AT };
+    d.as('race', ctx => mod.recordRaceActions(ctx, { actions: [a] }));
+    expect(() => d.as('race', ctx => mod.chooseRaceActionOption(ctx, { actionKey: 'w1', option: 'withdraw', by: 'tp', at: AT }))).toThrow(/unauthorized/);
+    expect(() => d.as('head', ctx => mod.chooseRaceActionOption(ctx, { actionKey: 'w1', option: 'retire', by: 'tp', at: AT }))).toThrow(/priced options/);
+    d.as('head', ctx => mod.chooseRaceActionOption(ctx, { actionKey: 'w1', option: 'withdraw', by: 'tp', at: AT }));
+    const row = d.h.db.raceActions.actionKey.find('w1');
+    expect(row?.status).toBe('approved');
+    expect(JSON.parse(row!.detailJson).chosen).toBe('withdraw');
+    expect(() => d.as('head', ctx => mod.chooseRaceActionOption(ctx, { actionKey: 'w1', option: 'repair', by: 'tp', at: AT }))).toThrow(/not awaiting/);
+  });
+});

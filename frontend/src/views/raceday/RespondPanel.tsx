@@ -32,8 +32,9 @@ interface Decision {
   p_heavy?: number;
   p_tub?: number;
   options?: Option[];
-  recommendation?: string;
-  recommendation_why?: string;
+  summary?: string;
+  chosen?: string;
+  chosen_by?: string;
   standings?: string;
   outcome?: string;
 }
@@ -87,8 +88,7 @@ export function respondHeadline(race: RaceData): Headline {
   const decision = waiting.find((a) => a.kind === 'withdraw_car');
   if (decision) {
     const d = parse<Decision>(decision.detailJson, {});
-    const rec = d.options?.find((o) => o.id === d.recommendation);
-    return { value: `Car ${d.car ?? ''}: decide`, note: rec ? `desk recommends: ${rec.label.toLowerCase()}` : decision.title, tone: 'hold' };
+    return { value: `Car ${d.car ?? ''}: decide`, note: `${d.options?.length ?? 3} options priced, for the Team Principal`, tone: 'hold' };
   }
   if (waiting.length) return { value: `${waiting.length} to decide`, note: waiting[0]!.title, tone: 'hold' };
   const live = race.actions.filter((a) => a.status !== 'cancelled');
@@ -102,14 +102,13 @@ function DecisionCard({ a }: { a: Action }) {
   const d = parse<Decision>(a.detailJson, {});
   const options = d.options ?? [];
   const available = d.hours_available ?? 0;
-  const rec = options.find((o) => o.id === d.recommendation);
   const scale = Math.max(available, ...options.map((o) => o.hours_needed[2] ?? 0), 1);
   const waiting = a.status === 'awaiting_approval';
   return (
     <article className={`rd-decision ${waiting ? 'rd-decision--waiting' : ''}`} aria-labelledby={`dec-${a.actionKey}`}>
       <header className="rd-decision-head">
         <h3 id={`dec-${a.actionKey}`}>
-          Car {d.car}: start or withdraw?
+          Car {d.car}: repair, spare tub or withdraw?
         </h3>
         <StatusChip a={a} />
         {a.dueAt && <span className="mono muted">decide by {clock(a.dueAt)} UTC</span>}
@@ -122,13 +121,13 @@ function DecisionCard({ a }: { a: Action }) {
       </p>
       <ol className="rd-options">
         {options.map((o) => {
-          const recommended = o.id === d.recommendation;
+          const chosen = o.id === d.chosen;
           const mid = o.hours_needed[1] ?? 0;
           return (
-            <li key={o.id} className={`rd-option ${recommended ? 'rd-option--rec' : ''} ${o.feasible ? '' : 'rd-option--out'}`}>
+            <li key={o.id} className={`rd-option ${chosen ? 'rd-option--rec' : ''} ${o.feasible ? '' : 'rd-option--out'}`}>
               <div className="rd-option-top">
                 <b>{o.label}</b>
-                {recommended && <span className="rd-chip rd-chip--ok">recommended</span>}
+                {chosen && <span className="rd-chip rd-chip--ok">chosen by {d.chosen_by ?? 'the Team Principal'}</span>}
                 <span className={`rd-chip ${o.feasible ? 'rd-chip--run' : 'rd-chip--alert'}`}>{o.feasible ? 'fits the time' : 'does not fit'}</span>
               </div>
               <div className="rd-hours" role="img" aria-label={`${hours(mid)} needed against ${hours(available)} available`}>
@@ -154,24 +153,16 @@ function DecisionCard({ a }: { a: Action }) {
                 </div>
               </dl>
               <p className="muted rd-risk">{o.risk}</p>
+              {waiting && (
+                <ActButton label={`Choose: ${o.label.toLowerCase()}`} run={(by, at) => race.chooseOption({ actionKey: a.actionKey, option: o.id, by, at })} />
+              )}
             </li>
           );
         })}
       </ol>
-      {d.recommendation_why && (
-        <p className="rd-why">
-          <b>Why: </b>
-          {d.recommendation_why}
-        </p>
-      )}
+      {d.summary && <p className="rd-why">{d.summary} The desk prices the options and does not choose: the Team Principal decides.</p>}
       {d.standings && <p className="muted">{d.standings}</p>}
       {d.outcome && <p className="rd-outcome">What happened: {d.outcome}</p>}
-      {waiting && (
-        <div className="decide-actions">
-          <ActButton label={rec ? `Approve: ${rec.label.toLowerCase()}` : 'Approve'} primary run={(by, at) => race.decideAction({ actionKey: a.actionKey, status: 'approved', by, at })} />
-          <ActButton label="Reject" run={(by, at) => race.decideAction({ actionKey: a.actionKey, status: 'rejected', by, at })} />
-        </div>
-      )}
     </article>
   );
 }

@@ -929,6 +929,30 @@ export const setRaceActionStatus = spacetimedb.reducer(
   }
 );
 
+// A decision with priced options (start or withdraw a car): the owner picks one. The choice is written into the
+// action's detail with who made it; the desk prices options but never picks, so only race_head may call this.
+export const chooseRaceActionOption = spacetimedb.reducer(
+  { actionKey: t.string(), option: t.string(), by: t.string(), at: t.string() },
+  (ctx, { actionKey, option, by, at }) => {
+    requireRole(ctx, 'race_head');
+    requireIso('at', at);
+    const cur = ctx.db.raceActions.actionKey.find(actionKey);
+    if (!cur) throw new SenderError('no such action');
+    if (cur.status !== 'awaiting_approval') throw new SenderError('invalid choice: action is not awaiting a decision');
+    let detail: Record<string, unknown>;
+    try {
+      detail = JSON.parse(cur.detailJson) as Record<string, unknown>;
+    } catch {
+      throw new SenderError('invalid choice: action detail is not JSON');
+    }
+    const options = Array.isArray(detail.options) ? (detail.options as { id?: string }[]) : [];
+    if (!options.some((o) => o.id === option)) throw new SenderError('invalid choice: not one of the priced options');
+    const detailJson = JSON.stringify({ ...detail, chosen: option, chosen_by: by, chosen_at: at });
+    if (detailJson.length > 4096) throw new SenderError('invalid choice: detail too large');
+    ctx.db.raceActions.actionKey.update({ ...cur, status: 'approved', detailJson, decidedBy: `person:${by}`, updatedAt: at });
+  }
+);
+
 const EntryLineInput = t.object('RaceEntryLineInput', { account: t.string(), debitCents: t.i64(), creditCents: t.i64(), memo: t.string() });
 const RaceEntryInput = t.object('RaceEntryInput', {
   entryKey: t.string(), incidentKey: t.string(), effectKey: t.string(), memo: t.string(), effectiveDate: t.string(), recognition: t.string(),

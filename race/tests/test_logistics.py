@@ -42,7 +42,7 @@ def test_manifest_comes_from_the_weekend_file_with_its_basis():
     assert data["chassis"]["built_2024"] == 3 and data["damage_tally_after_brazil"]["chassis"] == 2
 
 
-def test_albon_q3_crash_recommends_withdrawing():
+def test_albon_q3_crash_prices_three_options_and_chooses_none():
     st = state()
     acts = run(incident(), st)
     w = acts["1249-9627-23-1:withdraw_car"]
@@ -52,21 +52,21 @@ def test_albon_q3_crash_recommends_withdrawing():
     assert [o["id"] for o in d["options"]] == ["repair", "spare_tub", "withdraw"]
     repair, tub, _ = d["options"]
     assert not repair["feasible"] and not tub["feasible"] and tub["hours_needed"][1] > d["hours_available"]
-    assert d["recommendation"] == "withdraw" and "3.5 h" in d["recommendation_why"]
-    assert acts["1249-9627-23-1:fia_notice"].detail["follows"] == "withdraw"
+    assert "recommendation" not in d and "recommend" not in json.dumps(d).lower() and "3.5 h" in d["summary"]
+    assert [x["option"] for x in acts["1249-9627-23-1:fia_notice"].detail["drafts"]] == ["repair", "spare_tub", "withdraw"]
     assert acts["1249-9627-23-1:fia_notice"].status == "awaiting_approval" and acts["1249-9627-23-1:fia_notice"].owner_role == "sporting_director"
     assert "1249-9627-23-1:spares_reserve:chassis" in acts, "a likely damaged tub takes the spare tub"
     assert w.due_at.startswith("2024-11-03T14:30")
 
 
-def test_colapinto_q1_crash_recommends_repairing():
+def test_colapinto_q1_crash_repair_fits_the_time():
     st = state()
     acts = run(incident(car=43, at="2024-11-03T10:39:00Z", kph=166), st)
     d = acts["1249-9627-43-1:withdraw_car"].detail
     assert abs(d["hours_available"] - 4.85) < 0.01
     repair = d["options"][0]
     assert repair["feasible"] and repair["hours_needed"][1] <= d["hours_available"]
-    assert d["recommendation"] == "repair"
+    assert "recommendation" not in d
     assert acts["1249-9627-43-1:parc_ferme_list"].status == "auto"
     assert "1249-9627-43-1:spares_reserve:chassis" not in acts
 

@@ -288,7 +288,8 @@ def expected_points(grid: int, state) -> float:
 
 
 def withdraw_options(inc: Incident, state, b: dict, start: str) -> dict:
-    """The three priced outcomes for a car damaged in qualifying, and which one the desk recommends."""
+    """The three priced outcomes for a car damaged in qualifying, side by side. The desk prices them and states what
+    fits the time; it does not pick one. Whether the car starts is the Team Principal's call."""
     d = _a(state, "decision")
     parts = likely_parts(b)
     available = round(max(_hours(inc.first_seen_at, start), 0.0), 2)
@@ -321,19 +322,12 @@ def withdraw_options(inc: Incident, state, b: dict, start: str) -> dict:
         {"id": "withdraw", "label": "Withdraw the car", "hours_needed": [0, 0, 0], "feasible": True, "cost_cents": [0, 0, 0],
          "expected_points": 0.0, "risk": "certain zero points; the rebuild moves to Grove and the spares at track stay for the next event"},
     ]
-    best = max((o for o in options if o["feasible"]), key=lambda o: (o["expected_points"], -o["cost_cents"][1]))
-    if best["id"] == "withdraw":
-        blockers = [f"{o['label'].lower()} needs {o['hours_needed'][1]:.1f} h" if o["id"] != "repair" or tp < LIKELY else
-                    f"{o['label'].lower()} is ruled out (tub P={tp:.2f})" for o in options if o["id"] != "withdraw"]
-        why = f"Withdraw: {'; '.join(blockers)}, and the race starts {available:.1f} h after the crash."
-    elif best["id"] == "repair":
-        why = (f"Repair: {rep_h[1]:.1f} h of work fits the {available:.1f} h before the start and keeps P{g} on the grid "
-               f"({best['expected_points']:.1f} expected points).")
-    else:
-        why = f"Spare tub: the repair is ruled out, the build-up fits {available:.1f} h, and a pit-lane start can still score."
+    fits = ", ".join(f"{o['label'].lower()} {o['hours_needed'][1]:.1f} h" for o in options if o["id"] != "withdraw")
+    summary = (f"The race starts {available:.1f} h after the crash. Hours needed: {fits}"
+               + (f"; the tub is likely damaged (P={tp:.2f})" if tp >= LIKELY else "") + ".")
     return {"car": inc.driver_number, "grid": grid, "grid_basis": grid_basis, "race_start": start, "hours_available": available,
             "p_heavy": round(b["severity"].get("heavy", 0.0), 2), "p_tub": round(tp, 2), "options": options,
-            "recommendation": best["id"], "recommendation_why": why, "standings": _standings_note(state)}
+            "summary": summary, "standings": _standings_note(state)}
 
 
 # ---------------------------------------------------------------------- the plan
@@ -417,10 +411,10 @@ def plan(inc: Incident, state) -> list[Action]:
         decision = withdraw_options(inc, state, b, start)
         if inc.belief.get("dns"):
             decision["outcome"] = f"car {car} did not take the start (DNS in the race result)"
-        rec = next(o for o in decision["options"] if o["id"] == decision["recommendation"])
         decide_by = iso(parse_iso(start) - timedelta(minutes=int(_a(state, "decision")["lead_minutes"])))
-        add("withdraw_car", f"Car {car}: {rec['label'].lower()}? {decision['hours_available']:.1f} h from the crash to the start",
-            {"why": decision["recommendation_why"] + " Whether the car starts is irreversible and outward: the Team Principal decides.", **decision},
+        add("withdraw_car", f"Car {car}: repair, spare tub or withdraw? {decision['hours_available']:.1f} h from the crash to the start",
+            {"why": decision["summary"] + " Three options priced; the desk does not choose. Whether the car starts is irreversible and outward: "
+                    "the Team Principal decides.", **decision},
             owner="team_principal", status="awaiting_approval", due=decide_by, outward=True, reversible=False)
 
     if stype != "Race" and start:
@@ -429,15 +423,17 @@ def plan(inc: Incident, state) -> list[Action]:
                     "approval, so the list is drafted now from the likely parts and confirmed by the garage.",
              "parts": [{"part": p, "label": _label(p, p), "spec": "identical specification"} for p in parts if p != "chassis"],
              "used_only_if": "the car is repaired to start"}, owner="chief_mechanic")
-        rec = (decision or {}).get("recommendation", "repair")
-        to, draft = {
-            "repair": ("Technical Delegate", f"Williams requests approval to replace damaged parts on car {car} under parc fermé with parts of identical specification (list attached)."),
-            "spare_tub": ("Technical Delegate and the Stewards", f"Williams will change the survival cell of car {car} under parc fermé; the car will start from the pit lane."),
-            "withdraw": ("the Stewards", f"Williams notifies that car {car} will not take the start of the race."),
-        }[rec]
-        add("fia_notice", f"FIA notice to {to}: car {car}",
-            {"why": f"Follows the {rec.replace('_', ' ')} recommendation; a notice to the FIA is outward, so the Sporting Director sends it.",
-             "to": to, "draft": draft, "follows": rec}, owner="sporting_director", status="awaiting_approval", due=start, outward=True)
+        drafts = [
+            {"option": "repair", "to": "Technical Delegate",
+             "draft": f"Williams requests approval to replace damaged parts on car {car} under parc fermé with parts of identical specification (list attached)."},
+            {"option": "spare_tub", "to": "Technical Delegate and the Stewards",
+             "draft": f"Williams will change the survival cell of car {car} under parc fermé; the car will start from the pit lane."},
+            {"option": "withdraw", "to": "the Stewards", "draft": f"Williams notifies that car {car} will not take the start of the race."},
+        ]
+        add("fia_notice", f"FIA notice for car {car}: one draft per option",
+            {"why": "One draft for each option the Team Principal may choose; the Sporting Director sends the one that matches the choice "
+                    "(a notice to the FIA is outward).", "drafts": drafts, "follows": "the Team Principal's choice"},
+            owner="sporting_director", status="awaiting_approval", due=start, outward=True)
 
     p_pu, p_gb = b["parts"].get("power_unit", 0.0), b["parts"].get("gearbox", 0.0)
     if max(p_pu, p_gb) >= POSSIBLE:
