@@ -8,9 +8,9 @@ import { ActButton, clock, parse, roleLabel } from '../raceday/shared';
 import { flowSteps } from '../roles/IncidentFlow';
 import { readBelief, SEVERITIES } from '../roles/incidentCondition';
 import { Pill, type Tone } from '../roles/kit';
-import { LifeBar, Shares } from './charts';
+import { Bullet, LifeBar, Shares } from './charts';
 import { AlertRow, PartRow, PartsHead } from './panels';
-import type { Desk, DeskPart } from './model';
+import type { Desk, DeskPart, PlanLine } from './model';
 
 // The side sheet: the second level of detail. One target at a time; the footer opens the full role view.
 
@@ -20,7 +20,8 @@ export type SheetTarget =
   | { kind: 'incident'; id: string }
   | { kind: 'decision'; id: string }
   | { kind: 'logistics'; id: string }
-  | { kind: 'alerts'; id: string };
+  | { kind: 'alerts'; id: string }
+  | { kind: 'plan'; id: string };
 
 interface Props {
   target: SheetTarget;
@@ -36,7 +37,7 @@ export function SideSheet({ target, desk, close, go, open }: Props) {
     window.addEventListener('keydown', on);
     return () => window.removeEventListener('keydown', on);
   }, [close]);
-  const body = target.kind === 'part' ? <PartSheet desk={desk} id={target.id} go={go} /> : target.kind === 'parts' ? <PartsSheet desk={desk} car={Number(target.id)} go={go} open={open} /> : target.kind === 'incident' ? <IncidentSheet desk={desk} id={target.id} go={go} /> : target.kind === 'decision' ? <DecisionSheet desk={desk} id={target.id} go={go} /> : target.kind === 'logistics' ? <LogisticsSheet desk={desk} go={go} /> : <AlertsSheet desk={desk} kind={target.id} go={go} />;
+  const body = target.kind === 'part' ? <PartSheet desk={desk} id={target.id} go={go} /> : target.kind === 'parts' ? <PartsSheet desk={desk} car={Number(target.id)} go={go} open={open} /> : target.kind === 'incident' ? <IncidentSheet desk={desk} id={target.id} go={go} /> : target.kind === 'decision' ? <DecisionSheet desk={desk} id={target.id} go={go} /> : target.kind === 'logistics' ? <LogisticsSheet desk={desk} go={go} /> : target.kind === 'plan' ? <PlanSheet desk={desk} id={target.id} go={go} open={open} /> : <AlertsSheet desk={desk} kind={target.id} go={go} />;
   return (
     <>
       <div className="g-scrim is-open" onClick={close} />
@@ -309,6 +310,88 @@ function LogisticsSheet({ desk, go }: { desk: Desk; go: (tab: string, anchor?: s
           );
         })}
       </ol>
+    </Frame>
+  );
+}
+
+// ------------------------------------------------------------------------------------------ the response plan
+
+const LINE_KIND: Record<string, string> = {
+  entry: 'Entry', spares_reserve: 'Spare', work_order: 'Work order', td017_move: 'Inventory', evidence_pack: 'Evidence', parc_ferme_list: 'Parc fermé',
+  pu_check: 'PU check', hand_carry: 'Hand-carry', freight: 'Freight', fia_notice: 'FIA notice',
+};
+
+function PlanLineRow({ l, open }: { l: PlanLine; open: (t: SheetTarget) => void }) {
+  const sim = l.precedent?.similarity ?? Math.max(0, ...(l.components ?? []).map((c) => c.similarity ?? 0));
+  const novel = l.status === 'novel';
+  const title = [l.why, l.precedent ? `${l.precedent.case_id}: ${l.precedent.summary ?? ''}` : null, ...(l.components ?? []).map((c) => `${c.label}: ${c.status} ${c.similarity ?? ''}${c.nearest ? ` (closest ${c.nearest.summary})` : ''}`)].filter(Boolean).join('\n');
+  return (
+    <li className={`plan-line plan-line--${l.status}`} title={title} onClick={() => (l.kind === 'entry' ? open({ kind: 'decision', id: l.ref }) : null)} role={l.kind === 'entry' ? 'button' : undefined}>
+      <span className="plan-line-kind">{LINE_KIND[l.kind] ?? l.kind}</span>
+      <span className="plan-line-label">
+        <b>{l.label}</b>
+        {novel && l.why ? <span className="plan-line-why">{l.why}</span> : null}
+      </span>
+      <span className="plan-line-sim">
+        <Bullet value={sim} max={1} limit={0.8} tone={novel ? 'bad' : 'navy'} height={6} label={`similarity ${sim.toFixed(2)}`} />
+        <span className="mono">{sim ? sim.toFixed(2) : '—'}</span>
+      </span>
+      <span className="mono plan-line-amt">{l.amount_cents ? usdShort(l.amount_cents) : ''}</span>
+      <Pill tone={novel ? 'bad' : 'ok'}>{novel ? 'Novel' : 'Precedent'}</Pill>
+    </li>
+  );
+}
+
+function PlanSheet({ desk, id, go, open }: { desk: Desk; id: string; go: (tab: string, anchor?: string) => void; open: (t: SheetTarget) => void }) {
+  const race = desk.race;
+  const p = desk.plans.find((x) => x.plan.planKey === id);
+  if (!p) return <Frame title="Response plan">Not found</Frame>;
+  const draft = p.plan.status === 'draft';
+  const ops = p.lines.filter((l) => l.kind !== 'entry');
+  const ents = p.lines.filter((l) => l.kind === 'entry');
+  return (
+    <Frame
+      title={`Response plan · ${p.label}`}
+      id={`v${p.plan.version}`}
+      tone={draft ? 'wait' : p.plan.status === 'approved' ? 'ok' : 'bad'}
+      foot={
+        draft ? (
+          <>
+            <ActButton label="Reject" run={(by, at) => race.approvePlan({ planKey: p.plan.planKey, status: 'rejected', by, at })} />
+            <ActButton label="Approve the plan" primary busyLabel="Approving…" run={(by, at) => race.approvePlan({ planKey: p.plan.planKey, status: 'approved', by, at })} />
+          </>
+        ) : (
+          <button type="button" className="g-btn" onClick={() => go('cfo')}>
+            Open the CFO view <IconExternal size={12} />
+          </button>
+        )
+      }
+    >
+      <section className="sheet-sec">
+        <div className="sheet-figs">
+          <div className="fig"><span className="fig-label">On precedent</span><span className="fig-value mono">{p.plan.precedented}</span><span className="fig-sub">post alone once approved</span></div>
+          <div className="fig"><span className="fig-label">Novel</span><span className={`fig-value mono ${p.plan.novel ? 'tone-alert' : ''}`}>{p.plan.novel}</span><span className="fig-sub">wait for the Head of Cost Cap</span></div>
+          <div className="fig"><span className="fig-label">Entries</span><span className="fig-value mono">{usdShort(p.amountCents)}</span><span className="fig-sub">{p.entries} lines</span></div>
+        </div>
+        <Shares parts={[{ tone: 'navy', value: p.plan.precedented, label: 'precedent' }, { tone: 'bad', value: p.plan.novel, label: 'novel' }]} height={8} />
+        <Row k="Status" v={<Pill tone={draft ? 'wait' : p.plan.status === 'approved' ? 'ok' : 'bad'}>{draft ? 'Waiting for the Chief of Staff' : `${p.plan.status} by ${p.plan.approvedBy}`}</Pill>} />
+      </section>
+      <section className="sheet-sec">
+        <h3 className="g-label">Entries · each matched part by part against the team's history</h3>
+        <ol className="plan-lines">
+          {ents.map((l) => (
+            <PlanLineRow key={l.ref} l={l} open={open} />
+          ))}
+        </ol>
+      </section>
+      <section className="sheet-sec">
+        <h3 className="g-label">Operations · reversible ones run ahead of the approval</h3>
+        <ol className="plan-lines">
+          {ops.map((l) => (
+            <PlanLineRow key={l.ref} l={l} open={open} />
+          ))}
+        </ol>
+      </section>
     </Frame>
   );
 }

@@ -10,7 +10,7 @@ function KindIcon({ item }: { item: InboxItem }) {
   return item.item.state === 'NEEDS_INFO' ? <IconQuestion size={14} /> : <IconAgent size={14} />;
 }
 
-const RACE_LABEL = { question: 'Race question', action: 'Race decision', effect: 'Race line', close: 'Race close' } as const;
+const RACE_LABEL = { question: 'Race question', action: 'Race decision', effect: 'Race line', close: 'Race close', plan: 'Response plan' } as const;
 
 function kindLabel(item: InboxItem): string {
   if (item.kind === 'race') return RACE_LABEL[item.race.type];

@@ -3,18 +3,17 @@
     post(state, entries, sink) -> list[Posting]     # new entries since the last call
     apply_reviews(state, sink) -> list[Posting]     # held entries a person decided, and failed posts retried
 
-Each new entry is either posted now or held. It is held when
+Each new entry is either posted now or held. There is no amount threshold: an entry posts on precedent, after the
+chief of staff has approved the incident's response plan (race/plan.py). It is held when
 
     a) a crash line behind it waits for a person (its effect is `needs_person`: Jev was unsure)  -> controller
-    b) the amount is material, using the thresholds the two desks already use:
-         >= $1,000,000  CFO               finance/config.py CFO_CENTS, finance/kernel.py K10 ("the CFO as well at $1M")
-         >=   $250,000  Head of Cost Cap  finance/config.py MATERIALITY_CENTS = agents/config.py MATERIALITY_USD_MINOR;
-                                          system_of_work/REDUCERS.md `materiality`: at or above it only the
-                                          human_head_of_cost_cap may approve, the controller decides below it
-    c) the entry is outside the cap (`recognition == 'excluded'`, an FIA fine)  -> Head of Cost Cap confirms the exclusion
-    d) it adjusts an entry that is not in the ERP yet (held, failed)               -> whoever reviews that entry
+    b) the incident's response plan is not approved yet (or there is none)                       -> chief of staff
+    c) the entry has no precedent in the team's history (no case close enough, or a familiar
+       part at an unfamiliar price), or is not on the plan                                        -> Head of Cost Cap
+    d) the entry is outside the cap (`recognition == 'excluded'`, an FIA fine)                   -> Head of Cost Cap confirms the exclusion
+    e) it adjusts an entry that is not in the ERP yet (held, failed)                             -> whoever reviews that entry
 
-The highest role wins (cfo > head_of_cost_cap > controller) and every reason is kept.
+The highest role wins (cfo > head_of_cost_cap = chief_of_staff > controller) and every reason is kept.
 
 pit-wall decides, not this file. With SpacetimeDB up, the desk asks the module to authorize each entry
 (request_race_posting) and sends to the ERP only what it authorized; the module applies the rules above plus one more
@@ -62,14 +61,14 @@ import time
 
 import httpx
 
-from finance.config import CFO_CENTS, MATERIALITY_CENTS
 from race.events import Entry, Posting, now_iso
 from world.company import ACCOUNT
 
 DEFAULT_ERP_URL = "http://localhost:8010"
 DEFAULT_GATEWAY_KEY = "dev-gateway-key"
 BALANCE_ACCOUNTS = {"1400": "capadj-RACE_SPARES_INVENTORY_1400", "2100": "capadj-RACE_ACCRUED_COSTS_2100"}
-ROLE_RANK = {"": 0, "controller": 1, "head_of_cost_cap": 2, "cfo": 3}
+ROLE_RANK = {"": 0, "controller": 1, "head_of_cost_cap": 2, "chief_of_staff": 2, "cfo": 3}
+PRECEDENT_MIN = 0.8  # race/history.py MIN_SIMILARITY, the module's PRECEDENT_MIN
 READ_EVERY_S = 1.0  # how often apply_reviews reads race_postings
 RETRY_EVERY_S = 5.0  # how often a failed post is tried again
 TIMEOUT = httpx.Timeout(5.0, connect=1.5)
@@ -114,6 +113,15 @@ def _effect_of(entry: Entry, state):
     return None
 
 
+def _plan_line(entry: Entry, state) -> tuple[object | None, dict | None]:
+    plan = (getattr(state, "plans", {}) or {}).get(entry.incident_key) if entry.incident_key else None
+    return plan, (plan.line(entry.entry_key) if plan is not None else None)
+
+
+def _precedented(line: dict | None) -> bool:
+    return bool(line) and line.get("status") == "precedent" and float((line.get("precedent") or {}).get("similarity") or 0) >= PRECEDENT_MIN
+
+
 def review_for(entry: Entry, state) -> tuple[str, list[str]]:
     """(review role, reasons). An empty role means the desk may post it on its own authority."""
     role, why = "", []
@@ -124,15 +132,21 @@ def review_for(entry: Entry, state) -> tuple[str, list[str]]:
         if ROLE_RANK[r] > ROLE_RANK[role]:
             role = r
 
-    amt = entry.amount_cents
     eff = _effect_of(entry, state)
     if (eff is not None and eff.status == "needs_person") or (eff is None and "waits for a person" in entry.memo.lower()):
         need("controller", "the crash line behind it waits for a person (Jev was unsure of the estimate)")
-    if amt >= CFO_CENTS:
-        need("cfo", f"{_usd(amt)} is at or above the CFO's $1,000,000 threshold (finance/kernel.py K10)")
-    elif amt >= MATERIALITY_CENTS:
-        need("head_of_cost_cap", f"{_usd(amt)} is at or above the $250,000 materiality the Head of Cost Cap decides "
-                                 "(cost cap desk REDUCERS.md `materiality`)")
+    if entry.incident_key:
+        plan, line = _plan_line(entry, state)
+        if plan is None:
+            need("chief_of_staff", "no response plan for this incident yet")
+        elif plan.status == "draft":
+            need("chief_of_staff", "the response plan for this incident waits for the chief of staff")
+        elif plan.status == "rejected":
+            need("chief_of_staff", "the response plan for this incident was rejected")
+        if plan is not None and line is None:
+            need("head_of_cost_cap", "the entry is not on the response plan")
+        elif line is not None and not _precedented(line):
+            need("head_of_cost_cap", f"no entry like it in the team's history{': ' + line['why'] if line.get('why') else ''}")
     if entry.recognition == "excluded":
         need("head_of_cost_cap", "it is booked outside the cap (an FIA fine); the Head of Cost Cap confirms the exclusion")
     if entry.entry_key.endswith(":adj"):
@@ -146,8 +160,11 @@ def review_for(entry: Entry, state) -> tuple[str, list[str]]:
 def _auto_reason(entry: Entry, state) -> str:
     eff = _effect_of(entry, state)
     who = f", decided by {eff.decided_by} ({eff.status})" if eff is not None else ""
-    return (f"posted on the desk's authority: {_usd(entry.amount_cents)} is under the $250,000 review threshold, "
-            f"{entry.recognition.replace('_', ' ')}{who}")
+    plan, line = _plan_line(entry, state)
+    prec = (line or {}).get("precedent") or {}
+    on = (f"on precedent {prec.get('case_id', '?')} (similarity {float(prec.get('similarity') or 0):.2f}) under the plan {plan.approved_by} approved"
+          if plan is not None and prec else "no incident behind it")
+    return f"posted on the desk's authority: {_usd(entry.amount_cents)} {on}, {entry.recognition.replace('_', ' ')}{who}"
 
 
 # ---------------------------------------------------------------------------------------------- journal entry
@@ -298,6 +315,28 @@ def _sql_str(v) -> str:
     if isinstance(v, (list, tuple)) and v:
         v = v[0]
     return str(v or "")
+
+
+def reconsider(state, incident_key: str, sink) -> list[Posting]:
+    """Without the database deciding (dry run), re-run the rule for the incident's held entries after its plan changed:
+    the ones now clear are posted. With pit-wall up the module does this itself in the approval's transaction."""
+    out: list[Posting] = []
+    postings: dict[str, Posting] = getattr(state, "postings", {}) or {}
+    entries: dict[str, Entry] = getattr(state, "entries", {}) or {}
+    for key, cur in list(postings.items()):
+        e = entries.get(key)
+        if e is None or cur.status != "held" or e.incident_key != incident_key:
+            continue
+        if _authorize(e, sink) is not None:
+            continue  # pit-wall decides: its row changes in the approval's transaction and apply_reviews posts it
+        role, why = review_for(e, state)
+        if role:
+            if (role, why) != (cur.review_role, None) and cur.reason != "held for review: " + "; ".join(why):
+                out.append(Posting(entry_key=key, incident_key=e.incident_key, status="held", amount_cents=e.amount_cents, review_role=role,
+                                   reason="held for review: " + "; ".join(why)))
+            continue
+        out.append(_post_one(state, e, sink, reason=_auto_reason(e, state)))
+    return out
 
 
 def apply_reviews(state, sink) -> list[Posting]:

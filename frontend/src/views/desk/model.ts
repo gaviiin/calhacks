@@ -6,7 +6,7 @@ import type { PartTone } from '../../blueprint/engine/engine';
 import { PALETTE, type RGB } from '../../blueprint/palette';
 import { useRace, type RaceData } from '../../lib/race';
 import { TEAM, carLabel, costByLap, ledger, payloadOf, readJev, sortTime, tierOf, type CostByLap } from '../../lib/raceModel';
-import type { RaceActions, RaceAudit, RaceIncidents, RacePartLife, RacePostings } from '../../module_bindings/types';
+import type { RaceActions, RaceAudit, RaceIncidents, RacePartLife, RacePlans, RacePostings } from '../../module_bindings/types';
 import { signedCents } from '../raceday/AccountPanel';
 import { latestSim } from '../raceday/ReplanPanel';
 import { clock, parse, roleLabel } from '../raceday/shared';
@@ -237,7 +237,7 @@ export function lensTones(lens: DeskLens, car: DeskCar): PartTone[] | null {
 
 // ------------------------------------------------------------------------------------------ alerts
 
-export type AlertKind = 'penalty' | 'damaged' | 'nospare' | 'held' | 'question' | 'decision' | 'due' | 'close' | 'refused' | 'unsure';
+export type AlertKind = 'plan' | 'penalty' | 'damaged' | 'nospare' | 'held' | 'question' | 'decision' | 'due' | 'close' | 'refused' | 'unsure';
 
 export interface Alert {
   key: string;
@@ -269,9 +269,58 @@ const n = (c: bigint | number | undefined | null) => Number(c ?? 0);
 
 function reasonTag(reason: string): string {
   if (/unsure/i.test(reason)) return 'Jev unsure';
-  if (/materiality/i.test(reason)) return 'over materiality';
-  if (/threshold/i.test(reason)) return 'over CFO threshold';
+  if (/response plan/i.test(reason)) return 'plan not approved';
+  if (/no entry like it|history|precedent|not on the response plan/i.test(reason)) return 'no precedent';
+  if (/outside the cap/i.test(reason)) return 'outside the cap';
   return reason.split(/[:;(]/)[0]!.trim();
+}
+
+// ------------------------------------------------------------------------------------------ the response plan
+
+export interface PlanLine {
+  ref: string;
+  kind: string;
+  label: string;
+  amount_cents: number;
+  status: 'precedent' | 'novel';
+  why?: string;
+  precedent?: { case_id: string; similarity: number; summary?: string } | null;
+  owner_role?: string;
+  action_status?: string;
+  components?: { part?: string; label: string; amount_cents: number; status: string; similarity?: number; precedent?: { case_id: string; similarity: number; summary?: string } | null; nearest?: { case_id: string; summary: string; amount_cents: number } | null }[];
+}
+
+export interface PlanView {
+  plan: RacePlans;
+  incident: RaceIncidents | null;
+  car: number | null;
+  /** "#43 · race L31 crash" */
+  label: string;
+  lines: PlanLine[];
+  operations: number;
+  entries: number;
+  amountCents: number;
+}
+
+function planLabel(inc: RaceIncidents | null): string {
+  if (!inc) return 'incident';
+  const lap = parse<{ lap?: number }>(inc.beliefJson, {}).lap;
+  const what = inc.evidenceJson.includes('car_stopped') ? 'crash' : 'contact';
+  return `${carLabel(inc.driverNumber)} · ${inc.sessionKey === 9627 ? 'qualifying' : `race L${lap ?? '?'}`} ${what}`;
+}
+
+export function planViews(race: RaceData): PlanView[] {
+  return race.plans
+    .map((p) => {
+      const inc = race.incidents.find((i) => i.incidentKey === p.incidentKey) ?? null;
+      const lines = parse<PlanLine[]>(p.linesJson, []);
+      return {
+        plan: p, incident: inc, car: inc?.driverNumber ?? null, label: planLabel(inc), lines,
+        operations: lines.filter((l) => l.kind !== 'entry').length, entries: lines.filter((l) => l.kind === 'entry').length,
+        amountCents: lines.filter((l) => l.kind === 'entry').reduce((t, l) => t + (l.amount_cents || 0), 0),
+      };
+    })
+    .sort((a, b) => Number(a.plan.status !== 'draft') - Number(b.plan.status !== 'draft') || sortTime(b.incident?.firstSeenAt ?? '') - sortTime(a.incident?.firstSeenAt ?? ''));
 }
 
 /** The held postings grouped by incident: one approval per crash, as the CFO view does it. */
@@ -297,8 +346,13 @@ export function heldGroups(race: RaceData): HeldGroup[] {
     .sort((a, b) => sortTime(b.at || '1970-01-01T00:00:00Z') - sortTime(a.at || '1970-01-01T00:00:00Z'));
 }
 
-function alertsOf(race: RaceData, cars: DeskCar[], held: HeldGroup[]): Alert[] {
+function alertsOf(race: RaceData, cars: DeskCar[], held: HeldGroup[], plans: PlanView[]): Alert[] {
   const out: Alert[] = [];
+  for (const p of plans.filter((x) => x.plan.status === 'draft'))
+    out.push({
+      key: `plan:${p.plan.planKey}`, kind: 'plan', tone: 'wait', action: true, car: p.car, who: 'Chief of Staff', amountCents: p.amountCents, at: p.plan.updatedAt,
+      title: `Response plan · ${p.label}`, detail: `${p.operations} operations · ${p.entries} entries · ${p.plan.precedented} on precedent · ${p.plan.novel} novel`, go: { tab: 'cfo' },
+    });
   for (const c of cars) {
     for (const p of c.parts) {
       if (p.penalty)
@@ -352,7 +406,7 @@ function alertsOf(race: RaceData, cars: DeskCar[], held: HeldGroup[]): Alert[] {
       title: `${refusedAgent.length} agent ${refusedAgent.length === 1 ? 'attempt' : 'attempts'} refused`, detail: last.reason, go: { tab: 'accounting' },
     });
   }
-  const order: Record<AlertKind, number> = { held: 0, question: 1, decision: 2, unsure: 3, close: 4, penalty: 5, nospare: 6, damaged: 7, due: 8, refused: 9 };
+  const order: Record<AlertKind, number> = { plan: 0, held: 1, question: 2, decision: 3, unsure: 4, close: 5, penalty: 6, nospare: 7, damaged: 8, due: 9, refused: 10 };
   return out.sort((a, b) => Number(b.action) - Number(a.action) || order[a.kind] - order[b.kind] || sortTime(b.at) - sortTime(a.at));
 }
 
@@ -456,6 +510,7 @@ const AUDIT_WORDS: Record<string, string> = {
   correct_effect: 'corrected an estimate', apply_answer: 'applied an answer', answer_question: 'answered a question',
   question_default: 'took the deadline default', approve_close: 'approved the close', choose_option: 'chose an option',
   set_policy_autonomy: 'set a policy’s autonomy', set_rules: 'changed the money rules', grant_seat: 'seated a person',
+  plan_approved: 'approved the response plan', plan_rejected: 'rejected the response plan',
   action_approved: 'approved an action', action_rejected: 'rejected an action', action_done: 'marked an action done', action_cancelled: 'cancelled an action',
   record_event: 'recorded an event', record_effects: 'booked an effect', record_part_life: 'updated part life', record_sim: 'ran the season', record_close: 'sealed the weekend',
 };
@@ -570,6 +625,7 @@ export interface Desk {
   parts: DeskPart[];
   alerts: Alert[];
   held: HeldGroup[];
+  plans: PlanView[];
   finance: DeskFinance;
   trail: TrailItem[];
   timeline: Timeline;
@@ -588,6 +644,7 @@ export function readDesk(race: RaceData): Desk {
   if (!numbers.size) for (const x of [23, 43]) numbers.add(x);
   const cars = [...numbers].sort((a, b) => a - b).map((x) => readDeskCar(x, race, tape));
   const held = heldGroups(race);
+  const plans = planViews(race);
   const ours = new Map(cars.map((c) => [c.number, c]));
   const order = [...tape.cars.entries()]
     .filter(([, t]) => t.position)
@@ -607,8 +664,9 @@ export function readDesk(race: RaceData): Desk {
     tape,
     cars,
     parts: cars.flatMap((c) => c.parts).sort((a, b) => a.urgency - b.urgency),
-    alerts: alertsOf(race, cars, held),
+    alerts: alertsOf(race, cars, held, plans),
     held,
+    plans,
     finance: financeOf(race, cars),
     trail: trailOf(race),
     timeline: timelineOf(race, tape),

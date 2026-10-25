@@ -26,8 +26,8 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from race import cap_forecast, close as close_mod, erp, incidents, ledger, life, logistics, people, questions, season_sim, strategy
-from race.events import Action, Close, Effect, Entry, Incident, OptionSet, Posting, Question, RaceEvent, SimRun, now_iso
+from race import cap_forecast, close as close_mod, erp, incidents, ledger, life, logistics, people, plan as plan_mod, questions, season_sim, strategy
+from race.events import Action, Close, Effect, Entry, Incident, OptionSet, Plan, Posting, Question, RaceEvent, SimRun, now_iso
 from race.replay import Replay
 from race.sink import RaceSink
 
@@ -61,6 +61,8 @@ class WeekendState:
     applied_answers: set = field(default_factory=set)  # question keys whose answer the desk has applied
     options: dict[str, OptionSet] = field(default_factory=dict)  # the latest priced decisions per car
     postings: dict[str, Posting] = field(default_factory=dict)  # entry key -> where it went in the books
+    plans: dict[str, Plan] = field(default_factory=dict)  # incident key -> the response plan the chief of staff approves
+    history: object | None = None  # race/history.py OperationStore: what the team has done before (loaded on first use)
     close: Close | None = None
     replay: Replay | None = None  # the live session's replay (its EffectsContext, policies, precedents)
 
@@ -146,7 +148,7 @@ class Weekend:
             self.say(f"[respond] {a.kind}: {a.title} ({a.status})")
 
         t0 = time.perf_counter()
-        self.book_entries(ledger.entries_for(inc, effects, st))
+        self.book_entries(ledger.entries_for(inc, effects, st), inc)
         self._time("account", t0)
 
         t0 = time.perf_counter()
@@ -180,6 +182,7 @@ class Weekend:
                     if self.sink:
                         self.sink.actions([a])
                     self.say(f"[respond] {a.kind}: {a.title} ({a.status})")
+            self.record_plan(inc)
             for q in questions.questions_for(inc, [], st):
                 if q.question_key not in st.questions:
                     st.questions[q.question_key] = q
@@ -188,7 +191,7 @@ class Weekend:
                     self.say(f"[ask] {q.route_role}: {q.prompt}")
         self.replan(f"result:{replay.session.get('session_key')}")
 
-    def book_entries(self, ents: list[Entry]) -> None:
+    def book_entries(self, ents: list[Entry], inc: Incident | None = None) -> None:
         fresh = []
         for e in ents:
             if e.entry_key not in self.state.entries:
@@ -197,8 +200,50 @@ class Weekend:
                 if self.sink:
                     self.sink.entry(e)
                 self.say(f"[account] {e.memo[:90]} ${e.amount_cents / 100:,.0f} ({e.recognition})")
+        incs = {e.incident_key for e in fresh if e.incident_key} | ({inc.incident_key} if inc is not None else set())
+        for ik in sorted(incs):  # the plan names every entry before the database is asked to post it
+            i = self.state.incidents.get(ik)
+            if i is not None:
+                self.record_plan(i)
         if fresh:
             self.record_postings(erp.post(self.state, fresh, self.sink))
+
+    def record_plan(self, inc: Incident) -> None:
+        """The response plan for the incident as it stands: its operations and entries, each with its precedent or none.
+        Recorded on every change; the chief of staff's approval (in the dashboard or replayed) stands across versions."""
+        t0 = time.perf_counter()
+        st = self.state
+        plan = plan_mod.build(inc, st)
+        prior = st.plans.get(inc.incident_key)
+        if plan_mod.same(prior, plan):
+            return
+        st.plans[inc.incident_key] = plan
+        if self.sink:
+            self.sink.plan(plan)
+        self._time("plan", t0)
+        self.say(f"[plan] {inc.incident_key} v{plan.version} {plan.status}: {plan.summary[:150]}")
+
+    def follow_plans(self) -> None:
+        """A person approved or rejected a plan (in the dashboard, or replayed offline): read it back, learn its operations,
+        and post what it releases."""
+        st = self.state
+        drafts = [p for p in st.plans.values() if p.status == "draft"]
+        if drafts and self.sink is not None and not self.sink.disabled:
+            now = time.monotonic()
+            if now - getattr(self, "_plan_poll", 0.0) >= 1.0:
+                self._plan_poll = now
+                rows = {r["plan_key"]: r for r in self.sink.sql("SELECT * FROM race_plans") if r.get("status") in ("approved", "rejected")}
+                for p in drafts:
+                    r = rows.get(p.plan_key)
+                    if r is None:
+                        continue
+                    p.status, p.approved_by, p.approved_at = r["status"], r.get("approved_by") or "", r.get("approved_at") or ""
+        for p in st.plans.values():
+            if p.status == "approved" and not getattr(p, "_learned", False):
+                p.__dict__["_learned"] = True
+                n = plan_mod.learn_approval(st, p)
+                self.say(f"[plan] {p.incident_key} approved by {p.approved_by}: {n} operations join the team's history")
+                self.record_postings(erp.reconsider(st, p.incident_key, self.sink))
 
     def record_postings(self, postings: list[Posting]) -> None:
         t0 = time.perf_counter()
@@ -207,6 +252,8 @@ class Weekend:
             if self.sink:
                 self.sink.posting(p)
             self.say(f"[books] {p.entry_key[:40]} {p.status}{' ' + p.erp_entry_id if p.erp_entry_id else ''}: {p.reason[:90]}")
+            if p.status == "posted":
+                plan_mod.learn(self.state, p)  # a posted entry is the precedent for the next one like it
         self._time("books", t0)
 
     # ------------------------------------------------------------------ stages that run on their own clock
@@ -258,12 +305,14 @@ class Weekend:
                 self.sink.actions(fresh)
             self.say(f"[respond] {a.detail.get('chosen_by', 'a person')} chose {chosen.replace('_', ' ')} for car {inc.driver_number}: "
                      f"{len(fresh)} next steps re-planned")
+            self.record_plan(inc)
 
     def apply_answers(self) -> None:
         """Answers a person gave in the dashboard since the last event: apply them and re-decide what they cover.
         Held entries a person approved are posted to the ERP here too, and decisions are followed."""
         self.record_postings(erp.apply_reviews(self.state, self.sink))
         self.follow_decisions()
+        self.follow_plans()
         changed = questions.apply_answers(self.state, self.sink, self.book)
         pend = getattr(self.state, "pending_entries", None)
         if pend:
@@ -280,6 +329,7 @@ class Weekend:
                 self.state.actions[a.action_key] = a
             if fresh and self.sink:
                 self.sink.actions(fresh)
+            self.record_plan(inc)
             self.replan(f"answer:{inc.incident_key}@v{inc.version}")
 
     # ------------------------------------------------------------------ run

@@ -4,7 +4,7 @@
     uv run python scripts/race_grant.py --role race_head --identity <hex> --name "Morgan Hale"
     uv run python scripts/race_grant.py --role cfo --identity <hex> --name "Dana Okafor"   # a seat on a second device
 
-A person's role (race_head, controller, head_of_cost_cap, cfo) is granted as a seat (grant_seat): the name every
+A person's role (race_head, controller, head_of_cost_cap, cfo, chief_of_staff) is granted as a seat (grant_seat): the name every
 decision of theirs is recorded under. pit-wall refuses to seat the publisher's own identity, which runs the agents.
 
 The module owner (whoever published pit-wall) calls set_writer; by default that is also the CLI identity,
@@ -27,7 +27,7 @@ sys.path.insert(0, str(Path(__file__).resolve().parents[1]))
 from finance.spacetime_mirror import cli_token  # noqa: E402
 
 
-PERSON_ROLES = ["race_head", "controller", "head_of_cost_cap", "cfo"]
+PERSON_ROLES = ["race_head", "controller", "head_of_cost_cap", "cfo", "chief_of_staff"]
 
 
 def cli_identity() -> str:

@@ -5,7 +5,7 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 // a one-time invite code), so the module's roles matrix judges every click. On the revenue desk the
 // seat names the approver the ledger's K11 check sees.
 
-export type SeatId = 'observer' | 'head' | 'controller' | 'cfo';
+export type SeatId = 'observer' | 'head' | 'controller' | 'cfo' | 'cos';
 
 export interface Person {
   id: SeatId;
@@ -39,6 +39,13 @@ export const PEOPLE: Record<SeatId, Person> = {
     title: 'CFO',
     costCapRole: null,
     revenue: { approver: 'priya', role: 'cfo' },
+  },
+  cos: {
+    id: 'cos',
+    name: 'Sam Reyes',
+    title: 'Chief of Staff',
+    costCapRole: null,
+    revenue: null,
   },
 };
 

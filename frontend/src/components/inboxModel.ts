@@ -3,7 +3,7 @@ import { abs, needsHead, type CostCapData } from '../lib/costcap';
 import { tidyMemo } from '../lib/format';
 import type { Parked, Queue, Question } from '../lib/revenue';
 import type { RaceData } from '../lib/race';
-import type { RaceActions, RaceCloses, RaceEffects, RaceQuestions } from '../module_bindings/types';
+import type { RaceActions, RaceCloses, RaceEffects, RacePlans, RaceQuestions } from '../module_bindings/types';
 
 // Everything that waits for a person, from both desks, in one list.
 
@@ -19,7 +19,8 @@ export type RaceInbox =
   | { type: 'question'; question: RaceQuestions }
   | { type: 'action'; action: RaceActions }
   | { type: 'effect'; effect: RaceEffects }
-  | { type: 'close'; close: RaceCloses };
+  | { type: 'close'; close: RaceCloses }
+  | { type: 'plan'; plan: RacePlans };
 
 const ROLE: Record<string, string> = {
   team_principal: 'Team Principal', chief_mechanic: 'Chief Mechanic', sporting_director: 'Sporting Director', logistics: 'Head of Logistics',
@@ -27,8 +28,13 @@ const ROLE: Record<string, string> = {
 };
 const role = (r: string) => ROLE[r] ?? r.replace(/_/g, ' ');
 
-export function raceInboxItems(race: Pick<RaceData, 'questions' | 'actions' | 'effects' | 'closes'>): InboxItem[] {
+export function raceInboxItems(race: Pick<RaceData, 'questions' | 'actions' | 'effects' | 'closes' | 'plans'>): InboxItem[] {
   const out: InboxItem[] = [];
+  for (const p of race.plans) {
+    if (p.status !== 'draft') continue;
+    out.push({ kind: 'race', key: `race-p:${p.planKey}`, desk: 'race', race: { type: 'plan', plan: p }, needs: 'Chief of Staff',
+      amount: 0, title: `Approve the response plan: ${p.summary.split(';')[0]}`, sub: `${p.precedented} on precedent · ${p.novel} novel` });
+  }
   for (const q of race.questions) {
     if (q.status !== 'open') continue;
     out.push({ kind: 'race', key: `race-q:${q.questionKey}`, desk: 'race', race: { type: 'question', question: q }, needs: role(q.routeRole),
@@ -52,7 +58,7 @@ export function raceInboxItems(race: Pick<RaceData, 'questions' | 'actions' | 'e
   return out;
 }
 
-export function inboxItems(cc: CostCapData, queue: Queue | null, race?: Pick<RaceData, 'questions' | 'actions' | 'effects' | 'closes'>): InboxItem[] {
+export function inboxItems(cc: CostCapData, queue: Queue | null, race?: Pick<RaceData, 'questions' | 'actions' | 'effects' | 'closes' | 'plans'>): InboxItem[] {
   const out: InboxItem[] = race ? raceInboxItems(race) : [];
   for (const w of cc.workItems) {
     if (w.state !== 'PROPOSED' && w.state !== 'NEEDS_INFO') continue;

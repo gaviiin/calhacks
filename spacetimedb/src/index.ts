@@ -429,6 +429,27 @@ const racePostings = table(
   }
 );
 
+// The response plan for an incident: the hardware operations and the financial entries that follow a crash, each line
+// with the closest precedent in the team's own history (or none). The chief of staff approves the plan as a whole;
+// then every line with a precedent executes and posts on its own, whatever its amount, and a line with no precedent
+// waits for the Head of Cost Cap. A later version of the incident rewrites the lines; an approval stands.
+const racePlans = table(
+  { name: 'race_plans', public: true },
+  {
+    planKey: t.string().primaryKey(), // the incident key
+    incidentKey: t.string().index('btree'),
+    version: t.u32(),
+    status: t.string(), // draft | approved | rejected
+    summary: t.string(),
+    linesJson: t.string(), // [{ref, kind, label, amountCents, status: precedent | novel, precedent: {caseId, similarity, summary} | null, why}]
+    precedented: t.u32(),
+    novel: t.u32(),
+    approvedBy: t.string(),
+    approvedAt: t.string(),
+    updatedAt: t.string(),
+  }
+);
+
 // Which outside services the desk actually used on this run, and how they did: OpenF1, Jev, Claude, the ERP,
 // SpacetimeDB itself, the notification channels. Shown on every view so nothing claims to be live that is not.
 const raceHealth = table(
@@ -549,6 +570,7 @@ const spacetimedb = schema({
   raceCloses,
   raceOptions,
   racePostings,
+  racePlans,
   raceHealth,
   raceAudit,
   raceSeats,
@@ -661,11 +683,13 @@ function requireRole(ctx: any, role: string) {
 // ---------------------------------------------------------------- who is calling, and the one door
 
 const AGENT_ROLES = ['kernel', 'router', 'race'];
-const PERSON_ROLES = ['race_head', 'controller', 'head_of_cost_cap', 'cfo'];
+const PERSON_ROLES = ['race_head', 'controller', 'head_of_cost_cap', 'cfo', 'chief_of_staff'];
+// Who approves a response plan: the chief of staff, or the CFO and the head of racing finance standing in.
+const PLAN_APPROVERS = ['chief_of_staff', 'cfo', 'race_head'];
 // Who may decide a held posting: the review role it was held for, or a more senior seat. race_head is the
 // dashboard's head-of-racing-finance seat and decides at controller level.
-const REVIEW_RANK: Record<string, number> = { '': 0, controller: 1, head_of_cost_cap: 2, cfo: 3 };
-const SEAT_RANK: Record<string, number> = { race_head: 1, controller: 1, head_of_cost_cap: 2, cfo: 3 };
+const REVIEW_RANK: Record<string, number> = { '': 0, controller: 1, head_of_cost_cap: 2, chief_of_staff: 2, cfo: 3 };
+const SEAT_RANK: Record<string, number> = { race_head: 1, controller: 1, head_of_cost_cap: 2, chief_of_staff: 2, cfo: 3 };
 const RULES_ID = 0;
 const DEFAULT_RULES = { autoPostMaxCents: 25_000_000n, cfoCents: 100_000_000n, modelMayPostAlone: false, replayPace: 1 };
 
@@ -1583,7 +1607,28 @@ const PostingInput = t.object('RacePostingInput', {
 // checks this row before it accepts a race entry, so even an agent holding the gateway key cannot post around it.
 
 const MODEL_DECIDERS = (decidedBy: string) => decidedBy === 'jev' || decidedBy.startsWith('claude');
+const PRECEDENT_MIN = 0.8; // a line executes on its own when its closest case in the team's history scores at least this
 
+// Lines are written by the desk in snake_case (race/plan.py): case_id, amount_cents.
+type PlanLine = { ref: string; kind: string; label: string; amount_cents?: number; status: string; why?: string; precedent?: { case_id?: string; caseId?: string; similarity: number; summary?: string } | null };
+
+/** The plan line for an entry, when its incident has a plan that names it. */
+function planLineFor(ctx: any, entry: any): { plan: any; line: PlanLine | null } {
+  if (!entry.incidentKey) return { plan: null, line: null };
+  const plan = ctx.db.racePlans.planKey.find(entry.incidentKey);
+  if (!plan) return { plan: null, line: null };
+  let lines: PlanLine[] = [];
+  try {
+    lines = JSON.parse(plan.linesJson) as PlanLine[];
+  } catch {
+    lines = [];
+  }
+  return { plan, line: lines.find((l) => l.kind === 'entry' && l.ref === entry.entryKey) ?? null };
+}
+
+// The rule, in order: the estimate behind the entry must not be waiting for a person; the incident's response plan
+// must be approved by the chief of staff; the entry must have a precedent in the team's history (then it posts on
+// its own, whatever its size); an entry with no precedent waits for the Head of Cost Cap. No amount threshold.
 function postingDecision(ctx: any, entry: any): { role: string; reasons: string[] } {
   const r = rules(ctx);
   let role = '';
@@ -1592,17 +1637,24 @@ function postingDecision(ctx: any, entry: any): { role: string; reasons: string[
     reasons.push(why);
     if ((REVIEW_RANK[who] ?? 0) > (REVIEW_RANK[role] ?? 0)) role = who;
   };
+  const { plan, line } = planLineFor(ctx, entry);
+  const precedented = !!line && line.status === 'precedent' && (line.precedent?.similarity ?? 0) >= PRECEDENT_MIN;
   const eff = entry.effectKey ? ctx.db.raceEffects.effectKey.find(entry.effectKey) : undefined;
   if (eff) {
     const signed = ctx.db.raceSignoffs.effectKey.find(eff.effectKey);
     if (eff.status === 'corrected' && !signed) need('controller', 'the estimate behind it was corrected after the entry was raised');
     else if (eff.status === 'needs_person' && !signed) need('controller', 'Jev was unsure of the estimate: a person confirms it first');
-    else if (MODEL_DECIDERS(eff.decidedBy) && !signed && !r.modelMayPostAlone) {
-      need('controller', `the estimate is ${eff.decidedBy === 'jev' ? "Jev's" : "the forecast agent's"} alone: a person signs it off before it posts`);
+    else if (MODEL_DECIDERS(eff.decidedBy) && !signed && !r.modelMayPostAlone && !precedented) {
+      need('controller', `the estimate is ${eff.decidedBy === 'jev' ? "Jev's" : "the forecast agent's"} alone and nothing like it is on the record: a person signs it off before it posts`);
     }
   }
-  if (entry.amountCents >= r.cfoCents) need('cfo', `${usd(entry.amountCents)} is at or above the CFO's ${usd(r.cfoCents)} threshold`);
-  else if (entry.amountCents >= r.autoPostMaxCents) need('head_of_cost_cap', `${usd(entry.amountCents)} is at or above the ${usd(r.autoPostMaxCents)} materiality`);
+  if (entry.incidentKey) {
+    if (!plan) need('chief_of_staff', 'no response plan for this incident yet');
+    else if (plan.status === 'draft') need('chief_of_staff', 'the response plan for this incident waits for the chief of staff');
+    else if (plan.status === 'rejected') need('chief_of_staff', 'the response plan for this incident was rejected');
+    if (plan && !line) need('head_of_cost_cap', 'the entry is not on the response plan');
+    else if (line && !precedented) need('head_of_cost_cap', `no entry like it in the team's history${line.why ? `: ${line.why}` : ''}`);
+  }
   if (entry.recognition === 'excluded') need('head_of_cost_cap', 'booked outside the cap (an FIA fine): the Head of Cost Cap confirms the exclusion');
   // An adjustment never reaches the ERP ahead of the entry it adjusts: it waits with it, for the same person.
   if (entry.entryKey.endsWith(':adj')) {
@@ -1618,9 +1670,82 @@ function postingDecision(ctx: any, entry: any): { role: string; reasons: string[
 function authorizedReason(ctx: any, entry: any, after?: string): string {
   const eff = entry.effectKey ? ctx.db.raceEffects.effectKey.find(entry.effectKey) : undefined;
   const signed = eff ? ctx.db.raceSignoffs.effectKey.find(eff.effectKey) : undefined;
+  const { plan, line } = planLineFor(ctx, entry);
+  const onPlan = plan ? `under the plan ${plan.approvedBy ? `${plan.approvedBy} approved` : plan.status}` : 'no incident';
+  const prec = line?.precedent ? `on precedent ${line.precedent.case_id ?? line.precedent.caseId ?? '?'} (similarity ${Number(line.precedent.similarity).toFixed(2)})` : 'no precedent needed';
   const basis = signed ? `signed off by ${signed.name}` : eff ? `decided by ${eff.decidedBy}` : 'no estimate behind it';
-  return `${after ? `${after}: ` : ''}authorized by pit-wall: ${usd(entry.amountCents)} under the ${usd(rules(ctx).autoPostMaxCents)} limit, ${basis}`.slice(0, 512);
+  return `${after ? `${after}: ` : ''}authorized by pit-wall: ${usd(entry.amountCents)} ${prec}, ${onPlan}, ${basis}`.slice(0, 512);
 }
+
+// The plan changed (recorded, approved, rejected): re-run the posting decision for every entry of the incident that is
+// still held, so an approval releases the precedented lines in the same transaction.
+function reconsiderIncidentPostings(ctx: any, incidentKey: string, by: string) {
+  const affected = [...ctx.db.raceEntries.iter()].filter((e: any) => e.incidentKey === incidentKey);
+  for (const entry of affected) {
+    const cur = ctx.db.racePostings.entryKey.find(entry.entryKey);
+    if (!cur || cur.status !== 'held') continue;
+    const d = postingDecision(ctx, entry);
+    if (d.role === '') {
+      ctx.db.racePostings.entryKey.update({ ...cur, status: 'authorized', reviewRole: '', reason: authorizedReason(ctx, entry, `after ${by}`), by: 'pit-wall', at: ctx.timestamp.toISOString() });
+    } else {
+      ctx.db.racePostings.entryKey.update({ ...cur, reviewRole: d.role, reason: `held for review: ${d.reasons.join('; ')}`.slice(0, 512) });
+    }
+  }
+}
+
+const PLAN_STATUSES = ['draft', 'approved', 'rejected'];
+const PlanInput = t.object('RacePlanInput', {
+  planKey: t.string(), incidentKey: t.string(), version: t.u32(), status: t.string(), summary: t.string(), linesJson: t.string(),
+  precedented: t.u32(), novel: t.u32(), approvedBy: t.string(), approvedAt: t.string(), updatedAt: t.string(),
+});
+
+// The desk records the response plan it drafted for an incident (every version). Only a person approves: a plan the
+// desk sends as approved is recorded as a draft. An earlier approval stands across versions; the new lines still each
+// need their own precedent to post.
+export const recordRacePlan = spacetimedb.reducer(
+  { plan: PlanInput },
+  (ctx, { plan }) => {
+    requireRole(ctx, 'race');
+    if (!PLAN_STATUSES.includes(plan.status)) throw new SenderError('invalid plan: unknown status');
+    if (!ctx.db.raceIncidents.incidentKey.find(plan.incidentKey)) throw new SenderError('invalid plan: no such incident');
+    requireIso('plan.updatedAt', plan.updatedAt);
+    requireLen('plan.summary', plan.summary, 1024);
+    requireLen('plan.linesJson', plan.linesJson, 65536);
+    const cur = ctx.db.racePlans.planKey.find(plan.planKey);
+    const row = cur
+      ? { ...plan, status: cur.status === 'draft' ? 'draft' : cur.status, approvedBy: cur.approvedBy, approvedAt: cur.approvedAt }
+      : { ...plan, status: 'draft', approvedBy: '', approvedAt: '' };
+    if (cur) ctx.db.racePlans.planKey.update(row);
+    else ctx.db.racePlans.insert(row);
+    reconsiderIncidentPostings(ctx, plan.incidentKey, `plan v${plan.version}`);
+  }
+);
+
+// The chief of staff approves (or rejects) the team's reaction to an incident as a whole. Every held entry of the
+// incident is reconsidered at once: the ones with a precedent are released to post, the novel ones keep waiting.
+export const approveRacePlan = spacetimedb.reducer(
+  { planKey: t.string(), status: t.string(), by: t.string(), at: t.string() },
+  (ctx, { planKey, status, by, at }) => {
+    if (!['approved', 'rejected'].includes(status)) throw new SenderError('invalid decision');
+    requireIso('at', at);
+    const cur = ctx.db.racePlans.planKey.find(planKey);
+    if (!cur) throw new SenderError('no such plan');
+    gate(ctx, `plan_${status}`, planKey,
+      (c) => {
+        const p = personOrReplay(ctx, c, by);
+        if (p) return p;
+        if (cur.status !== 'draft') return `the plan is ${cur.status}, not a draft`;
+        if (c.person && !PLAN_APPROVERS.includes(c.role)) return `a ${c.role.replace(/_/g, ' ')} does not approve a response plan; the chief of staff does`;
+        return null;
+      },
+      (c) => {
+        const who = c.person ? c.name : by;
+        ctx.db.racePlans.planKey.update({ ...cur, status, approvedBy: who, approvedAt: at, updatedAt: at });
+        reconsiderIncidentPostings(ctx, cur.incidentKey, `${who} ${status} the plan`);
+        return `response plan v${cur.version} ${status} by ${who} (${c.person ? c.role : 'replayed'}): ${cur.precedented} on precedent, ${cur.novel} novel`;
+      });
+  }
+);
 
 // A sign-off or correction changed the estimate behind some entries: re-run their posting decision now.
 function reconsiderPostings(ctx: any, effectKey: string, by: string) {
