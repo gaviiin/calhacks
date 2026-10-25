@@ -1,10 +1,8 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
 
-// The Race Desk (racedesk/api.py, mounted by finance/api.py at /api/racedesk). A real race replayed lap by
-// lap: what the running order is worth to Meridian under its sponsor contracts and in expected
-// championship prize money, every money call on the team radio, crashes booked against the cost cap,
-// and the speed scoreboard (when it happened, when Pit Wall acted, what a month-end close would do).
-// Money is USD cents; clocks are UTC ISO strings.
+// The Race Desk's view model. Arnav's console (the car, the gauges, the radio, the speed scoreboard)
+// renders a Replay. On this branch the replay is built from the live Jev feed (live_racing, /live),
+// not from a precomputed file. Money is USD cents; clocks are UTC ISO strings.
 
 export interface RaceInfo {
   round: number;
@@ -26,6 +24,13 @@ export interface CarNow {
   position: number | null;
   up_one: number;
   down_one: number;
+  /** set when the figures are the server's strategy advice rather than the desk's own contract table */
+  from_feed?: boolean;
+  up_text?: string;
+  down_text?: string;
+  /** what pitting now would cost, from the feed's pit scenario */
+  pit_now?: number | null;
+  pit_text?: string;
 }
 
 export interface Lap {
@@ -52,6 +57,7 @@ export interface RadioCall {
 }
 
 export interface Crash {
+  incident_id?: string;
   lap: number;
   clock: string;
   car: number;
@@ -159,14 +165,20 @@ export interface Replay {
   method: Record<string, string>;
 }
 
-/** The races the demo is built around, one click each. */
+/** The races the live Jev feed can play, one click each. */
 export const FEATURED: { season: number; round: number; label: string; story: string }[] = [
-  { season: 2024, round: 14, label: 'Spa 2024', story: 'Russell wins, then is disqualified: $1.76m kept off invoices' },
-  { season: 2026, round: 10, label: 'Spa 2026', story: 'Lap 1 crash booked to the cost cap in one lap' },
-  { season: 2023, round: 15, label: 'Singapore 2023', story: 'Last-lap crash, priced to the dollar' },
+  { season: 2024, round: 21, label: 'São Paulo 2024', story: 'Russell pits under the VSC, then a red flag: Jev reprices the exposure as it happens' },
+  { season: 2024, round: 14, label: 'Spa 2024', story: 'Russell wins on the road, then is disqualified: Jev corrects the bonus from the FIA documents' },
 ];
 
-export const SEASONS = [2026, 2024, 2023];
+export const SEASONS = [2024];
+
+const LIVE_RACES: Record<number, RaceInfo[]> = {
+  2024: [
+    { round: 14, name: 'Belgian Grand Prix', date: '2024-07-28', laps: 44 },
+    { round: 21, name: 'São Paulo Grand Prix', date: '2024-11-03', laps: 71 },
+  ],
+};
 
 async function get<T>(url: string, signal?: AbortSignal): Promise<T> {
   const r = await fetch(url, { signal, cache: 'no-store' });
@@ -183,17 +195,7 @@ async function get<T>(url: string, signal?: AbortSignal): Promise<T> {
 }
 
 export function useRaces(season: number) {
-  const [races, setRaces] = useState<RaceInfo[]>([]);
-  const [error, setError] = useState<string | null>(null);
-  useEffect(() => {
-    const ac = new AbortController();
-    setError(null);
-    get<RaceInfo[]>(`/api/racedesk/races?season=${season}`, ac.signal)
-      .then(setRaces)
-      .catch((e) => !ac.signal.aborted && setError(String(e.message ?? e)));
-    return () => ac.abort();
-  }, [season]);
-  return { races, error };
+  return { races: LIVE_RACES[season] ?? [], error: null as string | null };
 }
 
 export function useReplay(season: number, round: number) {
@@ -247,22 +249,31 @@ export const SPEEDS = [1, 4, 12] as const;
 export type Speed = (typeof SPEEDS)[number];
 
 /** Steps through frames: a lap every 1.1s at 1×, a post-race moment every 2.2s. */
-export function usePlayback(frames: Frame[]) {
+/** `follow` keeps the playhead on the newest frame while the live feed is still publishing. */
+export function usePlayback(frames: Frame[], follow = false) {
   const [i, setI] = useState(0);
   const [playing, setPlaying] = useState(false);
   const [speed, setSpeed] = useState<Speed>(4);
+  const [stick, setStick] = useState(true);
   const timer = useRef<number | null>(null);
   const n = frames.length;
+  const raceKey = frames[0]?.clock ?? '';
 
   useEffect(() => {
     setI(0);
     setPlaying(false);
-  }, [frames]);
+    setStick(true);
+  }, [raceKey]);
 
   useEffect(() => {
-    if (!playing) return;
+    if (follow && stick) setI(Math.max(0, frames.length - 1));
+  }, [follow, stick, frames.length]);
+
+  useEffect(() => {
+    if (!playing || (follow && stick)) return;
     if (i >= n - 1) {
       setPlaying(false);
+      setStick(true);
       return;
     }
     const next = frames[i + 1];
@@ -271,28 +282,38 @@ export function usePlayback(frames: Frame[]) {
     return () => {
       if (timer.current) window.clearTimeout(timer.current);
     };
-  }, [playing, i, n, speed, frames]);
+  }, [playing, i, n, speed, frames, follow, stick]);
 
+  const tracking = follow && stick;
   return {
     i,
     frame: frames[Math.min(i, n - 1)] ?? null,
     playing,
+    tracking,
     speed,
     setSpeed,
     play: () => {
+      setStick(false);
       if (i >= n - 1) setI(0);
       setPlaying(true);
     },
     pause: () => setPlaying(false),
+    hold: () => {
+      setStick(false);
+      setPlaying(false);
+    },
     seek: (v: number) => {
       setPlaying(false);
-      setI(Math.max(0, Math.min(n - 1, v)));
+      const next = Math.max(0, Math.min(n - 1, v));
+      setStick(next >= n - 1);
+      setI(next);
     },
     end: () => {
       setPlaying(false);
-      setI(n - 1);
+      setStick(true);
+      setI(Math.max(0, n - 1));
     },
-    done: i >= n - 1,
+    done: i >= n - 1 && !tracking,
   };
 }
 
@@ -305,6 +326,7 @@ export function utc(iso: string | null | undefined): string {
 
 /** "15s", "2m 01s", "10 days" */
 export function duration(seconds: number): string {
+  if (seconds < 1) return `${Math.max(1, Math.round(seconds * 1000))}ms`;
   if (seconds < 90) return `${Math.round(seconds)}s`;
   if (seconds < 3600) {
     const m = Math.floor(seconds / 60);

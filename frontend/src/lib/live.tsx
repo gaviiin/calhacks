@@ -222,6 +222,160 @@ export interface ResultChangeSignal {
   timestamps: Timestamps;
 }
 
+/** What one place up or down is worth to the team right now, from the contracts (strategy.py). */
+export interface PlaceValue {
+  car: number;
+  driver_id: string;
+  position: number | null;
+  value_now_cents: number;
+  up_one_cents: number;
+  down_one_cents: number;
+  up_one_text: string;
+  down_one_text: string;
+}
+
+export interface PitScenario {
+  car: number;
+  position: number | null;
+  pit_loss_s: number;
+  pit_loss_basis: string;
+  under: string | null;
+  cars_passed: number[];
+  cars_maybe: number[];
+  positions_lost: number;
+  rejoin_position: number | null;
+  delta_cents: number;
+  /** the same stop under a green flag (full pit loss), so the Safety Car discount is visible */
+  green_pit_loss_s?: number | null;
+  green_positions_lost?: number | null;
+  green_delta_cents?: number | null;
+  text: string;
+}
+
+export interface TyreContext {
+  car: number;
+  compound: string | null;
+  age_laps: number | null;
+  stint_lap_start: number | null;
+  field_median_age_laps: number | null;
+  note: string;
+}
+
+/** The money on every strategic lever, as of now. Arithmetic on the timing feed and the contracts; no pace model. */
+export interface StrategyAdvice {
+  schema_version: number;
+  race_id: string;
+  version: number;
+  as_of_utc: string;
+  observed_at_utc: string;
+  lap: number | null;
+  flag_status: string | null;
+  exposure_now_cents: number;
+  exposure_at_join_cents: number | null;
+  exposure_peak_cents: number | null;
+  lost_from_peak_cents: number | null;
+  places: PlaceValue[];
+  pit: PitScenario[];
+  tyres: TyreContext[];
+  weather_note: string;
+  /** plain-English lines: what a place, a stop, the tyres and the weather are worth right now */
+  levers?: string[];
+  status: 'indicative';
+  financial_source: 'synthetic';
+  basis: string;
+  timestamps: Timestamps;
+}
+
+export type ScenarioKey = 'continue' | 'pit_now' | 'retire' | 'repair_and_rejoin' | 'penalty_5s' | 'penalty_10s' | 'drive_through' | 'disqualified';
+
+export interface IncidentScenario {
+  key: ScenarioKey;
+  label: string;
+  assumption: string;
+  position_after: number | null;
+  exposure_after_cents: number;
+  delta_cents: number;
+  lines_lost: string[];
+  lines_gained: string[];
+  constructors_position_after: number | null;
+  prize_delta_cents: number;
+}
+
+/** The live finance agent's draft on an incident: a pick among the scenarios code priced, never a booking. */
+export interface AdvisorNote {
+  used: boolean;
+  status: 'pending' | 'ok' | 'disabled' | 'unavailable' | 'refused' | 'error' | 'invalid';
+  model: string | null;
+  latency_ms: number | null;
+  recommended_scenario: string | null;
+  headline: string | null;
+  rationale: string | null;
+  what_we_need: string[];
+  confidence: 'low' | 'medium' | 'high' | null;
+  error: string | null;
+  drafted_at_utc: string | null;
+}
+
+/** Accident outcomes priced for one car; the cost-cap side waits for the garage report. */
+export interface IncidentPlan {
+  schema_version: number;
+  incident_id: string;
+  version: number;
+  race_id: string;
+  car: number;
+  driver_id: string;
+  team_car: boolean;
+  as_of_utc: string;
+  observed_at_utc: string;
+  lap: number | null;
+  flag_status: string | null;
+  position_now: number | null;
+  exposure_now_cents: number;
+  scenarios: IncidentScenario[];
+  damage_estimate_cents: number | null;
+  cost_cap_note: string;
+  advisor: AdvisorNote;
+  status: 'indicative';
+  financial_source: 'synthetic';
+  basis: string;
+  timestamps: Timestamps;
+}
+
+export interface SinkHealth {
+  name: string;
+  ok: boolean;
+  written: number;
+  errors: number;
+  last_write_utc: string | null;
+  detail: string | null;
+}
+
+/** How alive the feed is, measured on the wall clock (health.py, every 5 s while running). */
+export interface FeedHealth {
+  replay_id: string | null;
+  state: string | null;
+  mode: Mode;
+  now_utc: string;
+  race_clock_utc: string | null;
+  lap: number | null;
+  last_publish_utc: string | null;
+  seconds_since_last_publish: number | null;
+  publishes_total: number;
+  publishes_last_60s: number;
+  publishes_per_second_10s: number;
+  state_updates: number;
+  publish_p95_ms: number | null;
+  sinks: SinkHealth[];
+  jev: { requests?: number; errors?: number; p50_ms?: number | null; p95_ms?: number | null; mode?: string };
+  advisor: string;
+  exposure_now_cents: number | null;
+  exposure_at_join_cents: number | null;
+  exposure_peak_cents: number | null;
+  lost_from_peak_cents: number | null;
+  incidents: number;
+  incident_plans: number;
+}
+
 export interface ReplayStatus {
   replay_id: string;
   race_id: string;
@@ -300,6 +454,9 @@ interface Snapshot {
   metrics: Metrics | null;
   log: string[];
   seq: number;
+  strategy?: StrategyAdvice | null;
+  incident_plans?: IncidentPlan[];
+  feed?: FeedHealth | null;
 }
 
 export interface LiveState {
@@ -311,6 +468,8 @@ export interface LiveState {
   /** when the current replay's first status was published; '' until the stream has said */
   replayStartedAt: string;
   race: RaceStateUpdate | null;
+  /** every race-state publication of this replay, oldest first */
+  states: Published<RaceStateUpdate>[];
   /** state updates of the current replay that carried a forecast change, in order */
   moves: Published<RaceStateUpdate>[];
   /** every IncidentSignal version, in publish order */
@@ -318,12 +477,23 @@ export interface LiveState {
   resultChanges: Published<ResultChangeSignal>[];
   jevDecisions: Published<JevDecisionRecord>[];
   financeImpacts: Published<FinanceImpactUpdate>[];
+  /** the latest strategy advice of this replay (null on a document replay or before the first publish) */
+  strategy: StrategyAdvice | null;
+  /** the strategy versions of this replay at which the money given up since the peak changed, in order */
+  strategyMoves: Published<StrategyAdvice>[];
+  /** the latest incident plan per incident, in first-publish order */
+  plans: Published<IncidentPlan>[];
+  /** the latest feed health, and the browser's clock when it arrived (so the age can tick between polls) */
+  feed: FeedHealth | null;
+  feedAt: number;
   metrics: Metrics | null;
   log: string[];
   busy: string | null;
   error: string | null;
   startBrazil: (pauseAtLap: number | null) => Promise<void>;
   startSpa: () => Promise<void>;
+  /** Stop whatever is on the feed, then start this race. Switching is allowed mid-replay. */
+  playRace: (raceId: string) => Promise<void>;
   resume: () => Promise<void>;
   stop: () => Promise<void>;
 }
@@ -333,16 +503,23 @@ export const SPA = '2024_belgian_gp';
 export const BRAZIL_WINDOW = { from_lap: 28, to_lap: 34, speed: 20 };
 export const SPA_SPEED = 120;
 
-const KINDS = ['race_state', 'incident_signal', 'jev_decision', 'finance_impact', 'result_change', 'replay_status'] as const;
+const KINDS = ['race_state', 'incident_signal', 'jev_decision', 'finance_impact', 'result_change', 'replay_status', 'strategy_advice', 'incident_plan', 'feed_health'] as const;
 
 interface Store {
   replay: ReplayStatus | null;
   race: RaceStateUpdate | null;
+  /** race-state publications of this replay, in arrival order, so the race desk can scrub the feed */
+  states: Published<RaceStateUpdate>[];
   moves: Published<RaceStateUpdate>[];
   incidents: Map<string, Published<IncidentSignal>>;
   results: Map<string, Published<ResultChangeSignal>>;
   jev: Map<string, Published<JevDecisionRecord>>;
   impacts: Map<string, Published<FinanceImpactUpdate>>;
+  strategy: Published<StrategyAdvice> | null;
+  strategyMoves: Published<StrategyAdvice>[];
+  plans: Map<string, Published<IncidentPlan>>;
+  feed: Published<FeedHealth> | null;
+  feedAt: number;
   lastSeq: number;
   /** when the current replay's first status was published; state updates from before it are another story */
   replayStartedAt: string;
@@ -352,14 +529,50 @@ interface Store {
 const jevKey = (p: JevDecisionRecord) => `${p.kind}:${p.at}:${p.incident_id ?? ''}`;
 const impactKey = (p: FinanceImpactUpdate) => `${p.incident_id}:${p.received_at_utc ?? ''}:${p.financial_status}`;
 
-const empty = (): Store => ({ replay: null, race: null, moves: [], incidents: new Map(), results: new Map(), jev: new Map(), impacts: new Map(), lastSeq: 0, replayStartedAt: '' });
+const empty = (): Store => ({
+  replay: null, race: null, states: [], moves: [], incidents: new Map(), results: new Map(), jev: new Map(), impacts: new Map(),
+  strategy: null, strategyMoves: [], plans: new Map(), feed: null, feedAt: 0, lastSeq: 0, replayStartedAt: '',
+});
 
 /** A new replay: the exposure story starts again and the previous race's state is not this one's. */
 function newReplay(s: Store, p: ReplayStatus, startedAt: string): void {
-  if (s.replay && s.replay.replay_id === p.replay_id) return;
+  if (s.replay && s.replay.replay_id === p.replay_id) {
+    // first seen through the snapshot (no publish time); the stream's status record brings it
+    if (!s.replayStartedAt && startedAt) s.replayStartedAt = startedAt;
+    return;
+  }
   s.moves = [];
   s.race = null;
+  s.states = [];
+  s.strategy = null;
+  s.strategyMoves = [];
   s.replayStartedAt = startedAt;
+}
+
+/** The advice is versioned per race; a later publish always wins (a new run starts its versions again). */
+function takeStrategy(s: Store, r: Published<StrategyAdvice>): void {
+  if (s.strategy && r.published_at_utc < s.strategy.published_at_utc) return;
+  s.strategy = r;
+  const last = s.strategyMoves[s.strategyMoves.length - 1];
+  if (!last || (last.payload.lost_from_peak_cents ?? 0) !== (r.payload.lost_from_peak_cents ?? 0)) s.strategyMoves = [...s.strategyMoves, r];
+}
+
+function takePlan(s: Store, r: Published<IncidentPlan>): void {
+  const cur = s.plans.get(r.id);
+  if (cur && r.published_at_utc < cur.published_at_utc) return;
+  s.plans = new Map(s.plans).set(r.id, r);
+}
+
+function takeFeed(s: Store, r: Published<FeedHealth>): void {
+  if (s.feed && r.payload.now_utc < s.feed.payload.now_utc) return;
+  s.feed = r;
+  s.feedAt = Date.now();
+}
+
+function rememberState(s: Store, rec: Published<RaceStateUpdate>): void {
+  if (s.states.some((x) => x.payload.event_id === rec.payload.event_id)) return;
+  const states = [...s.states, rec];
+  s.states = states.length > 800 ? states.slice(-800) : states;
 }
 
 const publishedAt = (r: RaceStateUpdate | null) => r?.timestamps?.state_published ?? r?.observed_at_utc ?? '';
@@ -373,6 +586,9 @@ function fold(s: Store, r: Published<unknown>): void {
   switch (r.kind) {
     case 'replay_status': {
       const p = r.payload as ReplayStatus;
+      // The replay we just replaced still publishes one last "stopped" record. Its id differs and
+      // its sequence is newer, so without this it would wipe the race that just started.
+      if (s.replay && s.replay.replay_id !== p.replay_id && (p.state === 'stopped' || p.state === 'error')) break;
       newReplay(s, p, r.published_at_utc);
       if (newerReplay(s.replay, p)) s.replay = p;
       break;
@@ -381,6 +597,7 @@ function fold(s: Store, r: Published<unknown>): void {
       const p = r.payload as RaceStateUpdate;
       if (r.published_at_utc < s.replayStartedAt) break; // an earlier replay's state, still in the stream's buffer
       if (!s.race || publishedAt(p) >= publishedAt(s.race)) s.race = p;
+      rememberState(s, r as Published<RaceStateUpdate>);
       const ch = p.forecast_change;
       if (ch && ch.text && !s.moves.some((m) => m.payload.forecast_change?.text === ch.text && m.payload.forecast.as_of_utc === p.forecast.as_of_utc)) {
         s.moves = [...s.moves, r as Published<RaceStateUpdate>];
@@ -399,17 +616,38 @@ function fold(s: Store, r: Published<unknown>): void {
     case 'finance_impact':
       s.impacts = new Map(s.impacts).set(impactKey(r.payload as FinanceImpactUpdate), r as Published<FinanceImpactUpdate>);
       break;
+    case 'strategy_advice':
+      if (r.published_at_utc < s.replayStartedAt) break;
+      takeStrategy(s, r as Published<StrategyAdvice>);
+      break;
+    case 'incident_plan':
+      takePlan(s, r as Published<IncidentPlan>);
+      break;
+    case 'feed_health':
+      takeFeed(s, r as Published<FeedHealth>);
+      break;
   }
 }
 
 /** The snapshot has only the latest version of each record; it fills whatever the stream has not sent. */
 function seed(s: Store, snap: Snapshot): void {
+  const seedSeq = -1; // unknown position in the stream; stream records always win
   if (snap.replay) {
     newReplay(s, snap.replay, s.replayStartedAt); // the snapshot carries no publish time; the stream's status record sets it
     if (newerReplay(s.replay, snap.replay)) s.replay = snap.replay;
   }
-  if (snap.race_state && (!s.race || publishedAt(snap.race_state) >= publishedAt(s.race))) s.race = snap.race_state;
-  const seedSeq = -1; // unknown position in the stream; stream records always win
+  if (snap.race_state && (!s.race || publishedAt(snap.race_state) >= publishedAt(s.race))) {
+    s.race = snap.race_state;
+    rememberState(s, {
+      kind: 'race_state',
+      id: snap.race_state.race_id,
+      version: 1,
+      status: snap.race_state.flag_status,
+      published_at_utc: publishedAt(snap.race_state),
+      payload: snap.race_state,
+      seq: seedSeq,
+    });
+  }
   for (const p of snap.incidents) {
     const k = `${p.incident_id}#${p.version}`;
     if (!s.incidents.has(k)) {
@@ -430,6 +668,17 @@ function seed(s: Store, snap: Snapshot): void {
     const k = impactKey(p);
     if (!s.impacts.has(k)) s.impacts = new Map(s.impacts).set(k, { kind: 'finance_impact', id: k, version: 1, status: p.financial_status, published_at_utc: p.received_at_utc ?? '', payload: p, seq: seedSeq });
   }
+  const at = (t: Timestamps | undefined, fallback: string) => t?.state_published ?? fallback;
+  if (snap.strategy && (!s.strategy || snap.strategy.version > s.strategy.payload.version || at(snap.strategy.timestamps, '') > s.strategy.published_at_utc)) {
+    takeStrategy(s, { kind: 'strategy_advice', id: snap.strategy.race_id, version: snap.strategy.version, status: snap.strategy.flag_status, published_at_utc: at(snap.strategy.timestamps, snap.strategy.observed_at_utc), payload: snap.strategy, seq: seedSeq });
+  }
+  for (const p of snap.incident_plans ?? []) {
+    const cur = s.plans.get(p.incident_id);
+    if (!cur || p.version > cur.payload.version) {
+      takePlan(s, { kind: 'incident_plan', id: p.incident_id, version: p.version, status: p.advisor.status, published_at_utc: at(p.timestamps, p.observed_at_utc), payload: p, seq: seedSeq });
+    }
+  }
+  if (snap.feed) takeFeed(s, { kind: 'feed_health', id: snap.feed.replay_id ?? '', version: 1, status: snap.feed.state, published_at_utc: snap.feed.now_utc, payload: snap.feed, seq: seedSeq });
 }
 
 const bySeq = <T,>(a: Published<T>, b: Published<T>) => (a.seq < 0 || b.seq < 0 ? a.published_at_utc.localeCompare(b.published_at_utc) : a.seq - b.seq);
@@ -459,6 +708,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
   const [generation, setGeneration] = useState(0); // bumped to reconnect the stream from seq 0
   const pending = useRef<Published<unknown>[]>([]);
   const seqRef = useRef(0);
+  const busyRef = useRef(false);
 
   // ---------------------------------------------------------------- the snapshot, polled
   const poll = useCallback(async () => {
@@ -540,6 +790,8 @@ export function LiveProvider({ children }: { children: ReactNode }) {
   // ---------------------------------------------------------------- controls
   const act = useCallback(
     async (label: string, fn: () => Promise<unknown>) => {
+      if (busyRef.current) return;
+      busyRef.current = true;
       setBusy(label);
       setError(null);
       try {
@@ -548,6 +800,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
       } catch (e) {
         setError(e instanceof Error ? e.message : String(e));
       } finally {
+        busyRef.current = false;
         setBusy(null);
       }
     },
@@ -559,11 +812,20 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     const resultChanges = [...store.results.values()].sort(bySeq);
     const jevDecisions = [...store.jev.values()].sort(bySeq);
     const financeImpacts = [...store.impacts.values()].sort(bySeq);
+    const states = [...store.states].sort((a, b) => a.payload.event_time_utc.localeCompare(b.payload.event_time_utc) || a.seq - b.seq);
+    const plans = [...store.plans.values()].sort((a, b) => a.payload.as_of_utc.localeCompare(b.payload.as_of_utc) || a.published_at_utc.localeCompare(b.published_at_utc));
     return {
-      online, streaming, replay: store.replay, replayStartedAt: store.replayStartedAt, race: store.race, moves: store.moves, incidents, resultChanges, jevDecisions, financeImpacts, metrics, log, busy, error,
+      online, streaming, replay: store.replay, replayStartedAt: store.replayStartedAt, race: store.race, states, moves: store.moves, incidents, resultChanges, jevDecisions, financeImpacts,
+      strategy: store.strategy?.payload ?? null, strategyMoves: store.strategyMoves, plans, feed: store.feed?.payload ?? null, feedAt: store.feedAt, metrics, log, busy, error,
       startBrazil: (pauseAtLap) =>
         act('Starting the São Paulo replay', () => post('/live/replay', { race_id: BRAZIL, ...BRAZIL_WINDOW, pause_at_lap: pauseAtLap })),
       startSpa: () => act('Starting the Spa replay', () => post('/live/replay', { race_id: SPA, speed: SPA_SPEED })),
+      playRace: (raceId) =>
+        act(raceId === SPA ? 'Starting the Spa replay' : 'Starting the São Paulo replay', async () => {
+          await post('/live/replay/stop', {}).catch(() => undefined);
+          const body = raceId === SPA ? { race_id: SPA, speed: SPA_SPEED } : { race_id: BRAZIL, ...BRAZIL_WINDOW, pause_at_lap: null };
+          await post('/live/replay', body);
+        }),
       resume: () => act('Resuming', () => post('/live/replay/resume', {})),
       stop: () => act('Stopping', () => post('/live/replay/stop', {})),
     };

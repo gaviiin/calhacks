@@ -308,6 +308,10 @@ class PitScenario(BaseModel):
     positions_lost: int = 0
     rejoin_position: int | None = None
     delta_cents: int = 0
+    # the same stop under a green flag (full pit loss), so the Safety Car discount is visible
+    green_pit_loss_s: float | None = None
+    green_positions_lost: int | None = None
+    green_delta_cents: int | None = None
     text: str = ""
 
 
@@ -339,6 +343,8 @@ class StrategyAdvice(BaseModel):
     pit: list[PitScenario] = Field(default_factory=list)
     tyres: list[TyreContext] = Field(default_factory=list)
     weather_note: str = ""
+    # plain-English lines the pit wall can read out: what a place, a stop, the tyres and the weather are worth right now
+    levers: list[str] = Field(default_factory=list)
     status: Literal["indicative"] = "indicative"
     financial_source: Literal["synthetic"] = "synthetic"
     basis: str = ""

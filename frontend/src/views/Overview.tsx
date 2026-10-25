@@ -12,6 +12,7 @@ import { WhyPane } from '../components/Why';
 import { DEFAULTS, evaluate } from '../lib/caprisk';
 import { useCostCap } from '../lib/costcap';
 import { pct, usdShort } from '../lib/format';
+import { useLive } from '../lib/live';
 import { useRevenue } from '../lib/revenue';
 
 interface Scorecard {
@@ -112,8 +113,27 @@ export function Overview({ inbox, status }: { inbox: InboxItem[]; status: SeatSt
   const cc = useCostCap();
   const [selected, setSelected] = useState<string | null>(null);
   const key = selected ?? inbox[0]?.key ?? null;
+  const live = useLive();
+  const exposure = live.race?.forecast.amount_cents;
   return (
     <div className="overview">
+      <dl className="deskline deskline--solo">
+        <dt>
+          <a className="link" href="#/race">
+            Race desk <IconArrow size={13} />
+          </a>
+        </dt>
+        <dd>
+          {live.race ? (
+            <>
+              lap {live.race.lap ?? '—'} · if finished now <b>{exposure == null ? '—' : usdShort(exposure)}</b>
+              <span className="muted"> · Jev on the live feed</span>
+            </>
+          ) : (
+            <span className="muted">{live.online ? 'the live feed has not started a race' : 'live feed not reachable'}</span>
+          )}
+        </dd>
+      </dl>
       <Results />
       <div className="split">
         <Attention inbox={inbox} selected={key} onSelect={setSelected} />

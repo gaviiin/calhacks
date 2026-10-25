@@ -8,7 +8,7 @@ import { PEOPLE, fetchSeatCodes, sha256Hex, useSeat, type SeatId } from '../lib/
 import { useSeatConnection } from '../lib/seatConnection';
 import { IconLive } from './icons';
 
-export type View = 'overview' | 'live' | 'inbox' | 'cost-cap' | 'risk' | 'revenue' | 'evidence' | 'audit' | 'connect';
+export type View = 'overview' | 'live' | 'race' | 'race-console' | 'live-feed' | 'inbox' | 'cost-cap' | 'risk' | 'revenue' | 'evidence' | 'audit' | 'connect';
 
 const NAV: { id: View; label: string }[] = [
   { id: 'overview', label: 'Pit wall' },

@@ -61,6 +61,10 @@ def test_strategy_advice_carries_the_tally(world, brazil, slice_meta, slice_even
     assert adv.exposure_now_cents == 36_908_000 and adv.lost_from_peak_cents == 285_000_000 - 36_908_000
     assert {p.car for p in adv.places} == {63, 44} and len(adv.pit) == 2 and len(adv.tyres) == 2 and adv.status == "indicative"
     assert "measurement, not a forecast" in adv.weather_note
+    sc = next(x for x in adv.pit if x.car == 63)  # under the Safety Car at 16:33: the green counterfactual is the dearer one
+    assert sc.under == "SAFETY_CAR" and sc.green_pit_loss_s > sc.pit_loss_s and (sc.green_delta_cents or 0) <= sc.delta_cents
+    assert any(line.startswith("Under the Safety Car a stop costs Russell") for line in adv.levers)
+    assert any("Rain is falling" in line for line in adv.levers)
 
 
 def _signal(car, lap=32):

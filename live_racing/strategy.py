@@ -38,7 +38,7 @@ def effective_pit_loss(state: RaceState) -> tuple[float, str, str | None]:
         return base * SC_PIT_FACTOR, basis + f"; x{SC_PIT_FACTOR} under the Safety Car (assumption: the field is bunched and slow)", flag
     if flag in ("VSC", "VSC_ENDING"):
         return base * VSC_PIT_FACTOR, basis + f"; x{VSC_PIT_FACTOR} under the Virtual Safety Car (assumption)", flag
-    return base, basis, flag
+    return base, basis, None  # green (or no flag yet): the full pit loss, no factor to name
 
 
 def cars_behind_within(state: RaceState, car: int, seconds: float) -> tuple[list[int], list[int]]:
@@ -134,6 +134,7 @@ def pit_scenarios(world: World, race: Race, state: RaceState, team_cars: list[in
     positions = state.positions()
     base = if_finished_now(world, race, positions, as_of_utc=as_of, drivers_meta=drivers_meta)
     loss, basis, under = effective_pit_loss(state)
+    green_loss, _ = pit_loss(state)
     out = []
     for car in team_cars:
         pos = positions.get(car)
@@ -142,12 +143,55 @@ def pit_scenarios(world: World, race: Race, state: RaceState, team_cars: list[in
         fc = if_finished_now(world, race, after, as_of_utc=as_of, drivers_meta=drivers_meta)
         delta = (fc.amount_cents or 0) - (base.amount_cents or 0)
         rejoin = (pos + len(passed)) if pos is not None else None
+        green_passed, _ = cars_behind_within(state, car, green_loss)
+        green_fc = if_finished_now(world, race, positions_after_losing(positions, car, len(green_passed)), as_of_utc=as_of, drivers_meta=drivers_meta)
+        green_delta = (green_fc.amount_cents or 0) - (base.amount_cents or 0)
         text = (f"Pit now from P{pos}: about {loss:.0f}s in the lane, " + (f"rejoin P{rejoin} behind {', '.join(f'car {c}' for c in passed)}" if passed else f"rejoin P{rejoin}, nobody close enough to get past")
                 + (f" (cars {', '.join(map(str, maybe))} too close to call)" if maybe else "") + f": {usd(delta) if delta < 0 else '+' + usd(delta)} on the sponsor exposure"
                 + (f" under the {under.replace('_', ' ').lower()}" if under else "") + ". Indicative; no tyre or pace model.")
         out.append(PitScenario(car=car, position=pos, pit_loss_s=round(loss, 1), pit_loss_basis=basis, under=under, cars_passed=passed, cars_maybe=maybe,
-                               positions_lost=len(passed), rejoin_position=rejoin, delta_cents=delta, text=text))
+                               positions_lost=len(passed), rejoin_position=rejoin, delta_cents=delta, green_pit_loss_s=round(green_loss, 1),
+                               green_positions_lost=len(green_passed), green_delta_cents=green_delta, text=text))
     return out
+
+
+def _signed(cents: int) -> str:
+    return ("+" if cents > 0 else "") + usd(cents) if cents else "$0"
+
+
+def lever_lines(world: World, places: list[PlaceValue], pits: list[PitScenario], tyres: list[TyreContext], state: RaceState) -> list[str]:
+    """What the numbers mean, in the words a pit wall would use. Every figure comes from the objects above."""
+    car_map = world.car_map(2024)
+    name = lambda car: (car_map.get(car, {}).get("driver_id", f"car {car}")).replace("_", " ").title()  # noqa: E731
+    lines: list[str] = []
+    for p in places:
+        if p.position is None:
+            continue
+        if p.up_one_cents == 0 and p.down_one_cents == 0:
+            lines.append(f"{name(p.car)} at P{p.position}: no sponsor clause turns on one place either way.")
+        else:
+            lines.append(f"{name(p.car)} at P{p.position}: one place up {_signed(p.up_one_cents)}, one place down {_signed(p.down_one_cents)}.")
+    for s in pits:
+        if s.position is None:
+            continue
+        if s.under == "RED_FLAG":
+            lines.append(f"Red flag: {name(s.car)} can change tyres and repair without losing track position; a stop costs nothing now.")
+        elif s.under in ("SAFETY_CAR", "SAFETY_CAR_ENDING", "VSC", "VSC_ENDING"):
+            lines.append(f"Under the {'Safety Car' if s.under.startswith('SAFETY') else 'Virtual Safety Car'} a stop costs {name(s.car)} {s.positions_lost} place(s) and "
+                         f"{_signed(s.delta_cents)}; the same stop under green would cost {s.green_positions_lost} place(s) and {_signed(s.green_delta_cents or 0)}.")
+        else:
+            lines.append(f"A stop now costs {name(s.car)} {s.positions_lost} place(s) and {_signed(s.delta_cents)} ({s.pit_loss_s:.0f}s in the lane).")
+    w = state.weather
+    if w.rainfall:
+        comp = {t.compound for t in tyres if t.compound}
+        lines.append(f"Rain is falling and the team is on {', '.join(sorted(c.lower() + 's' for c in comp)) or 'unknown tyres'}: the next tyre call is a weather call, "
+                     "and its price is the pit-stop line above.")
+    else:
+        lines.append("Dry at the sensor; a tyre change is a wear call, and its price is the pit-stop line above (no wear model is pretended).")
+    for t in tyres:
+        if t.age_laps is not None and t.field_median_age_laps is not None and t.age_laps >= t.field_median_age_laps + 5:
+            lines.append(f"{name(t.car)} has {t.age_laps} laps on this set, {t.age_laps - t.field_median_age_laps:.0f} more than the field median.")
+    return lines
 
 
 def tyre_context(state: RaceState, team_cars: list[int]) -> list[TyreContext]:
@@ -180,11 +224,13 @@ def strategy_advice(world: World, race: Race, state: RaceState, team_cars: list[
     w = state.weather
     weather_note = ("rain falling" if w.rainfall else "dry at the sensor") + (f", track {w.track_temperature_c}C" if w.track_temperature_c is not None else "") + \
         " (measurement, not a forecast)"
+    places = place_values(world, race, state, team_cars, as_of, drivers_meta)
+    pits = pit_scenarios(world, race, state, team_cars, as_of, drivers_meta)
+    tyres = tyre_context(state, team_cars)
     return StrategyAdvice(
         race_id=race.race_id, version=version, as_of_utc=as_of or "", observed_at_utc=observed_at, lap=state.lap, flag_status=state.flag_status,
         exposure_now_cents=now, exposure_at_join_cents=exposure_at_join, exposure_peak_cents=exposure_peak,
         lost_from_peak_cents=(exposure_peak - now) if exposure_peak is not None else None,
-        places=place_values(world, race, state, team_cars, as_of, drivers_meta), pit=pit_scenarios(world, race, state, team_cars, as_of, drivers_meta),
-        tyres=tyre_context(state, team_cars), weather_note=weather_note,
+        places=places, pit=pits, tyres=tyres, weather_note=weather_note, levers=lever_lines(world, places, pits, tyres, state),
         basis=f"positions and lap-start gaps from the timing feed as of {as_of}; contracts: Meridian's synthetic sponsors; pit loss from this race's stops",
         timestamps=Timestamps(source_event=as_of, adapter_received=observed_at, finance_recomputed=finance_recomputed))

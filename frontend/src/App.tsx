@@ -9,11 +9,13 @@ import { RiskView } from './views/RiskView';
 import { CostCapView } from './views/CostCapView';
 import { EvidenceView } from './views/EvidenceView';
 import { InboxView } from './views/InboxView';
+import { LiveDashboard } from './views/LiveDashboard';
 import { LiveView } from './views/LiveView';
 import { Overview } from './views/Overview';
+import { RaceView } from './views/RaceView';
 import { RevenueView } from './views/RevenueView';
 
-// #/ · #/live · #/inbox/<key> · #/cost-cap · #/revenue · #/evidence · #/audit/<from>-<to>
+// #/ · #/live (the live dashboard; #/race is an alias) · #/race-console (the car console) · #/inbox/<key> · #/cost-cap · #/revenue · #/evidence · #/audit/<from>-<to>
 
 interface Route {
   view: View;
@@ -22,8 +24,9 @@ interface Route {
 
 function parse(hash: string): Route {
   const [, view = '', ...rest] = hash.replace(/^#/, '').split('/');
-  const known: View[] = ['live', 'inbox', 'cost-cap', 'risk', 'revenue', 'evidence', 'audit', 'connect'];
-  return { view: (known as string[]).includes(view) ? (view as View) : 'overview', arg: rest.join('/') || null };
+  const known: View[] = ['live', 'race', 'race-console', 'live-feed', 'inbox', 'cost-cap', 'risk', 'revenue', 'evidence', 'audit', 'connect'];
+  const v = view === 'race' ? 'live' : view; // the old race desk address opens the live dashboard
+  return { view: (known as string[]).includes(v) ? (v as View) : 'overview', arg: rest.join('/') || null };
 }
 
 function useRoute(): [Route, (hash: string) => void] {
@@ -59,12 +62,16 @@ export default function App() {
       </a>
       <Shell view={route.view} go={(v) => nav(v === 'overview' ? '/' : `/${v}`)} inboxCount={inbox.length} status={status} />
       <main id="main" className="page">
-        {!cc.ready && route.view !== 'revenue' && route.view !== 'evidence' && route.view !== 'connect' && route.view !== 'live' ? (
+        {route.view === 'live' ? (
+          <LiveDashboard />
+        ) : route.view === 'race-console' ? (
+          <RaceView arg={route.arg} nav={nav} inbox={inbox} status={status} />
+        ) : route.view === 'live-feed' ? (
+          <LiveView />
+        ) : !cc.ready && route.view !== 'revenue' && route.view !== 'evidence' && route.view !== 'connect' ? (
           <p className="muted loading">Connecting to the cost cap desk on SpacetimeDB…</p>
         ) : route.view === 'overview' ? (
           <Overview inbox={inbox} status={status} />
-        ) : route.view === 'live' ? (
-          <LiveView />
         ) : route.view === 'inbox' ? (
           <InboxView inbox={inbox} selected={route.arg} select={(k) => nav(`/inbox/${k}`)} status={status} />
         ) : route.view === 'cost-cap' ? (

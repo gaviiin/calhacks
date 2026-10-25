@@ -119,6 +119,12 @@ export function CarStage({ r, lap, car, setCar, sponsor, setSponsor, playing, of
             <dd className={`mono ${now && now.down_one < 0 ? 'tone-alert' : 'muted'}`}>{now ? signed(now.down_one) : '—'}</dd>
           </div>
           <div>
+            <dt>Pit now</dt>
+            <dd className={`mono ${now?.pit_now != null && now.pit_now < 0 ? 'tone-alert' : 'muted'}`} title={now?.pit_text}>
+              {now?.pit_now != null ? signed(now.pit_now) : now?.from_feed ? '$0' : 'feed only'}
+            </dd>
+          </div>
+          <div>
             <dt>Minimum mass</dt>
             <dd className="mono">{spec.mass}</dd>
           </div>
@@ -127,6 +133,7 @@ export function CarStage({ r, lap, car, setCar, sponsor, setSponsor, playing, of
             <dd className="mono">{spec.wheelbase}</dd>
           </div>
         </dl>
+        <p className="small muted stage-source">{now?.from_feed ? 'Place and pit values from the feed\u2019s strategy advice.' : 'Place values from the desk\u2019s own contract table until the feed advises.'}</p>
       </aside>
 
       <div className="stage-main">
@@ -171,7 +178,7 @@ export function CarStage({ r, lap, car, setCar, sponsor, setSponsor, playing, of
               hotspots={(r.sponsors ?? []).filter((s) => ZONES[s.id]).map((s) => ({ id: s.id, label: s.name, earning: earning(s.id) }))}
               selected={sponsor}
               onSelect={setSponsor}
-              damage={crash?.damage_estimate ? `Damage est. ${usdShort(crash.damage_estimate)} · cap` : null}
+              damage={crash ? (crash.damage_estimate != null ? `Damage est. ${usdShort(crash.damage_estimate)} · cap` : 'Damage: garage report pending') : null}
               title={`Meridian car ${car}, ${driver}`}
             />
             <div className="stage-track" aria-hidden />
@@ -352,7 +359,13 @@ export function Gauges({ r, lap, crashes, car, official }: { r: Replay; lap: Lap
         ) : (
           <div className="gauge-empty">
             <IconShield size={22} />
-            <p className="small muted">{anyCrash ? `Damage estimate ${usdShort(anyCrash.damage_estimate ?? 0)} booked. The season forecast models 2026 only.` : 'No damage this race. A crash re-runs the season forecast within the lap.'}</p>
+            <p className="small muted">
+              {anyCrash
+                ? anyCrash.damage_estimate != null
+                  ? `Recovery cost ${usdShort(anyCrash.damage_estimate)} selected by the cost cap desk. Breach risk is not modelled on the live feed.`
+                  : 'Incident on the feed; the damage estimate awaits the garage report. Breach risk is not modelled on the live feed.'
+                : 'No incident on the feed yet. Breach risk is not modelled on the live feed; the cap risk desk has the season model.'}
+            </p>
           </div>
         )}
       </article>
@@ -362,7 +375,8 @@ export function Gauges({ r, lap, crashes, car, official }: { r: Replay; lap: Lap
           {now?.position ? (
             <>
               <b>{r.team_cars[car]} P{now.position}:</b> one place {now.up_one > 0 ? <>up pays <span className="tone-ok mono">{signed(now.up_one)}</span></> : 'up pays nothing more'}; one place{' '}
-              {now.down_one < 0 ? <>down costs <span className="tone-alert mono">{signed(now.down_one)}</span></> : 'down costs nothing'}.
+              {now.down_one < 0 ? <>down costs <span className="tone-alert mono">{signed(now.down_one)}</span></> : 'down costs nothing'}
+              {now.pit_now != null ? <>; a stop now <span className="mono">{signed(now.pit_now)}</span></> : ''}.
             </>
           ) : (
             <>

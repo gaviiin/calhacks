@@ -2,12 +2,15 @@ import { useEffect, useMemo, useRef, useState } from 'react';
 import { LineChart, type Marker } from '../charts/LineChart';
 import { Attention } from '../components/Attention';
 import { CarStage, Gauges, RunningOrder, SponsorPanel, StatPills } from '../components/RaceHero';
-import { IconArrow, IconBolt, IconPause, IconPlay, IconRadio, IconRestart, IconShield, IconSkip } from '../components/icons';
+import { ExposureTally, FeedStrip, PlanCard, StrategyCards, usePlansNow } from '../components/StrategyDesk';
+import { IconArrow, IconBolt, IconPause, IconPlay, IconRadio, IconRestart, IconShield, IconSkip, IconWaiting } from '../components/icons';
 import { resolveEntry, type InboxItem } from '../components/inboxModel';
 import type { SeatStatus } from '../components/Shell';
 import { WhyPane } from '../components/Why';
 import { useCostCap } from '../lib/costcap';
-import { pct, usdShort } from '../lib/format';
+import { usdShort } from '../lib/format';
+import { replayFromLive } from '../lib/liveDesk';
+import { BRAZIL, SPA, useLive } from '../lib/live';
 import {
   FEATURED,
   SEASONS,
@@ -19,7 +22,6 @@ import {
   useDerived,
   usePlayback,
   useRaces,
-  useReplay,
   utc,
   type Crash,
   type Frame,
@@ -67,7 +69,7 @@ function Picker({ season, round, go }: { season: number; round: number; go: (s: 
       <div className="race-select">
         <label>
           <span className="ctl-label">Season</span>
-          <select value={season} onChange={(e) => go(Number(e.target.value), 1)}>
+          <select value={season} onChange={(e) => go(Number(e.target.value), races.some((r) => r.round === round) ? round : races[0]?.round ?? round)}>
             {SEASONS.map((s) => (
               <option key={s} value={s}>
                 {s}
@@ -96,7 +98,7 @@ function Picker({ season, round, go }: { season: number; round: number; go: (s: 
 function Header({ r, pb }: { r: Replay; pb: ReturnType<typeof usePlayback> }) {
   const f = pb.frame;
   const lap = f ? r.laps[f.lapIndex] : null;
-  const phase = f?.kind === 'after' ? { cls: 'status--hold', t: 'After the flag' } : lap && lap.lap === r.race_laps ? { cls: 'status--ok', t: 'Chequered flag' } : pb.playing ? { cls: 'status--live', t: 'Live' } : { cls: 'status--muted', t: pb.i === 0 ? 'On the grid' : 'Paused' };
+  const phase = f?.kind === 'after' ? { cls: 'status--hold', t: 'After the flag' } : lap && lap.lap === r.race_laps ? { cls: 'status--ok', t: 'Chequered flag' } : pb.tracking || pb.playing ? { cls: 'status--live', t: 'Live' } : { cls: 'status--muted', t: pb.i === 0 ? 'On the grid' : 'Paused' };
   return (
     <section className="race-head" aria-label="Race">
       <nav className="crumbs small muted" aria-label="Breadcrumb">
@@ -124,9 +126,9 @@ function Header({ r, pb }: { r: Replay; pb: ReturnType<typeof usePlayback> }) {
           <button type="button" className="btn pillbtn" onClick={pb.end} disabled={pb.done}>
             <IconSkip size={13} /> To the end
           </button>
-          <button type="button" className="btn btn--primary pillbtn race-play" onClick={pb.playing ? pb.pause : pb.play} aria-label={pb.playing ? 'Pause' : 'Play'}>
-            {pb.playing ? <IconPause size={14} /> : pb.done ? <IconRestart size={14} /> : <IconPlay size={14} />}
-            {pb.playing ? 'Pause' : pb.done ? 'Replay' : pb.i === 0 ? 'Start the race' : 'Resume'}
+          <button type="button" className="btn btn--primary pillbtn race-play" onClick={pb.tracking ? pb.hold : pb.playing ? pb.pause : pb.play} aria-label={pb.tracking || pb.playing ? 'Pause' : 'Play'}>
+            {pb.tracking || pb.playing ? <IconPause size={14} /> : pb.done ? <IconRestart size={14} /> : <IconPlay size={14} />}
+            {pb.tracking || pb.playing ? 'Pause' : pb.done ? 'Replay' : pb.i === 0 ? 'Start the race' : 'Resume'}
           </button>
         </div>
       </div>
@@ -168,7 +170,7 @@ function Scrubber({ r, frames, pb }: { r: Replay; frames: Frame[]; pb: ReturnTyp
 // ------------------------------------------------------------------------------------------ telemetry
 
 function Telemetry({ r, upto }: { r: Replay; upto: number }) {
-  const xs = r.laps.map((l) => l.lap);
+  const xs = r.laps.map((_, i) => i);
   const swing = r.laps.map((l, i) => (i <= upto ? l.total - r.start.total : null));
   const bonus = r.laps.map((l, i) => (i <= upto ? l.bonus_usd : null));
   const allSwing = r.laps.map((l) => l.total - r.start.total);
@@ -180,10 +182,16 @@ function Telemetry({ r, upto }: { r: Replay; upto: number }) {
     return m;
   }, [r]);
   const markers: Marker[] = [];
+  const at = (clock: string) => {
+    let idx = 0;
+    r.laps.forEach((l, i) => { if (l.clock <= clock) idx = i; });
+    return idx;
+  };
   for (const c of r.radio) {
-    if (c.lap > (r.laps[upto]?.lap ?? 0)) continue;
-    if (c.kind === 'retirement') markers.push({ x: c.lap, label: `${c.status === 'Collision' || c.status === 'Accident' ? 'Crash' : 'Out'} L${c.lap}`, tone: 'alert' });
-    if (c.kind === 'safety_car') markers.push({ x: c.lap, label: `SC L${c.lap}`, tone: 'hold' });
+    const x = at(c.clock);
+    if (x > upto) continue;
+    if (c.kind === 'retirement') markers.push({ x, label: `Incident L${c.lap}`, tone: 'alert' });
+    if (c.kind === 'safety_car') markers.push({ x, label: `SC L${c.lap}`, tone: 'hold' });
   }
   const tip = (i: number) => {
     const l = r.laps[i];
@@ -229,7 +237,7 @@ function Telemetry({ r, upto }: { r: Replay; upto: number }) {
       <LineChart
         xs={xs}
         series={[{ key: 'swing', label: 'vs lights out', values: swing, color: '--s2', area: 0.08 }]}
-        xLabel={(x) => (x === 0 ? 'Start' : `L${x}`)}
+        xLabel={(x) => { const l = r.laps[x]; return !l || l.lap === 0 ? 'Start' : `L${l.lap}`; }}
         yLabel={(y) => signed(y)}
         yMin={lo - (hi - lo) * 0.08}
         yMax={hi + (hi - lo) * 0.08 || 1}
@@ -243,7 +251,7 @@ function Telemetry({ r, upto }: { r: Replay; upto: number }) {
       <LineChart
         xs={xs}
         series={[{ key: 'bonus', label: 'bonuses', values: bonus, color: '--lime', area: 0.1 }]}
-        xLabel={(x) => (x === 0 ? 'Start' : `L${x}`)}
+        xLabel={(x) => { const l = r.laps[x]; return !l || l.lap === 0 ? 'Start' : `L${l.lap}`; }}
         yLabel={(y) => usdShort(y)}
         yMin={0}
         yMax={Math.max(...r.laps.map((l) => l.bonus_usd)) * 1.1 || 1}
@@ -264,6 +272,9 @@ const RADIO_LABEL: Record<string, string> = {
   safety_car: 'Safety car',
   flag: 'Flag',
   final_classification: 'FIA final',
+  strategy: 'Strategy',
+  plan: 'Outcomes',
+  advisor: 'Advisor',
 };
 
 function Radio({ calls, after }: { calls: RadioCall[]; after: SpeedEvent[] }) {
@@ -311,72 +322,76 @@ function Radio({ calls, after }: { calls: RadioCall[]; after: SpeedEvent[] }) {
 
 // ------------------------------------------------------------------------------------------ crash → cost cap
 
-function RiskBar({ label, p, tone }: { label: string; p: number; tone: 'muted' | 'hold' | 'alert' }) {
-  const w = Math.max(1.5, Math.min(100, (p / 0.15) * 100));
-  return (
-    <div className="riskbar">
-      <span className="riskbar-label">{label}</span>
-      <span className="riskbar-track">
-        <span className={`riskbar-fill riskbar-fill--${tone}`} style={{ width: `${w}%` }} />
-      </span>
-      <b className="mono riskbar-val">{pct(p, 0)}</b>
-    </div>
-  );
-}
-
 function CrashDesk({ r, crashes }: { r: Replay; crashes: Crash[] }) {
   const all = r.crashes;
+  const plans = usePlansNow();
+  const names: Record<number, string> = {};
+  for (const [c, code] of Object.entries(r.team_cars)) names[Number(c)] = r.field?.[c]?.driver ?? code;
+  for (const [c, f] of Object.entries(r.field ?? {})) names[Number(c)] ??= f.driver;
+  const planFor = (c: Crash) => plans.find((p) => p.incident_id === c.incident_id) ?? plans.find((p) => p.car === c.car && p.lap === c.lap) ?? null;
+  const orphans = plans.filter((p) => !crashes.some((c) => c.incident_id === p.incident_id || (c.car === p.car && c.lap === p.lap)));
   return (
     <section className="race-crash panel" aria-labelledby="crash-h">
       <div className="sec-head">
         <h2 id="crash-h">
-          <IconBolt size={16} /> Crash to cost cap
+          <IconBolt size={16} /> Crash desk
         </h2>
         <p className="muted">
-          A crash is a repair bill, and repairs count against the cost cap. The desk books an estimate the lap it happens and re-runs the season forecast. Power unit failures
-          are excluded from the cap (D5.1.1.n), so they book nothing.
+          When a car stops, the feed prices every outcome against the same contracts: continue, pit, repair, penalties, retire, disqualification. The damage side waits for
+          the garage report, and the live finance agent drafts a recommendation a person reads. Nothing here is booked.
         </p>
       </div>
-      {all.length === 0 ? (
-        <p className="muted empty">No crash for Meridian in this race. Try Spa 2026 or Singapore 2023.</p>
-      ) : crashes.length === 0 ? (
+      {all.length === 0 && orphans.length === 0 ? (
+        <p className="muted empty">No incident on the feed yet for this race.</p>
+      ) : crashes.length === 0 && orphans.length === 0 ? (
         <p className="muted empty">
-          {all.length === 1 ? 'A crash is coming in this race.' : `${all.length} crashes are coming in this race.`} Keep the replay running.
+          {all.length === 1 ? 'An incident is coming in this race.' : `${all.length} incidents are coming in this race.`} Keep the replay running.
         </p>
       ) : (
-        crashes.map((c) => (
-          <article key={`${c.car}${c.lap}`} className="crash-card">
-            <header className="crash-head">
-              <span className="crash-who">
-                {c.driver} · <span className="tone-alert">{c.status.toLowerCase()}</span> · lap {c.lap}
-              </span>
-              <span className="mono muted">{utc(c.clock)} UTC</span>
-            </header>
-            <div className="crash-figs">
-              <div>
-                <b className="mono crash-big">{c.damage_estimate != null ? usdShort(c.damage_estimate) : '—'}</b>
-                <span className="small muted">damage estimate booked</span>
-              </div>
-              <div>
-                <b className="mono crash-big tone-ok">{c.lap_ms ? duration(c.lap_ms / 1000) : '—'}</b>
-                <span className="small muted">to book it (the lap it happened on)</span>
-              </div>
-            </div>
-            {c.p_breach_after != null && c.p_breach_before != null ? (
-              <div className="crash-risk">
-                <p className="small muted">Chance Meridian breaks the 2026 cost cap this season</p>
-                <RiskBar label="Before the crash" p={c.p_breach_before} tone="muted" />
-                <RiskBar label="After the crash" p={c.p_breach_after} tone="hold" />
-                {c.p_breach_after_with_final_package != null && <RiskBar label="…and if we still bring the final upgrade" p={c.p_breach_after_with_final_package} tone="alert" />}
-                <a className="link small" href="#/risk">
-                  Open the cap risk model <IconArrow size={12} />
-                </a>
-              </div>
-            ) : (
-              <p className="small muted">The season forecast models the 2026 rules; for {r.season} the desk books the damage estimate only.</p>
-            )}
-          </article>
-        ))
+        <div className="plans">
+          {crashes.map((c) => {
+            const plan = planFor(c);
+            return (
+              <article key={c.incident_id ?? `${c.car}${c.lap}`} className="crash-card">
+                <header className="crash-head">
+                  <span className="crash-who">
+                    {c.driver} · <span className="tone-alert">{c.status.toLowerCase()}</span> · lap {c.lap}
+                  </span>
+                  <span className="mono muted">{utc(c.clock)} UTC</span>
+                </header>
+                <div className="crash-figs">
+                  <div>
+                    <b className="mono crash-big">{plan && plan.damage_estimate_cents != null ? usdShort(plan.damage_estimate_cents) : c.damage_estimate != null ? usdShort(c.damage_estimate) : '—'}</b>
+                    <span className="small muted">
+                      {plan && plan.damage_estimate_cents != null ? 'damage estimate from the garage report' : c.damage_estimate != null ? 'recovery cost selected by the cost cap desk' : 'damage estimate: awaiting the garage report'}
+                    </span>
+                  </div>
+                  <div>
+                    <b className="mono crash-big">{c.lap_ms ? duration(c.lap_ms / 1000) : '—'}</b>
+                    <span className="small muted">Jev's routing latency on the incident</span>
+                  </div>
+                </div>
+                {plan ? (
+                  <PlanCard plan={plan} names={names} />
+                ) : (
+                  <p className="small muted">
+                    <IconWaiting size={13} /> No priced outcomes yet for this incident: the feed publishes a plan for incidents on a watched car.
+                  </p>
+                )}
+                <p className="small not-modelled">
+                  Cap breach risk: not modelled on the live feed; the season model is on the{' '}
+                  <a className="link" href="#/risk">
+                    cap risk desk <IconArrow size={12} />
+                  </a>
+                  .
+                </p>
+              </article>
+            );
+          })}
+          {orphans.map((plan) => (
+            <PlanCard key={plan.incident_id} plan={plan} names={names} />
+          ))}
+        </div>
       )}
     </section>
   );
@@ -575,12 +590,39 @@ function Approvals({ inbox, status }: { inbox: InboxItem[]; status: SeatStatus }
 // ------------------------------------------------------------------------------------------ view
 
 export function RaceView({ arg, nav, inbox, status }: { arg: string | null; nav: (hash: string) => void; inbox: InboxItem[]; status: SeatStatus }) {
+  const live = useLive();
   const { season, round } = parseRoute(arg);
-  const { data: r, loading, error } = useReplay(season, round);
+  const r = useMemo(() => {
+    const built = replayFromLive(live);
+    return built && built.round === round ? built : null;
+  }, [live, round]);
+  const follow = live.replay?.state === 'running' || live.replay?.state === 'fast_forward';
   const frames = useMemo(() => (r ? framesOf(r) : []), [r]);
-  const pb = usePlayback(frames);
+  const pb = usePlayback(frames, follow);
   const d = useDerived(r, pb.frame);
-  const go = (s: number, n: number) => nav(`/race/${s}-${n}`);
+  const asked = useRef('');
+  useEffect(() => {
+    if (!live.online || live.busy) return;
+    const id = round === 14 ? SPA : round === 21 ? BRAZIL : null;
+    if (!id) return;
+    const same = live.replay?.race_id === id && ['fast_forward', 'running', 'paused', 'finished'].includes(live.replay.state);
+    if (same) {
+      asked.current = '';
+      return;
+    }
+    if (asked.current === id) return;
+    asked.current = id;
+    void live.playRace(id);
+  }, [live.online, live.busy, live.replay, round, live.playRace]);
+  const go = (s: number, n: number) => {
+    const id = n === 14 ? SPA : n === 21 ? BRAZIL : null;
+    if (!id) return;
+    nav(`/race/${s}-${n}`);
+    const running = live.replay && ['fast_forward', 'running', 'paused'].includes(live.replay.state);
+    if (running && live.replay?.race_id === id) return;
+    asked.current = id;
+    void live.playRace(id);
+  };
   const finalKnown = !!r?.speed.some((s) => s.event === 'FIA Final Classification' && s.acted_at);
   const [carPick, setCar] = useState<string | null>(null);
   const [sponsor, setSponsor] = useState<string | null>('halcyon');
@@ -606,18 +648,26 @@ export function RaceView({ arg, nav, inbox, status }: { arg: string | null; nav:
   return (
     <div className="race">
       <Picker season={season} round={round} go={go} />
-      {error ? (
+      {(!r || !d) && <FeedStrip />}
+      {!live.online && !r ? (
         <section className="panel">
-          <h2>Race Desk not reachable</h2>
+          <h2>Live feed not reachable</h2>
           <p className="muted">
-            {error}. Start the API from the repo root with <code>uvicorn finance.api:app --port 8000</code>; the dashboard proxies <code>/api</code> to it.
+            Start it with <code>make live-api</code> (port 8020). This desk plays that feed: Jev’s routing, the if-finished-now exposure, and the incident hand-off.
           </p>
         </section>
-      ) : loading || !r || !d ? (
-        <p className="muted loading">Replaying the race and pricing every lap…</p>
+      ) : !r || !d ? (
+        <p className="muted loading">{live.busy ?? 'Waiting for the first lap from the live feed…'}</p>
       ) : (
         <>
+          {live.error && (
+            <p className="outcome outcome--alert" role="alert">
+              {live.error}
+            </p>
+          )}
           <Header r={r} pb={pb} />
+          <FeedStrip />
+          <ExposureTally />
           <StatPills r={r} lap={lap!} speed={d.speed} crashes={d.crashes} />
           <CarStage
             r={r}
@@ -626,11 +676,21 @@ export function RaceView({ arg, nav, inbox, status }: { arg: string | null; nav:
             setCar={setCar}
             sponsor={sponsor}
             setSponsor={setSponsor}
-            playing={pb.playing}
+            playing={pb.playing || pb.tracking}
             official={d.finalIn}
             scrubber={<Scrubber r={r} frames={frames} pb={pb} />}
           />
           <RunningOrder r={r} lap={lap!} frame={pb.frame} official={d.finalIn} />
+          <section className="race-strategy panel" aria-labelledby="strat-h">
+            <div className="sec-head">
+              <h2 id="strat-h">What every lever costs</h2>
+              <p className="muted">
+                From the feed's strategy advice, re-published on every team-car position change, flag change and pit stop: one place up, one place down, what a stop
+                now would cost given this race's pit-lane time and the gaps, and the tyre context. No pace or degradation model is pretended.
+              </p>
+            </div>
+            <StrategyCards names={Object.fromEntries(Object.entries(r.team_cars).map(([c, code]) => [Number(c), r.field?.[c]?.driver ?? code]))} />
+          </section>
           <Gauges r={r} lap={lap!} crashes={d.crashes} car={carSel} official={d.finalIn} />
           <div className="race-mid">
             <SponsorPanel r={r} lap={lap!} car={carSel} sponsor={sponsor} setSponsor={setSponsor} flagged={d.flagged} booked={booked} />

@@ -1,5 +1,6 @@
 import { useMemo, useState, type ReactNode } from 'react';
 import { Figure } from '../components/Figure';
+import { ExposureTally, FeedStrip, PlanCard, StrategyCards, usePlansNow } from '../components/StrategyDesk';
 import { IconAgent, IconApproved, IconChart, IconDenied, IconDoc, IconExternal, IconFlag, IconLive, IconPlay, IconQuestion, IconStop, IconWaiting } from '../components/icons';
 import {
   BRAZIL,
@@ -494,6 +495,8 @@ function Cars({ race, moves }: { race: RaceStateUpdate | null; moves: Published<
         </ul>
       )}
       {fc?.prize && <p className="muted small">{fc.prize.note}</p>}
+      <h3>What every lever costs</h3>
+      <StrategyCards fmt={money} names={CAR_NAMES} />
       <h3>Every time the exposure moved</h3>
       {moves.length === 0 ? (
         <p className="muted small">No move yet in this replay.</p>
@@ -620,11 +623,13 @@ function Earlier({ count, children }: { count: number; children: ReactNode }) {
 }
 
 function IncidentCards({ groups, impacts }: { groups: Published<IncidentSignal>[][]; impacts: Published<FinanceImpactUpdate>[] }) {
+  const plans = usePlansNow();
   return (
     <div className="incidents">
       {groups.map((versions) => {
         const latest = versions[versions.length - 1].payload;
         const updates = impacts.filter((i) => i.payload.incident_id === latest.incident_id);
+        const plan = plans.find((p) => p.incident_id === latest.incident_id) ?? null;
         return (
           <article className="incident" key={latest.incident_id} aria-label={latest.incident_id}>
             <div className="incident-head">
@@ -700,6 +705,7 @@ function IncidentCards({ groups, impacts }: { groups: Published<IncidentSignal>[
                 );
               })}
             </ol>
+            {plan && <PlanCard plan={plan} fmt={money} names={CAR_NAMES} />}
             {updates.map((u) => (
               <ImpactUpdate key={u.id} u={u.payload} />
             ))}
@@ -911,6 +917,8 @@ export function LiveView() {
           </p>
         )}
       </section>
+      <FeedStrip />
+      <ExposureTally fmt={money} />
       <ReplayPanel />
       <RaceClock race={live.race} replay={live.replay} />
       <Cars race={live.race} moves={live.moves} />

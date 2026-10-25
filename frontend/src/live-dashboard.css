@@ -1,0 +1,1013 @@
+/* ================================================================ live dashboard (views/LiveDashboard.tsx)
+   The race as the finance desk reads it. Tokens from styles.css: lime = earning / the primary action,
+   amber (hold) = waiting or a caution, coral (alert) = money lost or a red flag. Figures are mono. */
+
+.ld {
+  display: grid;
+  gap: 16px;
+}
+
+.ld-title {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 12px 24px;
+}
+
+.ld-title h1 {
+  margin: 2px 0 4px;
+  font: 700 34px/1.05 var(--display);
+  letter-spacing: 0.035em;
+}
+
+.ld-sub {
+  max-width: 72ch;
+  color: var(--steel);
+  margin: 0;
+}
+
+.ld-h {
+  margin: 0;
+  font: 700 19px/1.1 var(--display);
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+}
+
+.ld-h3 {
+  margin: 14px 0 6px;
+  font: 600 13px/1.35 var(--body);
+}
+
+.ld-card {
+  background: var(--panel);
+  border: 1px solid var(--line-soft);
+  border-radius: 2px;
+  padding: 16px 18px;
+  min-width: 0;
+}
+
+.ld-card-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-bottom: 10px;
+}
+
+.ld-muted {
+  color: var(--muted);
+}
+
+.ld-small {
+  font-size: 12.5px;
+}
+
+.ld-ok {
+  color: var(--lime);
+}
+
+.ld-error {
+  color: var(--alert);
+  font-size: 12.5px;
+}
+
+.ld-chips {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+/* chips: icon + word, never colour alone */
+.ld-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 24px;
+  padding: 2px 9px;
+  border-radius: 2px;
+  font: 600 12px/1.2 var(--body);
+  color: var(--steel);
+  background: var(--raise);
+  border: 1px solid transparent;
+  white-space: nowrap;
+}
+
+.ld-chip svg {
+  width: 13px;
+  height: 13px;
+  flex: none;
+}
+
+.ld-chip--ok {
+  color: var(--lime);
+  background: var(--lime-wash);
+}
+
+.ld-chip--hold {
+  color: var(--hold);
+  background: var(--hold-wash);
+}
+
+.ld-chip--alert {
+  color: var(--alert);
+  background: var(--alert-wash);
+}
+
+.ld-delta {
+  font: 600 13px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--steel);
+}
+
+.ld-delta--ok {
+  color: var(--lime);
+}
+
+.ld-delta--alert {
+  color: var(--alert);
+}
+
+.ld-delta--strong {
+  font-size: 18px;
+  margin-left: 10px;
+}
+
+/* ---------------------------------------------------------------- command bar */
+
+.ld-command {
+  background: var(--panel);
+  border: 1px solid var(--line-soft);
+  border-radius: 2px;
+  padding: 12px 16px;
+  display: grid;
+  gap: 10px;
+}
+
+.ld-command-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+}
+
+.ld-command-row--status {
+  font-size: 12.5px;
+  color: var(--steel);
+  justify-content: flex-start;
+}
+
+.ld-presets {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}
+
+.ld-preset {
+  display: grid;
+  gap: 2px;
+  text-align: left;
+  padding: 7px 12px;
+  background: transparent;
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  cursor: pointer;
+  font: 600 13px/1.2 var(--body);
+}
+
+.ld-preset:hover:not(:disabled) {
+  background: var(--raise);
+}
+
+.ld-preset:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+
+.ld-preset--race {
+  border-color: var(--lime);
+}
+
+.ld-preset-note {
+  font-weight: 400;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.ld-knobs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+}
+
+.ld-knob {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  font: 600 12.5px/1 var(--body);
+  color: var(--steel);
+}
+
+.ld-knob select {
+  background: var(--panel-2);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 7px 8px;
+  font: 600 13px/1 var(--mono);
+}
+
+.ld-knob--check input {
+  accent-color: var(--lime);
+}
+
+.ld-progress {
+  display: inline-block;
+  width: 160px;
+  height: 6px;
+  background: var(--raise);
+  border-radius: 2px;
+  overflow: hidden;
+  vertical-align: middle;
+}
+
+.ld-progress > span {
+  display: block;
+  height: 100%;
+  background: var(--lime);
+  transition: width 0.3s var(--ease);
+}
+
+/* ---------------------------------------------------------------- health strip */
+
+.ld-health {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  font-size: 12.5px;
+  color: var(--steel);
+}
+
+.ld-health-item b {
+  color: var(--ink);
+}
+
+/* ---------------------------------------------------------------- hero */
+
+.ld-hero {
+  display: grid;
+  grid-template-columns: minmax(220px, 0.9fr) minmax(320px, 1.6fr) minmax(280px, 1.1fr);
+  gap: 16px;
+}
+
+.ld-hero--spa {
+  grid-template-columns: minmax(280px, 1fr) minmax(320px, 2fr);
+}
+
+.ld-clock-big {
+  font: 600 44px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+  margin: 10px 0 6px;
+}
+
+.ld-clock-lap {
+  font-size: 15px;
+  margin-bottom: 10px;
+}
+
+.ld-clock-lap b {
+  font-size: 22px;
+}
+
+.ld-money-main {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(160px, 320px);
+  gap: 12px 20px;
+  align-items: end;
+}
+
+.ld-money-big {
+  display: inline-block;
+  font: 600 46px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.ld-spark {
+  width: 100%;
+  height: 64px;
+  display: block;
+}
+
+.ld-spark-line {
+  fill: none;
+  stroke: var(--ink);
+  stroke-width: 1.6;
+  vector-effect: non-scaling-stroke;
+}
+
+.ld-spark-fill {
+  fill: rgba(243, 243, 240, 0.06);
+}
+
+.ld-spark-dot {
+  fill: var(--ink);
+}
+
+.ld-spark--lime .ld-spark-line,
+.ld-spark--lime .ld-spark-dot {
+  stroke: var(--lime);
+  fill: var(--lime);
+}
+
+.ld-spark--lime .ld-spark-line {
+  fill: none;
+}
+
+.ld-spark--lime .ld-spark-fill {
+  fill: var(--lime-wash);
+}
+
+.ld-spark--hold .ld-spark-line {
+  stroke: var(--hold);
+}
+
+.ld-spark--hold .ld-spark-dot {
+  fill: var(--hold);
+}
+
+.ld-spark--hold .ld-spark-fill {
+  fill: var(--hold-wash);
+}
+
+.ld-tally {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 12px;
+  margin: 14px 0 0;
+}
+
+.ld-tally div {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  border-radius: 2px;
+}
+
+.ld-tally dt {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.ld-tally dd {
+  margin: 0;
+  font: 600 16px/1.1 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.ld-tally-lost dd {
+  color: var(--alert);
+}
+
+.ld-lines {
+  list-style: none;
+  margin: 12px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.ld-lines li {
+  display: grid;
+  grid-template-columns: 150px 80px 1fr;
+  gap: 10px;
+  align-items: baseline;
+  font-size: 13px;
+}
+
+.ld-lines .mono {
+  text-align: right;
+}
+
+/* Jev */
+.ld-jev-last {
+  display: grid;
+  gap: 6px;
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border-radius: 2px;
+}
+
+.ld-jev-kind {
+  font-size: 12.5px;
+  color: var(--steel);
+}
+
+.ld-jev-route {
+  font: 700 26px/1.05 var(--display);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.ld-probs {
+  list-style: none;
+  margin: 4px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+  font-size: 12px;
+}
+
+.ld-probs li {
+  display: grid;
+  grid-template-columns: 110px 1fr 40px;
+  gap: 8px;
+  align-items: center;
+}
+
+.ld-prob-bar {
+  height: 6px;
+  background: var(--raise);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.ld-prob-bar > span {
+  display: block;
+  height: 100%;
+  background: var(--steel);
+}
+
+.ld-probs li:first-child .ld-prob-bar > span {
+  background: var(--lime);
+}
+
+.ld-probs .mono {
+  text-align: right;
+}
+
+.ld-jev-list {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 4px;
+  font-size: 12.5px;
+}
+
+.ld-jev-list li {
+  display: grid;
+  grid-template-columns: 64px 1fr auto 56px;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.ld-jev-mini-route {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.ld-jev-list .mono:last-child {
+  text-align: right;
+}
+
+/* ---------------------------------------------------------------- cars */
+
+.ld-cars {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 16px;
+}
+
+.ld-car-head {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px 14px;
+  align-items: center;
+  margin-bottom: 12px;
+}
+
+.ld-car-num {
+  font: 700 44px/1 var(--mono);
+  color: var(--ink);
+}
+
+.ld-car-name {
+  font: 700 22px/1.05 var(--display);
+  letter-spacing: 0.035em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.ld-car-pos {
+  display: grid;
+  justify-items: end;
+  gap: 2px;
+  font-size: 11.5px;
+}
+
+.ld-car-pos b {
+  font: 600 30px/1 var(--mono);
+  color: var(--ink);
+}
+
+.ld-levers {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 8px 14px;
+  margin: 0;
+}
+
+.ld-levers div {
+  display: grid;
+  gap: 3px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  border-radius: 2px;
+}
+
+.ld-levers dt {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.ld-levers dd {
+  margin: 0;
+  font: 600 16px/1.1 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.ld-levers dd .ld-delta {
+  font-size: 16px;
+}
+
+/* ---------------------------------------------------------------- conditions */
+
+.ld-cond-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1.4fr) minmax(280px, 1fr);
+  gap: 16px 28px;
+}
+
+.ld-strip-label {
+  font-size: 11.5px;
+  color: var(--muted);
+  margin: 10px 0 4px;
+}
+
+.ld-strip {
+  position: relative;
+  height: 14px;
+  background: var(--raise);
+  border-radius: 2px;
+  overflow: hidden;
+}
+
+.ld-strip--stint {
+  height: 18px;
+}
+
+.ld-seg {
+  position: absolute;
+  top: 0;
+  bottom: 0;
+  display: inline-flex;
+  align-items: center;
+  padding: 0 4px;
+  font: 600 10px/1 var(--mono);
+  color: #06080a;
+  overflow: hidden;
+  white-space: nowrap;
+}
+
+.ld-legend .ld-seg {
+  position: static;
+  display: inline-block;
+  width: 12px;
+  height: 10px;
+  padding: 0;
+  margin: 0 4px 0 8px;
+  vertical-align: middle;
+}
+
+.ld-seg--green {
+  background: #3f8f5a;
+}
+
+.ld-seg--vsc,
+.ld-seg--vsc_ending {
+  background: #d9c04a;
+}
+
+.ld-seg--safety_car,
+.ld-seg--safety_car_ending {
+  background: var(--hold);
+}
+
+.ld-seg--red_flag {
+  background: var(--alert);
+}
+
+.ld-seg--finished {
+  background: var(--ink);
+}
+
+.ld-seg--rain {
+  background: #5aa9e6;
+}
+
+.ld-seg--dry {
+  background: transparent;
+}
+
+.ld-seg--intermediate {
+  background: #4ea36f;
+}
+
+.ld-seg--wet {
+  background: #3b7dd8;
+}
+
+.ld-seg--soft {
+  background: #e0523f;
+}
+
+.ld-seg--medium {
+  background: #e6c84a;
+}
+
+.ld-seg--hard {
+  background: #d8d8d4;
+}
+
+.ld-seg--unknown {
+  background: var(--line);
+}
+
+.ld-stint-row {
+  display: grid;
+  grid-template-columns: 28px 1fr;
+  gap: 8px;
+  align-items: center;
+  margin-bottom: 4px;
+}
+
+.ld-stint-car {
+  font-size: 12px;
+  color: var(--steel);
+}
+
+.ld-legend {
+  margin-top: 10px;
+}
+
+.ld-cond-text h3 {
+  margin: 0 0 6px;
+  font: 600 13px/1.35 var(--body);
+}
+
+.ld-levers-list {
+  margin: 0 0 10px;
+  padding-left: 18px;
+  display: grid;
+  gap: 6px;
+  font-size: 13.5px;
+  line-height: 1.45;
+}
+
+/* ---------------------------------------------------------------- story + incidents */
+
+.ld-main {
+  display: grid;
+  grid-template-columns: minmax(320px, 1fr) minmax(360px, 1.2fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.ld-filters {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.ld-filter {
+  background: transparent;
+  color: var(--steel);
+  border: 0;
+  border-radius: 2px;
+  padding: 0 10px;
+  height: 30px;
+  font: 600 12.5px/1 var(--body);
+  cursor: pointer;
+}
+
+.ld-filter--on {
+  background: var(--panel-2);
+  color: var(--ink);
+}
+
+.ld-story-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  max-height: 760px;
+  overflow: auto;
+}
+
+.ld-story-item {
+  display: grid;
+  grid-template-columns: 62px 18px 1fr auto;
+  gap: 10px;
+  align-items: start;
+  padding: 8px 8px 8px 10px;
+  border-left: 2px solid var(--line-soft);
+  background: transparent;
+}
+
+.ld-story-item--ok {
+  border-left-color: var(--lime);
+}
+
+.ld-story-item--hold {
+  border-left-color: var(--hold);
+}
+
+.ld-story-item--alert {
+  border-left-color: var(--alert);
+}
+
+.ld-story-item--jev,
+.ld-story-item--advisor {
+  background: var(--panel-2);
+}
+
+.ld-story-when {
+  display: grid;
+  gap: 1px;
+  font-size: 12px;
+  color: var(--steel);
+}
+
+.ld-story-when small {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.ld-story-icon svg {
+  width: 14px;
+  height: 14px;
+  color: var(--steel);
+  margin-top: 2px;
+}
+
+.ld-story-body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ld-story-title {
+  font-weight: 600;
+  font-size: 13.5px;
+}
+
+.ld-story-detail {
+  font-size: 12.5px;
+  color: var(--steel);
+}
+
+.ld-story-meta {
+  font-size: 11.5px;
+}
+
+.ld-story-delta {
+  min-width: 70px;
+  text-align: right;
+}
+
+/* incidents */
+.ld-incident {
+  padding: 12px 0 14px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.ld-incident:first-of-type {
+  border-top: 0;
+  padding-top: 4px;
+}
+
+.ld-incident-title {
+  font: 700 18px/1.1 var(--display);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+  margin-bottom: 6px;
+}
+
+.ld-incident-title .ld-muted {
+  font: 400 12.5px/1.2 var(--body);
+  text-transform: none;
+  letter-spacing: 0;
+}
+
+.ld-incident-msg {
+  margin: 10px 0 6px;
+  color: var(--steel);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.ld-evidence {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  color: var(--muted);
+}
+
+.ld-ext {
+  color: var(--steel);
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.ld-ext svg {
+  width: 12px;
+  height: 12px;
+}
+
+.ld-plan {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 12.5px;
+}
+
+.ld-plan th {
+  text-align: left;
+  font-weight: 600;
+  color: var(--muted);
+  padding: 4px 8px 6px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.ld-plan td {
+  padding: 5px 8px 5px 0;
+  border-bottom: 1px solid var(--line-soft);
+  vertical-align: top;
+}
+
+.ld-plan-rec td {
+  background: var(--lime-wash);
+}
+
+.ld-rec {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  background: var(--lime);
+  color: #06080a;
+  font: 700 10px/1.4 var(--body);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.ld-advisor {
+  margin-top: 10px;
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border-left: 2px solid var(--lime);
+  display: grid;
+  gap: 6px;
+  font-size: 13px;
+}
+
+.ld-advisor--pending,
+.ld-advisor--off {
+  border-left-color: var(--line);
+}
+
+.ld-advisor-head {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 14px;
+}
+
+.ld-advisor-head svg {
+  width: 16px;
+  height: 16px;
+  color: var(--lime);
+}
+
+.ld-advisor p {
+  margin: 0;
+  color: var(--steel);
+}
+
+.ld-garage {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 10px;
+}
+
+.ld-results {
+  list-style: none;
+  margin: 10px 0 0;
+  padding: 0;
+  display: grid;
+  gap: 10px;
+}
+
+.ld-results li {
+  display: grid;
+  grid-template-columns: 60px 1fr auto;
+  gap: 12px;
+  align-items: start;
+  font-size: 13px;
+}
+
+.ld-results li > span:nth-child(2) {
+  display: grid;
+  gap: 3px;
+}
+
+.ld-results .ld-small {
+  color: var(--steel);
+}
+
+.ld-foot {
+  max-width: 100ch;
+  margin: 0;
+}
+
+/* ---------------------------------------------------------------- responsive */
+
+@media (max-width: 1180px) {
+  .ld-hero,
+  .ld-hero--spa {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  }
+
+  .ld-money {
+    grid-column: 1 / -1;
+  }
+
+  .ld-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .ld-hero,
+  .ld-hero--spa,
+  .ld-cars,
+  .ld-cond-grid,
+  .ld-money-main {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ld-tally {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .ld-lines li {
+    grid-template-columns: 1fr auto;
+  }
+
+  .ld-lines li .ld-small {
+    grid-column: 1 / -1;
+  }
+
+  .ld-clock-big {
+    font-size: 36px;
+  }
+
+  .ld-money-big {
+    font-size: 36px;
+  }
+
+  .ld-story-item {
+    grid-template-columns: 56px 1fr auto;
+  }
+
+  .ld-story-icon {
+    display: none;
+  }
+
+  .ld-plan th:nth-child(5),
+  .ld-plan td:nth-child(5) {
+    display: none;
+  }
+}
