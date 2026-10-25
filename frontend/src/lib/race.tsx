@@ -1,4 +1,4 @@
-import { createContext, useCallback, useContext, useMemo, useRef, type ReactNode } from 'react';
+import { createContext, useCallback, useContext, useEffect, useMemo, useRef, useState, type ReactNode } from 'react';
 import { useSpacetimeDB, useTable } from 'spacetimedb/react';
 import { tables, type DbConnection } from '../module_bindings';
 import type {
@@ -248,8 +248,30 @@ export function RaceBridge({ children }: { children: ReactNode }) {
       incidents, beliefs, actions, entries, entryLines, questions, sims, closes, options, postings, health, decidePosting, decideAction, chooseOption, answer, approveClose,
       audit, seats, rules, signoffs, online, latency, mySeat]
   );
-  return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
+  // A replay at full speed writes thousands of rows a second, and each one re-renders the tables above. The views
+  // below see the data at most four times a second, so a fast replay cannot freeze the page.
+  const [published, setPublished] = useState(value);
+  const latest = useRef(value);
+  latest.current = value;
+  const timer = useRef<number | null>(null);
+  useEffect(() => {
+    if (timer.current !== null) return;
+    timer.current = window.setTimeout(() => {
+      timer.current = null;
+      setPublished(latest.current);
+    }, PUBLISH_MS);
+  }, [value]);
+  useEffect(
+    () => () => {
+      if (timer.current !== null) window.clearTimeout(timer.current);
+      timer.current = null; // StrictMode remounts: the next change must be able to schedule again
+    },
+    []
+  );
+  return <Ctx.Provider value={published}>{children}</Ctx.Provider>;
 }
+
+const PUBLISH_MS = 250;
 
 export function useRace(): RaceData {
   return useContext(Ctx);
