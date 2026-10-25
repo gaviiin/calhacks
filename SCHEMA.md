@@ -30,17 +30,19 @@ Each actor is a distinct SpacetimeDB identity (token from `POST /v1/identity`). 
 | `sync` | sync job | upsert golden rows (which auto-creates work items) |
 | `ai_cap_analyst` | agent | `propose`, `ask` on work items |
 | `ai_policy_learner` | agent | `propose_policy` |
-| `human_controller` | person or persona | `approve`, `reject`, `answer` on work items **below** materiality |
-| `human_head_of_cost_cap` | person or persona | `approve`, `reject`, `answer` on any work item; `approve_policy`, `reject_policy`; `lock_period` |
+| `human_controller` | person or persona | `approve`, `reject`, `answer` on work items **below** materiality; `teach_policy` within materiality |
+| `human_head_of_cost_cap` | person or persona | `approve`, `reject`, `answer` on any work item; `approve_policy`, `reject_policy`, `teach_policy`, `grant_autonomy`, `revoke_autonomy`; `lock_period` |
 | `gateway` | gateway job | `post` |
-| `auto_approver` | standing-approval job | `approve` only, and only under a standing approval (below) |
+| `auto_approver` | standing-approval job | `approve` only, and only what an approved rule decided (below) |
 | `red_team` | harness | nothing (every call it makes must be denied and logged) |
 
 Every role with a known identity may also call `recordStep` (section 6b); recording is never denied.
 
-Separation of duties, enforced in the reducer: `approve`/`reject` is denied when `work_item.proposed_by == ctx.sender`. Materiality: an item with `|amount_usd_minor| >= settings.materiality_usd_minor` can only be approved by `human_head_of_cost_cap`. Nobody can `post` except `gateway`; nothing posts unless state is `APPROVED`.
+Separation of duties, enforced in the reducer: `approve`/`reject` is denied when `work_item.proposed_by == ctx.sender`. Materiality: when a person decides, an item with `|amount_usd_minor| >= settings.materiality_usd_minor` can only be decided by `human_head_of_cost_cap`; materiality picks which person, it is not a reason to need one. Nobody can `post` except `gateway`; nothing posts unless state is `APPROVED`.
 
-**Earned autonomy (standing approvals).** A human never approves "the agent"; the Head of Cost Cap approves a *policy* and may later grant that policy autonomy on the strength of its sandbox record (`grantAutonomy`, with the sandbox run as evidence). The `auto_approver` may approve a work item only when all hold: the item's `proposed_policy_id` points at a policy that is APPROVED, in force for the item's period and has `autonomy = "GRANTED"`; `|amount_usd_minor|` is below materiality; the proposer is not the auto_approver. Its audit row records the policy id and version and the identity that granted autonomy, so every autonomous decision traces to a named human's standing approval. `revokeAutonomy` (Head of Cost Cap) turns it off immediately; items already approved stay approved, and later ones go back to human review.
+**People decide only what no rule covers (Oct 24).** Approving a policy gives it standing approval (`autonomy = "GRANTED"`, by the approver). The `auto_approver` approves, at any amount, a deterministic proposal whose every citation (the whole line, or each bill-line allocation; a `cap_limit_excess` split is computed by rule beside its sibling) is a policy that is APPROVED, in force and still GRANTED, or a `human_text` proposal built from a person's answer on that line (`answered_by` set). A Claude proposal is a line no rule covered: a person decides it, once. Its audit row records each policy, its version and the person whose approval or teaching gave it standing approval, or who answered. `revokeAutonomy` (Head of Cost Cap) sends that policy's later lines back to people; `grantAutonomy` gives it back.
+
+**Teaching (`teachPolicy`).** A person who decides a line can ask the desk to remember it: the rule is born APPROVED with standing approval, authored and approved by that person in one transition (audit `teach_policy`), pattern pinned to the account plus the vendor, department or memo (one example earns a narrow rule). A correction of a policy's decision becomes an exception under that policy. A controller may teach only within ±materiality (`min/max_amount_usd_minor`). Queued Claude proposals and open questions the rule now covers go back to NEW (audit `reopen`, `rule now covers it: pol-<id>`), so nobody is asked the same thing twice.
 
 **Denials are committed, not thrown.** A reducer that denies an action writes an `audit_log` row with `allowed=false` and returns normally without changing state (a thrown error would roll back the audit row). Callers confirm success by reading the item's state afterwards. Invalid arguments (unknown id, malformed input) do throw.
 
@@ -61,7 +63,7 @@ PROPOSED ──ask──┘
 | NEW | ask | NEEDS_INFO | ai_cap_analyst |
 | PROPOSED | ask | NEEDS_INFO | ai_cap_analyst |
 | NEEDS_INFO | answer | NEW | human_controller, human_head_of_cost_cap |
-| PROPOSED | approve | APPROVED | human_controller (below materiality), human_head_of_cost_cap, auto_approver (standing approval only) |
+| PROPOSED | approve | APPROVED | human_controller (below materiality), human_head_of_cost_cap, auto_approver (what an approved rule decided, any amount) |
 | PROPOSED | reject | REJECTED | same |
 | REJECTED | propose | PROPOSED | ai_cap_analyst |
 | APPROVED | post | POSTED | gateway |
@@ -118,6 +120,8 @@ Served by `world/` at `http://localhost:8010`. Every record has `id`, `source`, 
 - `history_2025_cap_classification`: `{id, gl_line_id, category_code, rulebook_entry_id, decided_by:"analyst"|"head_of_cost_cap", reason}` (the 2025 submission at line level)
 - `history_2025_approval`: `{id, gl_line_id, amount_usd_minor, escalated_to:"head_of_cost_cap"|null, decision, reason, decided_on}`
 - `rulebook_issue`: `{id:"SECD-ISS07", published_on:"2026-06-25", effective_from:"2026-01-01", path:"rulebook/rulebook.json"}` (a rule change arrives as a new record here)
+
+**2025 bill lines** (added Oct 24): `history_2025_bill_line` has the same shape as `bill_line` (`{id:"bl-2025-00042-3", bill_id:"bill-2025-00042", gl_line_id, line_no, description, amount_minor}`) for every 2025 vendor invoice, and `history_2025_bill_line_classification` is `{id:"h25bc-00042-3", bill_line_id, gl_line_id, category_code, rulebook_entry_id, amount_minor, decided_by, reason}`, exactly one per 2025 bill line, its `amount_minor` equal to the bill line's. Both are visible from the start and served by `/changes` like the other history sources. `history_2025_gl_line.bill_id` now names the 2025 invoice; 2025 bill headers are not served. A mixed invoice (lines in more than one category) has one `history_2025_cap_classification` row per category (`h25c-NNNNN`, `h25c-NNNNN-2`, ...) and its amounts in the bill-line classifications.
 
 **Cursor API** (change-only, per source):
 
@@ -179,8 +183,9 @@ All tables `public: true` for the dashboard. Timestamps are `t.timestamp()`; mon
 | `reject` | `{workItemId, reason}` | human_* (SoD) |
 | `post` | `{workItemId, erpEntryId}` | gateway |
 | `proposePolicy` | policy fields minus state/ids | ai_policy_learner |
-| `approvePolicy`, `rejectPolicy` | `{policyId, reason}` | human_head_of_cost_cap |
-| `grantAutonomy` | `{policyId, evidence, reason}` | human_head_of_cost_cap; policy must be APPROVED; `evidence` is the sandbox record JSON |
+| `approvePolicy`, `rejectPolicy` | `{policyId, reason}` | human_head_of_cost_cap; approval grants standing approval |
+| `teachPolicy` | `{workItemId, categoryCode, rulebookEntryId, pattern, reason}` | human_controller (within materiality), human_head_of_cost_cap; born APPROVED with standing approval |
+| `grantAutonomy` | `{policyId, evidence, reason}` | human_head_of_cost_cap; policy must be APPROVED; gives standing approval back after a revoke |
 | `revokeAutonomy` | `{policyId, reason}` | human_head_of_cost_cap |
 | `recordStep` | `{runId, step, kind, name, input, outputDigest, outputExcerpt, workItemId?, model?}` | any role except `none`; never denied; not a state change |
 
@@ -259,3 +264,33 @@ These fix the ten confirmed defects. Field and argument names are literal; `syst
 **Related party (defect 5).** The analyst compares `fair_value_minor` with the line's invoiced `amount_minor` in the same currency; it fires when fair value exceeds the invoiced amount. No uplift on negative lines. A currency mismatch between the fair value row and the line is a question, not a crash.
 
 **Pre-checks (defect 7, minimal).** Before policy matching the analyst runs deterministic checks and asks (never proposes) on a hit: same vendor and absolute amount within 30 days (possible duplicate); bill `bank_iban_on_bill` differs from the vendor master `bank_iban` (changed bank details); vendor name whose NFKC-normalised, confusable-folded form equals another vendor's but whose id differs (lookalike); same vendor, same posted date, two or more lines whose sum is at or above materiality (possible split). Aggregate materiality in the module stays Tier 1.
+
+## 11. Tier 1 contract: allocations and Ripple-Down Rule policies (Oct 24)
+
+### 11.1 Allocations
+
+A proposal may split one GL line across categories. The GL line stays the unit that reconciles to the statutory ledger; materiality is judged on the line total.
+
+- New table `allocation { id: u64 PK autoInc, work_item_id: u64 (index), line_no: u32, basis: string, basis_ref: string, category_code: string, rulebook_entry_id: string, policy_id: u64?, amount_usd_minor: i64, cap_effect_usd_minor: i64?, posted_treatment: string?, posted_cap_effect_usd_minor: i64? }`.
+- New reducer `proposeAllocations { workItemId: u64, allocations: Allocation[], reason: string, evidenceRefs: string, proposalSource: string }` where `Allocation = { basis, basisRef, categoryCode, rulebookEntryId, policyId?, amountUsdMinor, capEffectUsdMinor? }` (a `t.object` array, not JSON in a string). Same roles, states and transition as `propose`; the item's `proposed_category_code` and `proposed_rulebook_entry_id` become `"ALLOCATED"`.
+- Validation, each failure a denial: at least two allocations; amounts sum exactly to the item's `amount_usd_minor`; every entry valid and in force for the period and of the allocation's category; every cited policy valid for the allocation (11.2) ; per basis:
+  - `bill_line`: `basisRef` is a bill line id whose `gl_line_id` is this item's line; each bill line used at most once; bill-line allocations together cover every bill line of the line.
+  - `share`: `basisRef` is `"<department_id>:<share as decimal>"`. Apportionment is allowed only for categories in `APPORTIONABLE = {NON_F1, HERITAGE}` (D5.1.1.h.c, e.ii) plus their RELEVANT complement; any other category on a share basis is denied as `apportionment_not_permitted` ("Directly Attributable" forbids it).
+  - `cap_limit`: the within-limit part of a split at a category limit. Category = `basisRef` = the limited EXCLUDED category code; amount at most the category's remaining limit for the cap year (below). A line split at a limit has exactly one `cap_limit` allocation per limited category plus exactly one `cap_limit_excess`; no bill lines are needed.
+  - `cap_limit_excess`: category RELEVANT; `basisRef` is the limited category code; the rest above the limit. Its within-limit sibling is the `cap_limit` allocation (or `bill_line` allocations in that category, which also count against the limit).
+  - The limit is checked at `propose`/`proposeAllocations` and `approve` (so an over-limit proposal is denied up front as `cap_limit_exceeded: remaining <amount>`) and again at `post` (the limit can be consumed between approve and post).
+- **Category limits.** New table `limit_ledger { key: string PK ("<cap_year>|<category_code>"), cap_year: u32, category_code: string, excluded_usd_minor: i64 }`. Posting an EXCLUDED allocation or whole-line proposal in a category whose rulebook entry has `cap_limit_usd_minor` adds to it; a post that would take it past the limit is denied as `cap_limit_exceeded: remaining <amount>`, so the analyst must split with a `cap_limit_excess` allocation. A reversal subtracts what it backs out.
+- `post` books each allocation by its treatment (ADJUSTMENT via its cap effect) and records `posted_treatment`/`posted_cap_effect_usd_minor` per allocation; reversing an allocated item backs out each allocation once. The gateway posts one journal line pair per allocation.
+
+### 11.2 Policies as Ripple-Down Rules
+
+- `policy` gains `parent_policy_id: u64?`, `cornerstones: string` (JSON array of `{"ref": "<gl_line id or history ref>", "category_code": "..."}`, the cases the rule was made for) and `flip_report: string` (JSON, below). `proposePolicy` gains `parentPolicyId: u64?` and `cornerstones: string`, appended after `effectiveTo`.
+- **Applies.** A policy applies to a line when its own pattern matches and its parent applies (recursively). Only APPROVED, in-force, non-superseded policies take part.
+- **Resolution.** The conclusions for a line are the applicable policies none of whose applicable approved children apply. One conclusion, or several that agree on category, resolve to that category; when several agree, cite the deepest (ties: lowest id). Conclusions that disagree resolve to the one that strictly refines all the others (its effective pattern, the conjunction of its own and its ancestors' keys, is a strict superset with equal values), else `conflict` and the analyst asks.
+- **Module precedence.** `propose`/`proposeAllocations` citing policy P is denied as `exception_applies: pol-<child>` if an approved child of P applies to the line, and as `policy_conflict` if resolution for the line is a conflict or resolves to a different policy. The same checks run at approve and post.
+- **Cornerstone check (RDR).** At `proposePolicy`, for every cornerstone whose ref is a gl_line in the module: the new policy must apply to it. For a child policy, every cornerstone of its parent whose category equals the parent's must NOT be matched by the child (a "conflicting cornerstone"); either is a denial listing the refs. Cornerstones referring to history the module doesn't hold are stored and marked `checked_by_proposer` in the audit evidence; the Policy Learner checks those against history itself before proposing.
+- **Flip report.** At `proposePolicy`, the module computes over existing work items whose line the new policy would resolve to a different category than the item currently carries: `{"open": [ids], "posted_open_period": [ids], "posted_locked": [ids], "usd_minor_by_state": {...}}`, stored on the policy and in the audit row's evidence. The Head of Cost Cap sees it before approving.
+- **On approval of a child or new version:** open items (PROPOSED, APPROVED) citing an ancestor that the child now overrides are reopened (`reopen`, reason `exception approved: pol-<id>`); POSTED items in unlocked periods whose category changes get a `reversal` work item; POSTED items in locked periods are left alone and stay listed in the flip report.
+- **Corrections become exceptions.** `--from-corrections` proposes a child under the policy that fired, with the corrected items as cornerstones, instead of a new top-level policy.
+- New pattern keys: `description_regex` (matched, with the same normalisation rules as `memo_regex`, against bill line descriptions: for a bill-line allocation, against that bill line; for a whole-line proposal, it must match every bill line of the line, and a line with no bill lines does not match), `entity`, `erp_category_code`.
+- Shared conformance: `rulebook/rdr_conformance.json` holds policy trees, lines and expected resolutions; both the module and agents test suites load it.

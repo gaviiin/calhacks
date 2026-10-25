@@ -41,7 +41,7 @@ def test_bootstrap_writes_a_random_epoch_and_is_idempotent(tmp_path, rulebook):
     n = len(stdb.calls)
     logs.clear()
     res2 = bootstrap(stdb, identities_path=ids_path, rulebook_path=rb, log=logs.append)
-    assert res2 == {"created": [], "claimed": [], "rulebook_loaded": 0, "settings_written": []}
+    assert res2 == {"created": [], "claimed": [], "rulebook_loaded": 0, "settings_written": [], "seats_minted": {}}
     assert len(stdb.calls) == n and _setting(stdb, "db_epoch") == e  # no second epoch, no role traffic
     assert any("roles: unchanged" in l for l in logs)
     assert identities.epoch(json.loads(ids_path.read_text())) == e
@@ -110,3 +110,19 @@ def test_bootstrap_without_identities_file_on_an_epoched_module_still_bootstraps
     bootstrap(stdb, identities_path=ids_path, rulebook_path=rb, log=lambda *_: None)
     assert len(stdb.calls) == n
     assert identities.epoch(json.loads(ids_path.read_text())) == _setting(stdb, "db_epoch")
+
+
+def test_bootstrap_mints_dashboard_seats_once_per_epoch(tmp_path, rulebook):
+    stdb, ids_path, rb = _fresh(rulebook, tmp_path)
+    res = bootstrap(stdb, identities_path=ids_path, rulebook_path=rb, log=lambda *_: None)
+    seats_path = tmp_path / "seat_codes.json"
+    data = json.loads(seats_path.read_text())
+    assert res["seats_minted"] == {role: 3 for role in config.DASHBOARD_SEATS}
+    assert set(data["seats"]) == set(config.DASHBOARD_SEATS) and data["db_epoch"]
+    assert oct(seats_path.stat().st_mode & 0o777) == "0o600"
+    # each code is an invite the admin minted for that role, unclaimed until a browser takes the seat
+    code = data["seats"]["human_head_of_cost_cap"][0]["code"]
+    assert [c[2][0] for c in stdb.reducer_calls(R.CREATE_ROLE_INVITE) if c[2][2] == code] == ["human_head_of_cost_cap"]
+    assert not [c for c in stdb.reducer_calls(R.CLAIM_ROLE) if c[2][0] == code]
+    res2 = bootstrap(stdb, identities_path=ids_path, rulebook_path=rb, log=lambda *_: None)
+    assert res2["seats_minted"] == {}

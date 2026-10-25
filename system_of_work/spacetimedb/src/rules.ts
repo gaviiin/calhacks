@@ -55,6 +55,9 @@ export type Action =
   | 'propose_policy'
   | 'approve_policy'
   | 'reject_policy'
+  // A person decides a line no rule covered and asks the system to remember it: the rule is born
+  // APPROVED with standing approval, authored and approved by that person in one transition.
+  | 'teach_policy'
   | 'grant_autonomy'
   | 'revoke_autonomy'
   // Written by the module itself (never called): a sync correction or a superseding policy
@@ -65,7 +68,7 @@ type Grants = Partial<Record<ResourceKind, readonly Action[]>>;
 
 // role -> resource -> allowed actions (the deck's ROLES dict). No role but
 // `gateway` can post; `red_team` can do nothing; `none` can only claim an invite.
-// `auto_approver` can approve, and transition() further limits it to standing approvals.
+// `auto_approver` can approve, and transition() limits it to what an approved rule decided.
 export const ROLES: Record<Role, Grants> = {
   none: { role_invite: ['claim_role'] },
   admin: {
@@ -81,10 +84,10 @@ export const ROLES: Record<Role, Grants> = {
   },
   ai_cap_analyst: { work_item: ['propose', 'ask'] },
   ai_policy_learner: { policy: ['propose_policy'] },
-  human_controller: { work_item: ['approve', 'reject', 'answer'] },
+  human_controller: { work_item: ['approve', 'reject', 'answer'], policy: ['teach_policy'] },
   human_head_of_cost_cap: {
     work_item: ['approve', 'reject', 'answer'],
-    policy: ['approve_policy', 'reject_policy', 'grant_autonomy', 'revoke_autonomy'],
+    policy: ['approve_policy', 'reject_policy', 'teach_policy', 'grant_autonomy', 'revoke_autonomy'],
     period: ['lock_period'],
   },
   gateway: { work_item: ['post'] },
@@ -111,12 +114,14 @@ export const TRANSITIONS: Record<Machine, Record<string, Partial<Record<Action, 
     POSTED: {},
   },
   policy: {
-    ABSENT: { propose_policy: 'PROPOSED' },
+    ABSENT: { propose_policy: 'PROPOSED', teach_policy: 'APPROVED' },
     PROPOSED: { approve_policy: 'APPROVED', reject_policy: 'REJECTED' },
     APPROVED: {},
     REJECTED: {},
   },
-  // policy.autonomy; granting also requires policy.state = APPROVED (a guard in transition()).
+  // policy.autonomy, the policy's standing approval: GRANTED when the policy is approved or taught,
+  // so the lines it decides need no person; the head revokes it to send them back to people.
+  // Granting also requires policy.state = APPROVED (a guard in transition()).
   // SUSPENDED is set by the module when a higher version of the same policy_key is approved;
   // the head may re-grant (or revoke) it.
   autonomy: {
@@ -147,6 +152,7 @@ export const ACTION_TARGET: Partial<Record<Action, string>> = {
   propose_policy: 'PROPOSED',
   approve_policy: 'APPROVED',
   reject_policy: 'REJECTED',
+  teach_policy: 'APPROVED',
   grant_autonomy: 'GRANTED',
   revoke_autonomy: 'REVOKED',
   lock_period: 'LOCKED',
@@ -157,16 +163,19 @@ export const ACTION_TARGET: Partial<Record<Action, string>> = {
 // Actions refused on items whose period is locked (SCHEMA section 3).
 export const PERIOD_LOCKED_ACTIONS: readonly Action[] = ['propose', 'approve', 'post'];
 
-// At or above materiality, only the head of cost cap may decide (SCHEMA section 2:
-// the controller may approve, reject, answer only below materiality).
+// At or above materiality, only the head of cost cap may decide when a person decides (SCHEMA
+// section 2: the controller may approve, reject, answer only below materiality). Materiality picks
+// which person; it is not a reason to need one, so the standing-approval job is not bound by it.
 export const MATERIALITY_ACTIONS: readonly Action[] = ['approve', 'reject', 'answer'];
 export const MATERIALITY_ROLE: Role = 'human_head_of_cost_cap';
 
 export const TREATMENTS = ['EXCLUDED', 'RELEVANT', 'ADJUSTMENT'] as const;
 
-// propose.proposalSource (SCHEMA section 10). Only `deterministic` proposals may be auto-approved.
+// propose.proposalSource (SCHEMA section 10). `deterministic` proposals under approved rules and
+// `human_text` proposals built from a person's answer may be approved by the standing-approval job.
 export const PROPOSAL_SOURCES = ['deterministic', 'llm', 'human_text'] as const;
 export const DETERMINISTIC_SOURCE = 'deterministic';
+export const HUMAN_TEXT_SOURCE = 'human_text';
 
 // gl_line fields whose change on re-sync reopens an open work item (order = audit reason order).
 export const REOPEN_FIELDS = [
@@ -202,9 +211,26 @@ export const PATTERN_KEYS = [
   'related_party',
   'min_amount_usd_minor',
   'max_amount_usd_minor',
+  // Tier 1 (SCHEMA section 11.2). description_regex matches bill line descriptions under the
+  // same rules as memo_regex; entity and erp_category_code are exact matches on the gl line.
+  'description_regex',
+  'entity',
+  'erp_category_code',
 ] as const;
 
-// The standing-approval job: may approve only under a policy with autonomy GRANTED.
+// ---------- Tier 1: allocations (SCHEMA section 11.1) ----------
+
+// proposeAllocations writes this marker into proposed_category_code / proposed_rulebook_entry_id;
+// the split itself lives in the allocation table. post records it as posted_treatment.
+export const ALLOCATED = 'ALLOCATED';
+export const ALLOCATION_BASES = ['bill_line', 'share', 'cap_limit', 'cap_limit_excess'] as const;
+// Categories that may be apportioned by a department share (D5.1.1.h.c, e.ii); RELEVANT is
+// allowed on a share basis only as the complement of one of these. Everything else must be
+// Directly Attributable, so a share basis is denied as apportionment_not_permitted.
+export const APPORTIONABLE: readonly string[] = ['NON_F1', 'HERITAGE'];
+export const RELEVANT_CATEGORY = 'RELEVANT';
+
+// The standing-approval job: approves what an approved rule decided (transition() checks which).
 export const AUTONOMOUS_ROLE: Role = 'auto_approver';
 
 // agent_step (SCHEMA section 6b).

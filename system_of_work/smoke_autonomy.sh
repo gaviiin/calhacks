@@ -35,7 +35,7 @@ curl -sS -X POST "$CALL/setSetting" -H "Authorization: Bearer $ADMIN" -H "$J" -d
 
 # Learner proposes a policy (version 0 = next), head approves it.
 curl -sS -w 'proposePolicy HTTP %{http_code}\n' -X POST "$CALL/proposePolicy" -H "Authorization: Bearer $LEARNER" -H "$J" \
-  -d '["grove-canteen-catering",0,"CATERING","CATERING@SECD-ISS07","{\"vendor_id\":\"ven-017\",\"account_code\":\"6410\"}","Grove Catering on 6410 is the factory canteen","[\"hist-2025-0001\"]",214,"2026-01-01",{"none":[]}]'
+  -d '["grove-canteen-catering",0,"CATERING","CATERING@SECD-ISS07","{\"vendor_id\":\"ven-017\",\"account_code\":\"6410\"}","Grove Catering on 6410 is the factory canteen","[\"hist-2025-0001\"]",214,"2026-01-01",{"none":[]},{"none":[]},"[]"]'
 PID=$(curl -sS -X POST "$SQL" -H "Authorization: Bearer $HEAD" \
   -d "SELECT id FROM policy WHERE policy_key = 'grove-canteen-catering'" | jq '.[0].rows[0][0]')
 curl -sS -w 'approvePolicy HTTP %{http_code}\n' -X POST "$CALL/approvePolicy" -H "Authorization: Bearer $HEAD" -H "$J" \

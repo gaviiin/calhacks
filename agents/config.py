@@ -20,6 +20,7 @@ SYNC_CACHE_PATH = STATE_DIR / "sync_cache.json"
 GATEWAY_LEDGER_PATH = STATE_DIR / "gateway_posted.json"
 DEAD_LETTER_PATH = STATE_DIR / "dead_letter.jsonl"
 RULEBOOK_ISSUES_PATH = STATE_DIR / "rulebook_issues.json"
+SEAT_CODES_PATH = STATE_DIR / "seat_codes.json"  # dashboard seat invite codes (bootstrap step 7)
 OUT_DIR = AGENTS_DIR / "out"
 ONBOARDING_REPORT_PATH = OUT_DIR / "onboarding_report.md"
 RULEBOOK_PATH = REPO_ROOT / "rulebook" / "rulebook.json"
@@ -66,6 +67,13 @@ ACTOR_LABELS: dict[str, str] = {
     "gateway": "ERP gateway",
     "auto_approver": "Standing-approval job",
     "red_team": "Red team harness",
+}
+
+
+# Human roles a person can take in the dashboard (role -> label on their role row).
+DASHBOARD_SEATS: dict[str, str] = {
+    "human_head_of_cost_cap": "Head of Cost Cap (dashboard)",
+    "human_controller": "Financial Controller (dashboard)",
 }
 
 

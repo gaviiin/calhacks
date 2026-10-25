@@ -34,8 +34,10 @@ APPROVE = "approve"
 REJECT = "reject"
 POST = "post"
 PROPOSE_POLICY = "proposePolicy"
+PROPOSE_ALLOCATIONS = "proposeAllocations"
 APPROVE_POLICY = "approvePolicy"
 REJECT_POLICY = "rejectPolicy"
+TEACH_POLICY = "teachPolicy"
 GRANT_AUTONOMY = "grantAutonomy"
 REVOKE_AUTONOMY = "revokeAutonomy"
 RECORD_STEP = "recordStep"
@@ -210,6 +212,45 @@ def propose(work_item_id: int, category_code: str, rulebook_entry_id: str, polic
             _json_list(evidence_refs), _opt_int(cap_effect_usd_minor), proposal_source]
 
 
+ALLOCATION_BASES = ("bill_line", "share", "cap_limit_excess")
+ALLOCATED = "ALLOCATED"  # proposed_category_code / proposed_rulebook_entry_id of an allocated item
+# REDUCERS.md "SATS-JSON for HTTP callers": each AllocationInput is a POSITIONAL array in this order
+ALLOCATION_FIELDS = ("basis", "basisRef", "categoryCode", "rulebookEntryId", "policyId", "amountUsdMinor",
+                     "capEffectUsdMinor")
+
+
+def allocation(basis: str, basis_ref: str, category_code: str, rulebook_entry_id: str, policy_id: int | None,
+               amount_usd_minor: int, cap_effect_usd_minor: int | None = None) -> list:
+    """One `AllocationInput` (SCHEMA §11.1) as REDUCERS.md asks: a positional array
+    [basis, basisRef, categoryCode, rulebookEntryId, policyId?, amountUsdMinor, capEffectUsdMinor?],
+    options as {"some": v} / {"none": []}."""
+    if basis not in ALLOCATION_BASES:
+        raise ValueError(f"basis must be one of {ALLOCATION_BASES}, not {basis!r}")
+    if not basis_ref or not category_code or not rulebook_entry_id:
+        raise ValueError("basisRef, categoryCode and rulebookEntryId must be non-empty")
+    return [basis, str(basis_ref), category_code, rulebook_entry_id, _opt_int(policy_id), _int(amount_usd_minor),
+            _opt_int(cap_effect_usd_minor)]
+
+
+def propose_allocations(work_item_id: int, allocations: Iterable[dict | list], reason: str,
+                        evidence_refs: Iterable[str] | str, proposal_source: str = "deterministic") -> list:
+    """{workItemId: u64, allocations: AllocationInput[], reason, evidenceRefs, proposalSource} (REDUCERS.md).
+
+    `allocations` items are either already-built `allocation(...)` arrays or dicts with the
+    snake_case keys basis, basis_ref, category_code, rulebook_entry_id, policy_id, amount_usd_minor,
+    cap_effect_usd_minor."""
+    if proposal_source not in PROPOSAL_SOURCES:
+        raise ValueError(f"proposal_source must be one of {PROPOSAL_SOURCES}, not {proposal_source!r}")
+    out = []
+    for a in allocations:
+        if isinstance(a, list):
+            out.append(list(a))
+        else:
+            out.append(allocation(a["basis"], a["basis_ref"], a["category_code"], a["rulebook_entry_id"],
+                                  a.get("policy_id"), a["amount_usd_minor"], a.get("cap_effect_usd_minor")))
+    return [_int(work_item_id), out, reason, _json_list(evidence_refs), proposal_source]
+
+
 def ask(work_item_id: int, question: str) -> list:
     return [_int(work_item_id), question]
 
@@ -236,11 +277,26 @@ def post(work_item_id: int, erp_entry_id: str) -> list:
 AUTO_VERSION = 0
 
 
+def cornerstones_json(cornerstones: Iterable[dict] | str | None) -> str:
+    """JSON array of {"ref", "category_code"} (SCHEMA §11.2), as a string."""
+    if cornerstones is None:
+        return "[]"
+    if isinstance(cornerstones, str):
+        v = json.loads(cornerstones)
+        if not isinstance(v, list):
+            raise ValueError("cornerstones must be a JSON array")
+        return cornerstones
+    return json.dumps([{"ref": str(c["ref"]), "category_code": c["category_code"]} for c in cornerstones])
+
+
 def propose_policy(policy_key: str, version: int, category_code: str, rulebook_entry_id: str,
                    pattern: dict | str, rationale: str, evidence_refs: Iterable[str] | str,
-                   precedent_count: int, effective_from: str, effective_to: str | None) -> list:
+                   precedent_count: int, effective_from: str, effective_to: str | None,
+                   parent_policy_id: int | None = None,
+                   cornerstones: Iterable[dict] | str | None = None) -> list:
     """REDUCERS.md: policyKey, version: u32, categoryCode, rulebookEntryId, pattern, rationale,
-    evidenceRefs, precedentCount: u32, effectiveFrom, effectiveTo?
+    evidenceRefs, precedentCount: u32, effectiveFrom, effectiveTo?, parentPolicyId?: u64,
+    cornerstones (SCHEMA §11.2: the last two appended after effectiveTo).
 
     Pass version=AUTO_VERSION (0) to let the module assign the next version for the key; an
     explicit version that already exists is a 530.
@@ -256,6 +312,8 @@ def propose_policy(policy_key: str, version: int, category_code: str, rulebook_e
         _int(precedent_count),
         effective_from,
         opt(effective_to),
+        _opt_int(parent_policy_id),
+        cornerstones_json(cornerstones),
     ]
 
 
@@ -265,6 +323,12 @@ def approve_policy(policy_id: int, reason: str) -> list:
 
 def reject_policy(policy_id: int, reason: str) -> list:
     return [_int(policy_id), reason]
+
+
+def teach_policy(work_item_id: int, category_code: str, rulebook_entry_id: str, pattern: dict | str, reason: str) -> list:
+    """REDUCERS.md: workItemId, categoryCode, rulebookEntryId, pattern (JSON string), reason. A person
+    turns their decision on a line into a narrow rule, approved by them in the same call."""
+    return [_int(work_item_id), category_code, rulebook_entry_id, _json_obj(pattern), reason]
 
 
 def grant_autonomy(policy_id: int, evidence: dict | str, reason: str) -> list:

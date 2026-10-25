@@ -83,8 +83,32 @@ def test_policy_reducers():
                             "2026-01-01", None)
     assert args == ["vendor:ven-017|acct:6410", 2, "CATERING", "CATERING@SECD-ISS07",
                     json.dumps({"account_code": "6410", "vendor_id": "ven-017"}, sort_keys=True), "canteen",
-                    json.dumps(["h-1"]), 214, "2026-01-01", none()]
+                    json.dumps(["h-1"]), 214, "2026-01-01", none(), none(), "[]"]
+    # SCHEMA §11.2: parentPolicyId? and cornerstones appended after effectiveTo
+    child = R.propose_policy("k/exc", 0, "RELEVANT", "RELEVANT@SECD-ISS07", {"memo_regex": "offsite"}, "r", ["h-1"],
+                             3, "2026-01-01", None, 7, [{"ref": "gl-1", "category_code": "RELEVANT"}])
+    assert child[10:] == [some(7), json.dumps([{"ref": "gl-1", "category_code": "RELEVANT"}])]
     assert R.approve_policy(4, "ok") == [4, "ok"]
+
+
+def test_propose_allocations_order_and_encoding():
+    args = R.propose_allocations(7, [
+        {"basis": "bill_line", "basis_ref": "bl-1", "category_code": "CATERING", "rulebook_entry_id": "CATERING@SECD-ISS07",
+         "policy_id": 3, "amount_usd_minor": 600},
+        R.allocation("cap_limit_excess", "STAFF_ENTERTAINMENT", "RELEVANT", "RELEVANT@SECD-ISS07", None, 400),
+    ], "split", ["gl-1", "bl-1"], "deterministic")
+    assert R.PROPOSE_ALLOCATIONS == "proposeAllocations"
+    assert args[0] == 7 and args[2:] == ["split", json.dumps(["gl-1", "bl-1"]), "deterministic"]
+    # REDUCERS.md: each AllocationInput is a positional array in field order
+    assert args[1] == [
+        ["bill_line", "bl-1", "CATERING", "CATERING@SECD-ISS07", some(3), 600, none()],
+        ["cap_limit_excess", "STAFF_ENTERTAINMENT", "RELEVANT", "RELEVANT@SECD-ISS07", none(), 400, none()]]
+    assert R.ALLOCATION_FIELDS == ("basis", "basisRef", "categoryCode", "rulebookEntryId", "policyId",
+                                   "amountUsdMinor", "capEffectUsdMinor")
+    with pytest.raises(ValueError):
+        R.allocation("line", "gl-1", "RELEVANT", "RELEVANT@SECD-ISS07", None, 1)  # 530 in the module
+    with pytest.raises(ValueError):
+        R.propose_allocations(7, [], "r", [], "model")
     assert R.reject_policy(4, "no") == [4, "no"]
 
 
@@ -95,3 +119,8 @@ def test_reducer_names_are_schema_names():
     assert names == {"bootstrapAdmin", "createRoleInvite", "claimRole", "setSetting", "loadRulebookEntry",
                      "lockPeriod", "upsertGlLine", "upsertBillLine", "upsertVendor", "upsertFairValue", "propose",
                      "ask", "answer", "approve", "reject", "post", "proposePolicy", "approvePolicy", "rejectPolicy"}
+
+
+def test_teach_policy_args():
+    assert R.teach_policy(9, "RELEVANT", "RELEVANT@SECD-ISS07", {"vendor_id": "ven-1", "account_code": "6410"}, "why") == [
+        9, "RELEVANT", "RELEVANT@SECD-ISS07", '{"account_code": "6410", "vendor_id": "ven-1"}', "why"]

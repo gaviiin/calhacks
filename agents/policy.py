@@ -8,6 +8,12 @@ Pattern (SCHEMA.md §6) is a JSON object with optional keys:
     related_party                               bool, compared to the vendor row's related_party;
                                                 no vendor row (or no vendor) = no match
     min_amount_usd_minor, max_amount_usd_minor  inclusive bounds on the signed amount_usd_minor
+    entity, erp_category_code                   exact string equality (SCHEMA §11.2)
+    description_regex                           regex SEARCH over bill line descriptions, same rules
+                                                as memo_regex (SCHEMA §11.2): in bill-line context
+                                                (an allocation) against that one bill line; for a
+                                                whole line, it must match EVERY bill line of the line,
+                                                and a line with no bill lines never matches
 
 A line matches when EVERY present key matches. This mirrors `patternMismatches` in
 system_of_work/spacetimedb/src/util.ts (the module re-checks every cited policy). Both sides
@@ -31,6 +37,7 @@ import calendar
 import json
 import re
 import unicodedata
+from dataclasses import dataclass, field
 from typing import Any, Iterable
 
 PATTERN_KEYS = (
@@ -41,9 +48,14 @@ PATTERN_KEYS = (
     "related_party",
     "min_amount_usd_minor",
     "max_amount_usd_minor",
+    "description_regex",
+    "entity",
+    "erp_category_code",
 )
 
-_STR_KEYS = ("vendor_id", "account_code", "department_id", "memo_regex")
+_STR_KEYS = ("vendor_id", "account_code", "department_id", "memo_regex", "description_regex", "entity",
+             "erp_category_code")
+_REGEX_KEYS = ("memo_regex", "description_regex")
 _INT_KEYS = ("min_amount_usd_minor", "max_amount_usd_minor")
 
 MEMO_REGEX_MAX_CHARS = 200
@@ -176,8 +188,9 @@ def parse_pattern(p: str | dict | None) -> dict:
             if isinstance(v, bool) or not isinstance(v, int):
                 raise PatternError(f"{k} must be an integer (USD minor units)")
             out[k] = v
-    if "memo_regex" in out:
-        out["memo_regex"] = validate_memo_regex(out["memo_regex"])
+    for k in _REGEX_KEYS:
+        if k in out:
+            out[k] = validate_memo_regex(out[k])
     if not out:
         raise PatternError("empty pattern (no keys, or all keys null) would match every line")
     if "min_amount_usd_minor" in out and "max_amount_usd_minor" in out:
@@ -214,11 +227,33 @@ def memo_matches(memo_regex: str, memo: str | None) -> bool:
     return re.search(rx, text, MEMO_REGEX_FLAGS) is not None
 
 
-def matches(pattern: str | dict, line: dict, vendor: dict | None = None) -> bool:
-    """True when every present key of `pattern` matches `line` (and its vendor row)."""
+def description_matches(regex: str, line: dict, bill_lines: list[dict] | None = None,
+                        bill_line: dict | None = None) -> bool:
+    """SCHEMA §11.2 `description_regex`: in bill-line context, that bill line's description; for a
+    whole line, every bill line's description (a line with no bill lines never matches)."""
+    if bill_line is not None:
+        return memo_matches(regex, bill_line.get("description"))
+    lines = line.get("bill_lines") if bill_lines is None else bill_lines
+    lines = list(lines or [])
+    return bool(lines) and all(memo_matches(regex, b.get("description")) for b in lines)
+
+
+def matches(pattern: str | dict, line: dict, vendor: dict | None = None, *, bill_lines: list[dict] | None = None,
+            bill_line: dict | None = None) -> bool:
+    """True when every present key of `pattern` matches `line` (and its vendor row).
+
+    `bill_line` given = bill-line context (an allocation): `description_regex` is matched against
+    that bill line only. Otherwise `description_regex` must match every one of `bill_lines`
+    (default: `line["bill_lines"]`). Every other key is matched against the gl line itself."""
     try:
         p = parse_pattern(pattern)
     except PatternError:
+        return False
+    if "entity" in p and line.get("entity") != p["entity"]:
+        return False
+    if "erp_category_code" in p and line.get("erp_category_code") != p["erp_category_code"]:
+        return False
+    if "description_regex" in p and not description_matches(p["description_regex"], line, bill_lines, bill_line):
         return False
     if "vendor_id" in p and line.get("vendor_id") != p["vendor_id"]:
         return False
@@ -361,6 +396,185 @@ def resolve_matches(matched: list[dict]) -> tuple[dict | None, str]:
     if len(refiners) == 1:
         return refiners[0], "refinement"
     return None, "conflict"
+
+
+# ---- Ripple-Down Rule resolution (SCHEMA §11.2) -------------------------------------------------
+
+
+def parent_id(policy: dict) -> Any:
+    """parent_policy_id of a policy row, or None (top-level). Accepts SATS-JSON options."""
+    v = policy.get("parent_policy_id")
+    if isinstance(v, dict) and len(v) == 1:
+        v = v.get("some")
+    return None if v in (None, "") else v
+
+
+def _same_id(a: Any, b: Any) -> bool:
+    return a is not None and b is not None and str(a) == str(b)
+
+
+def eligible_policies(policies: Iterable[dict], period_key: str) -> list[dict]:
+    """The policies that take part in resolution for a period: APPROVED, in force for the whole
+    period, and not superseded by a higher APPROVED version of the same policy_key in force."""
+    approved = [p for p in policies if p.get("state") == "APPROVED" and in_force_for_period(p, period_key)]
+    return latest_versions(approved)
+
+
+def _by_id(policies: Iterable[dict]) -> dict[str, dict]:
+    return {str(p.get("id")): p for p in policies}
+
+
+def ancestors(policy: dict, by_id: dict[str, dict]) -> list[dict]:
+    """Parent first, then grandparent, ...; stops at a missing parent or a cycle."""
+    out: list[dict] = []
+    seen = {str(policy.get("id"))}
+    cur = policy
+    while parent_id(cur) is not None:
+        pid = str(parent_id(cur))
+        if pid in seen or pid not in by_id:
+            if pid not in by_id:
+                out.append({"id": pid, "_missing": True})
+            break
+        seen.add(pid)
+        cur = by_id[pid]
+        out.append(cur)
+    return out
+
+
+def depth(policy: dict, by_id: dict[str, dict]) -> int:
+    return len([a for a in ancestors(policy, by_id) if not a.get("_missing")])
+
+
+def effective_pattern(policy: dict, by_id: dict[str, dict]) -> dict | None:
+    """The conjunction of a policy's own pattern keys and its ancestors' (None if unparsable)."""
+    out: dict[str, Any] = {}
+    chain = [policy] + [a for a in ancestors(policy, by_id) if not a.get("_missing")]
+    for p in reversed(chain):  # root first: a descendant's value wins on the (odd) same key
+        try:
+            out.update(parse_pattern(p.get("pattern")))
+        except PatternError:
+            return None
+    return out
+
+
+def strictly_refines(a: dict, b: dict, by_id: dict[str, dict]) -> bool:
+    """a's effective pattern is a strict superset of b's, with equal values on b's keys."""
+    ea, eb = effective_pattern(a, by_id), effective_pattern(b, by_id)
+    if ea is None or eb is None:
+        return False
+    return len(ea) > len(eb) and all(k in ea and ea[k] == v for k, v in eb.items())
+
+
+def applies(policy: dict, by_id: dict[str, dict], line: dict, vendor: dict | None = None, *,
+            bill_lines: list[dict] | None = None, bill_line: dict | None = None) -> bool:
+    """SCHEMA §11.2 "Applies": its own pattern matches and its parent applies (recursively). A
+    parent that does not take part (not APPROVED, out of force, superseded, unknown) never applies,
+    so neither do its descendants."""
+    seen: set[str] = set()
+    cur: dict | None = policy
+    while cur is not None:
+        cid = str(cur.get("id"))
+        if cid in seen:
+            return False
+        seen.add(cid)
+        if not matches(cur.get("pattern"), line, vendor, bill_lines=bill_lines, bill_line=bill_line):
+            return False
+        pid = parent_id(cur)
+        if pid is None:
+            return True
+        cur = by_id.get(str(pid))
+    return False
+
+
+@dataclass
+class Resolution:
+    """What the policy tree says about one line (or one bill line).
+
+    result: "category" | "none" | "conflict"; `policy` is the one to cite when result is
+    "category"; `conclusions` are the applicable policies none of whose applicable children apply."""
+
+    result: str
+    policy: dict | None = None
+    category_code: str | None = None
+    conclusions: list[dict] = field(default_factory=list)
+    applicable: list[dict] = field(default_factory=list)
+    why: str = ""
+
+    @property
+    def rulebook_entry_id(self) -> str | None:
+        return (self.policy or {}).get("rulebook_entry_id")
+
+
+def resolve(policies: Iterable[dict], line: dict, vendor: dict | None, period_key: str, *,
+            bill_lines: list[dict] | None = None, bill_line: dict | None = None,
+            eligible: list[dict] | None = None) -> Resolution:
+    """SCHEMA §11.2 resolution, exactly:
+
+    - only APPROVED, in-force, non-superseded policies take part;
+    - a policy applies when its pattern matches and its parent applies (recursively);
+    - conclusions = applicable policies none of whose applicable approved children apply;
+    - one conclusion, or several that agree on category -> that category, citing the deepest
+      (ties: lowest id);
+    - several that disagree -> the one that strictly refines ALL the others (effective pattern =
+      own keys + ancestors' keys, strict superset with equal values), else conflict.
+
+    `bill_line` given = resolve for that one bill line (allocation context)."""
+    pols = eligible if eligible is not None else eligible_policies(policies, period_key)
+    by_id = _by_id(pols)
+    kw = {"bill_lines": bill_lines, "bill_line": bill_line}
+    applicable = [p for p in pols if applies(p, by_id, line, vendor, **kw)]
+    app_ids = {str(p.get("id")) for p in applicable}
+    conclusions = [p for p in applicable
+                   if not any(_same_id(parent_id(c), p.get("id")) and str(c.get("id")) in app_ids for c in applicable)]
+    conclusions.sort(key=_id_key)
+    if not conclusions:
+        return Resolution("none", why="none", applicable=applicable)
+    cats = {p.get("category_code") for p in conclusions}
+    if len(cats) == 1:
+        best = sorted(conclusions, key=lambda p: (-depth(p, by_id), _id_key(p)))[0]
+        why = "one" if len(conclusions) == 1 else "agreeing"
+        return Resolution("category", best, best.get("category_code"), conclusions, applicable, why)
+    refiners = [p for p in conclusions if all(p is q or strictly_refines(p, q, by_id) for q in conclusions)]
+    if len(refiners) == 1:
+        p = refiners[0]
+        return Resolution("category", p, p.get("category_code"), conclusions, applicable, "refinement")
+    return Resolution("conflict", None, None, conclusions, applicable, "conflict")
+
+
+def applying_children(policy: dict, policies: Iterable[dict], line: dict, vendor: dict | None, period_key: str,
+                      *, bill_lines: list[dict] | None = None, bill_line: dict | None = None) -> list[dict]:
+    """Approved, in-force children of `policy` that apply to the line (the module's
+    `exception_applies` check)."""
+    pols = eligible_policies(policies, period_key)
+    by_id = _by_id(pols)
+    return [c for c in pols if _same_id(parent_id(c), policy.get("id"))
+            and applies(c, by_id, line, vendor, bill_lines=bill_lines, bill_line=bill_line)]
+
+
+def tree_lines(policies: Iterable[dict]) -> list[str]:
+    """A policy tree as indented text lines (for reports): `pol-3 v1 acct:6420 -> MARKETING`."""
+    pols = list(policies)
+    by_id = _by_id(pols)
+    kids: dict[str, list[dict]] = {}
+    roots = []
+    for p in pols:
+        pid = parent_id(p)
+        if pid is None or str(pid) not in by_id:
+            roots.append(p)
+        else:
+            kids.setdefault(str(pid), []).append(p)
+    out: list[str] = []
+
+    def walk(p: dict, level: int) -> None:
+        n = len(json.loads(p.get("cornerstones") or "[]")) if isinstance(p.get("cornerstones"), str) \
+            else len(p.get("cornerstones") or [])
+        out.append(f"{'  ' * level}- {p.get('policy_key')} -> {p.get('category_code')} ({n} cornerstones)")
+        for c in sorted(kids.get(str(p.get("id")), []), key=_id_key):
+            walk(c, level + 1)
+
+    for r in sorted(roots, key=_id_key):
+        walk(r, 0)
+    return out
 
 
 # ---- rulebook ----------------------------------------------------------------------------------

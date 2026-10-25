@@ -134,7 +134,9 @@ def test_prechecks_are_skipped_once_a_human_has_answered(stdb, analyst_tools):
                               posted_date="2026-02-20", period_key="2026-02"), vendor(id="ven-011", name="Oxon Machining Ltd"))
     item.update(answer="Genuine: two separate uprights, both delivered. RELEVANT.")
     [d] = CapAnalyst(analyst_tools, offline=True).run_once()
-    assert d.action == "propose" and d.path == "answer" and d.category_code == "RELEVANT"
+    # the answer clears the hit; the approved policy agrees with it, so the proposal cites the policy
+    # (approved under that rule without asking again) rather than restating the answer
+    assert d.action == "propose" and d.path == "policy" and d.category_code == "RELEVANT"
 
 
 def test_prechecks_function_reports_every_hit(stdb, analyst_tools):

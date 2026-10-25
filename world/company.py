@@ -1,4 +1,4 @@
-"""The fictional constructor: Kestrel Grand Prix.
+"""The fictional constructor: Meridian Racing.
 
 A UK Formula 1 team based at Upper Heyford, Oxfordshire, calendar year end, scaled to roughly
 Williams FY2025 (turnover ~GBP 244m, payroll ~GBP 107m, ~1,150 staff). Only the expense side is
@@ -6,11 +6,11 @@ modelled. Everything in this file is static reference data; the seeded generator
 turns it into transactions.
 
 Two legal entities, both in the Reporting Group:
-  TECHNOLOGY  Kestrel Technology Ltd, the parent. Employs every member of staff, owns the Upper
+  TECHNOLOGY  Meridian Technology Ltd, the parent. Employs every member of staff, owns the Upper
               Heyford campus, the driver-in-loop simulator and the engineering IP, and recharges
               RACING monthly for simulator time and engineering services (a Related Party
               Transaction valued at max(contract, fair value), D6.1.1.a / ISS22 4.1(a)).
-  RACING      Kestrel Grand Prix Racing Ltd, the F1 Team entity. Holds the FIA entry, buys parts,
+  RACING      Meridian Racing F1 Team Ltd, the F1 Team entity. Holds the FIA entry, buys parts,
               the power unit, freight and travel, runs race operations and partner hospitality.
 
 Intercompany elimination is out of scope: the recharge covers simulator and IP services whose
@@ -27,23 +27,23 @@ import hashlib
 from datetime import date
 
 COMPANY = {
-    "name": "Kestrel Grand Prix",
+    "name": "Meridian Racing",
     "country": "GB",
     "site": "Upper Heyford, Oxfordshire OX25",
     "year_end": "12-31",
     "functional_currency": "GBP",
     "headcount": 1147,
-    "title_partner": "Orrery Fintech plc",
+    "title_partner": "Halcyon Energy plc",
 }
 
 ENTITIES = {
     "RACING": {
-        "legal_name": "Kestrel Grand Prix Racing Ltd",
+        "legal_name": "Meridian Racing F1 Team Ltd",
         "role": "F1 Team entity: FIA entry, race operations, parts, power unit, freight, travel, partner hospitality",
         "parent": "TECHNOLOGY",
     },
     "TECHNOLOGY": {
-        "legal_name": "Kestrel Technology Ltd",
+        "legal_name": "Meridian Technology Ltd",
         "role": "Parent: employs all staff, owns the campus, simulator and IP, recharges RACING monthly",
         "parent": None,
     },
@@ -101,8 +101,8 @@ ACCOUNTS: list[tuple[str, str, str, str, str]] = [
     ("6700", "Rent & rates", "PROPERTY", "PROPERTY", "expense"),
     ("6710", "Utilities", "RELEVANT", "RELEVANT", "expense"),
     ("6720", "Repairs & maintenance - plant & equipment", "RELEVANT", "RELEVANT", "expense"),
-    ("6730", "Repairs & maintenance - buildings", "PROPERTY", "PROPERTY", "expense"),
-    ("6740", "Health & safety", "HEALTH_SAFETY", "RELEVANT", "expense"),
+    ("6730", "Repairs & maintenance - buildings", "RELEVANT", "RELEVANT", "expense"),  # never Property Costs (ISS22 or SECD)
+    ("6740", "Health & safety", "HEALTH_SAFETY", "HR_FINANCE_LEGAL", "expense"),  # ISS22 HR Activities incl. health and safety matters
     ("6750", "IT, software & licences", "RELEVANT", "RELEVANT", "expense"),
     ("6760", "Insurance", "RELEVANT", "RELEVANT", "expense"),
     ("6800", "Heritage fleet operations", "HERITAGE", "HERITAGE", "expense"),
@@ -117,7 +117,7 @@ ACCOUNTS: list[tuple[str, str, str, str, str]] = [
     ("7110", "FX gains & losses", "FX", "FX", "expense"),
     ("7200", "Corporation tax", "CORP_TAX", "CORP_TAX", "expense"),
     ("7300", "R&D expenditure credit (RDEC)", "ADJ_GRANT_GROSS_UP", "RELEVANT", "contra_expense"),
-    ("7400", "Related-party recharges - Kestrel Technology", "RELEVANT", "RELEVANT", "expense"),
+    ("7400", "Related-party recharges - Meridian Technology", "RELEVANT", "RELEVANT", "expense"),
     ("7500", "Gain/loss on disposal of fixed assets", "ADJ_GRANT_GROSS_UP", "DEPRECIATION", "contra_expense"),
 ]
 ACCOUNT = {a[0]: {"code": a[0], "name": a[1], "default": a[2], "default_2025": a[3], "kind": a[4]} for a in ACCOUNTS}
@@ -161,7 +161,9 @@ DEPT_PAYROLL_CATEGORY: dict[str, tuple[str, str]] = {
     "FINANCE": ("HR_FINANCE_LEGAL", "HR_FINANCE_LEGAL"),
     "LEGAL": ("HR_FINANCE_LEGAL", "HR_FINANCE_LEGAL"),
     "HERITAGE": ("HERITAGE", "HERITAGE"),
-    "APPLIED": ("SPLIT", "SPLIT"),
+    # 2026: D5.1.1.h.c.A apportions Consideration only for PU supply, Customer Team Support, FIA Projects and
+    # Standard Supply Components. Generic Applied Technologies client work is none of these: 100% Relevant.
+    "APPLIED": ("SPLIT", "RELEVANT"),
 }
 
 EXCLUDED_PERSONS = [  # three highest paid individuals (drivers are not counted), monthly GBP
@@ -178,7 +180,7 @@ EXCLUDED_PERSONS = [  # three highest paid individuals (drivers are not counted)
 _VENDORS = [
     ("ven-001", "Grove Catering Services Ltd", "GB", "GBP", None, "CATERING", "GCS", 30, "Unit 4, Heyford Park, Upper Heyford OX25 5HD"),
     ("ven-002", "Paddock Table Hospitality Ltd", "GB", "GBP", None, None, "PTH", 30, "12 Brook Street, London W1K 4HR"),
-    ("ven-003", "Kestrel Technology Ltd", "GB", "GBP", "TECHNOLOGY", None, "KTL", 30, "Camp Road, Upper Heyford OX25 5HD"),
+    ("ven-003", "Meridian Technology Ltd", "GB", "GBP", "TECHNOLOGY", None, "MTL", 30, "Camp Road, Upper Heyford OX25 5HD"),
     ("ven-004", "Valcourt Powertrains SAS", "FR", "EUR", None, "PU_SUPPLY", "VPT", 30, "14 avenue des Moteurs, 78280 Guyancourt"),
     ("ven-005", "Meridian Express Logistics Ltd", "GB", "GBP", None, "RELEVANT", "MEX", 30, "Cargo Terminal 2, Heathrow TW6 3RS"),
     ("ven-006", "Bluewater Container Lines BV", "NL", "EUR", None, "RELEVANT", "BCL", 45, "Waalhaven O.z. 81, 3087 BM Rotterdam"),
@@ -200,7 +202,7 @@ _VENDORS = [
     ("ven-022", "Brightwater Creative Ltd", "GB", "GBP", None, "MARKETING", "BWC", 30, "40 Great Sutton Street, London EC1V 0DX"),
     ("ven-023", "Grandstand Events Ltd", "GB", "GBP", None, "MARKETING", "GSE", 30, "Silverstone Park, Towcester NN12 8GX"),
     ("ven-024", "Oxon Plant Services Ltd", "GB", "GBP", None, "RELEVANT", "OPS", 30, "Unit 12, Cherwell Business Village, Banbury OX16 2SP"),
-    ("ven-025", "Cherwell Building Maintenance Ltd", "GB", "GBP", None, "PROPERTY", "CBM", 30, "7 Tramway Road, Banbury OX16 5TD"),
+    ("ven-025", "Cherwell Building Maintenance Ltd", "GB", "GBP", None, "RELEVANT", "CBM", 30, "7 Tramway Road, Banbury OX16 5TD"),
     ("ven-026", "Wessex Energy Supply Ltd", "GB", "GBP", None, "RELEVANT", "WES", 14, "Energy House, Swindon SN1 1AB"),
     ("ven-027", "Heyford Park Estates Ltd", "GB", "GBP", None, "PROPERTY", "HPE", 14, "Heyford Park House, Upper Heyford OX25 5HA"),
     ("ven-028", "Trellis Engineering Software Inc", "US", "USD", None, "RELEVANT", "TES", 30, "100 Summer Street, Boston MA 02110"),
@@ -222,7 +224,7 @@ _VENDORS = [
     ("ven-044", "Hexagon Engineering Contractors Ltd", "GB", "GBP", None, "RELEVANT", "HEC", 30, "Milton Park, Abingdon OX14 4RY"),
     ("ven-045", "Halden Driver Management SAM", "MC", "EUR", None, "F1_DRIVER", "HDM", 15, "7 avenue Princesse Grace, 98000 Monaco"),
     ("ven-046", "Arrowsmith Racing Services Ltd", "GB", "GBP", None, "F1_DRIVER", "ARS", 15, "Old Bank Chambers, Chipping Norton OX7 5AD"),
-    ("ven-047", "Orrery Fintech plc", "GB", "GBP", None, "MARKETING", "ORR", 30, "1 Finsbury Avenue, London EC2M 2PF"),
+    ("ven-047", "Halcyon Energy plc", "GB", "GBP", None, "MARKETING", "HAL", 30, "1 Finsbury Avenue, London EC2M 2PF"),
     ("ven-048", "Coldstream Simulation Systems Ltd", "GB", "GBP", None, "RELEVANT", "CSS", 30, "Unit 2, Coldstream Business Centre, Milton Keynes MK12 5TS"),
     ("ven-049", "Monocoque IT Services Ltd", "GB", "GBP", None, "RELEVANT", "MIT", 30, "Oxford Business Park, Oxford OX4 2RU"),
     ("ven-050", "Brightline Training Academy Ltd", "GB", "GBP", None, "RELEVANT", "BTA", 30, "Daventry Road, Banbury OX16 3JT"),

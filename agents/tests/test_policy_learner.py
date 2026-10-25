@@ -6,7 +6,8 @@ import pytest
 
 from agents import reducers as R
 from agents.cap_analyst import CapAnalyst
-from agents.policy_learner import (GP_REGEX, PolicyReview, from_corrections, mine_history, load_history, onboard)
+from agents.policy_learner import (GP_REGEX, Case, PolicyReview, from_corrections, mine_history, load_history, onboard,
+                                   review_sample)
 from agents.rule_versions import Rulebook
 from agents.tools import AgentTools
 
@@ -204,3 +205,44 @@ def test_two_alike_corrections_are_not_enough(stdb, actors):
         analyst.propose_classification(item["id"], "CATERING", "CATERING@SECD-ISS07", None, "x", [f"gl-00030{n}"])
         stdb.call(actors["head_of_cost_cap"].token, R.REJECT, R.reject(item["id"], "Relevant"))
     assert from_corrections(_learner(stdb, actors), offline=True) == []
+
+
+def test_online_reviews_run_concurrently_and_record_in_candidate_order(history_world, rb, stdb, actors, tmp_path):
+    import threading
+    import time
+
+    lock, active, peak = threading.Lock(), [0], [0]
+
+    def reply(kwargs):
+        with lock:
+            active[0] += 1
+            peak[0] = max(peak[0], active[0])
+        time.sleep(0.05)
+        with lock:
+            active[0] -= 1
+        payload = json.loads(kwargs["messages"][0]["content"])
+        return PolicyReview(generalises=True, rationale=f"Reviewed {payload['policy_key']}.", concerns="")
+
+    class ListRecorder:
+        def __init__(self):
+            self.steps = []
+
+        def record(self, kind, name, input=None, output=None, **_):
+            self.steps.append((kind, name, input))
+
+    rec = ListRecorder()
+    res = onboard(history_world.client(), rb, _learner(stdb, actors), client=FakeAnthropic(parse_reply=reply),
+                  offline=False, report_path=tmp_path / "r.md", rec=rec)
+    reviewed = [c.policy_key for c in res["candidates"] if c.mapping and c.mapping.status in ("same", "changed")]
+    recorded = [inp["policy_key"] for kind, name, inp in rec.steps if name == "policy_learner.review"]
+    assert len(reviewed) > 1 and peak[0] > 1
+    assert recorded == reviewed
+
+
+def test_reviewer_sees_the_invoice_a_bill_line_is_on():
+    line = {"memo": "Carbon prepreg batch 14"}
+    carriage = Case("history_2025_bill_line:b1", line, {"description": "Carriage, packaging & handling"}, "RELEVANT", None)
+    goods = Case("history_2025_bill_line:b0", line, {"description": "Carbon prepreg batch 14"}, "RELEVANT", None)
+    whole = Case("history_2025_gl_line:g1", line, None, "RELEVANT", None)
+    assert review_sample(carriage) == "Carriage, packaging & handling [a line on the supplier invoice for: Carbon prepreg batch 14]"
+    assert review_sample(goods) == review_sample(whole) == "Carbon prepreg batch 14"

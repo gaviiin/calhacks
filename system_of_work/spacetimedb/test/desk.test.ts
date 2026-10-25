@@ -185,6 +185,8 @@ function proposePolicyArgs(over: Partial<Parameters<typeof mod.proposePolicy>[1]
     precedentCount: 214,
     effectiveFrom: '2026-01-01',
     effectiveTo: undefined,
+    parentPolicyId: undefined,
+    cornerstones: '[]',
     ...over,
   };
 }
@@ -944,11 +946,8 @@ function approvedPolicy(d: Desk, over: Partial<Parameters<typeof mod.proposePoli
   d.as('learner', ctx => mod.proposePolicy(ctx, proposePolicyArgs(over)));
   const pol = [...d.h.db.policy.iter()].sort((a, b) => Number(b.id - a.id))[0]!;
   d.as('head', ctx => mod.approvePolicy(ctx, { policyId: pol.id, reason: 'matches 2025 practice' }));
-  if (grant) {
-    d.as('head', ctx =>
-      mod.grantAutonomy(ctx, { policyId: pol.id, evidence: SANDBOX_EVIDENCE, reason: '0 errors over 5 sandboxes' })
-    );
-  }
+  // Approval gives a policy standing approval; `grant = false` is a policy the head then took it back from.
+  if (!grant) d.as('head', ctx => mod.revokeAutonomy(ctx, { policyId: pol.id, reason: 'review its lines first' }));
   return d.h.db.policy.id.find(pol.id)!;
 }
 
@@ -961,29 +960,30 @@ function proposedUnder(d: Desk, glId: string, policyId: bigint | undefined, over
 }
 
 describe('earned autonomy (standing approvals)', () => {
-  it('grantAutonomy records who granted it and the sandbox evidence, audited as a policy transition', () => {
+  it('approving a policy gives it standing approval; re-granting after a revoke records who and the evidence', () => {
     const d = makeDesk();
-    const pol = approvedPolicy(d, {}, false);
-    expect(pol.autonomy).toBe('NONE');
+    const pol = approvedPolicy(d);
+    expect(pol.autonomy).toBe('GRANTED');
+    expect(pol.autonomyBy?.isEqual(d.identity('head'))).toBe(true);
+    expect(pol.autonomyReason).toBe('standing approval comes with approval');
     expect(pol.autonomyEvidence).toBe('');
+    const approveRow = d.audit().filter(r => r.action === 'approve_policy').at(-1)!;
+    expect(JSON.parse(approveRow.diff).autonomy).toEqual({ from: 'NONE', to: 'GRANTED' });
 
+    d.as('head', ctx => mod.revokeAutonomy(ctx, { policyId: pol.id, reason: 'review the catering lines' }));
     d.as('head', ctx => mod.grantAutonomy(ctx, { policyId: pol.id, evidence: SANDBOX_EVIDENCE, reason: 'clean sandbox record' }));
     const granted = d.h.db.policy.id.find(pol.id)!;
     expect(granted.autonomy).toBe('GRANTED');
-    expect(granted.autonomyBy?.isEqual(d.identity('head'))).toBe(true);
     expect(granted.autonomyEvidence).toBe(SANDBOX_EVIDENCE);
     expect(granted.autonomyReason).toBe('clean sandbox record');
-    expect(granted.autonomyAt).toBeDefined();
-    expect(granted.state).toBe('APPROVED');
     const row = d.lastAudit();
     expect([row.action, row.resourceKind, row.subjectId, row.allowed, row.fromState, row.toState]).toEqual([
-      'grant_autonomy', 'policy', 'grove-canteen-catering', true, 'NONE', 'GRANTED',
+      'grant_autonomy', 'policy', 'grove-canteen-catering', true, 'REVOKED', 'GRANTED',
     ]);
     expect([row.policyId, row.policyVersion]).toEqual([pol.id, 1]);
     expect(row.evidence).toBe(SANDBOX_EVIDENCE);
-    expect(JSON.parse(row.diff).autonomy).toEqual({ from: 'NONE', to: 'GRANTED' });
+    expect(JSON.parse(row.diff).autonomy).toEqual({ from: 'REVOKED', to: 'GRANTED' });
   });
-
   it('auto_approver approves under a granted policy; the audit row names the policy and the granter', () => {
     const d = makeDesk();
     const pol = approvedPolicy(d);
@@ -1012,7 +1012,7 @@ describe('earned autonomy (standing approvals)', () => {
     expect(prec[0]!.decidedBy.isEqual(d.identity('autoApprover'))).toBe(true);
   });
 
-  it('auto_approver is denied when the cited policy has no autonomy', () => {
+  it("auto_approver is denied when the head revoked the policy's standing approval", () => {
     const d = makeDesk();
     const pol = approvedPolicy(d, {}, false);
     const it0 = proposedUnder(d, 'gl-auto-2', pol.id);
@@ -1020,11 +1020,10 @@ describe('earned autonomy (standing approvals)', () => {
     expect(d.item(it0.id).state).toBe('PROPOSED');
     const row = d.lastAudit();
     expect(row.allowed).toBe(false);
-    expect(row.reason).toBe(`standing_approval: policy ${pol.id} (grove-canteen-catering v1) autonomy is NONE, not GRANTED`);
+    expect(row.reason).toBe(`standing_approval: policy ${pol.id} (grove-canteen-catering v1) standing approval is REVOKED, not GRANTED`);
     expect(row.policyId).toBe(pol.id);
     expect(JSON.parse(row.evidence).standing_approval.autonomy_granted_by).toBeNull();
   });
-
   it('revocation takes effect for every later approve; earlier approvals stay', () => {
     const d = makeDesk();
     const pol = approvedPolicy(d);
@@ -1037,12 +1036,12 @@ describe('earned autonomy (standing approvals)', () => {
     const revoked = d.h.db.policy.id.find(pol.id)!;
     expect(revoked.autonomy).toBe('REVOKED');
     expect(revoked.autonomyReason).toBe('catering rule change pending');
-    expect(revoked.autonomyEvidence).toBe(SANDBOX_EVIDENCE); // the grant's evidence is kept
+    expect(revoked.autonomyEvidence).toBe('');
     expect(d.lastAudit().toState).toBe('REVOKED');
 
     d.approveAs('autoApprover', second.id);
     expect(d.item(second.id).state).toBe('PROPOSED');
-    expect(d.lastAudit().reason).toContain('autonomy is REVOKED, not GRANTED');
+    expect(d.lastAudit().reason).toContain('standing approval is REVOKED, not GRANTED');
     expect(d.item(first.id).state).toBe('APPROVED');
     // Back to human review.
     d.approveAs('controller', second.id);
@@ -1055,51 +1054,54 @@ describe('earned autonomy (standing approvals)', () => {
     expect(d.h.db.policy.id.find(pol.id)!.autonomy).toBe('GRANTED');
   });
 
-  it('auto_approver is denied at or above materiality, for charges and credits', () => {
+  it('auto_approver approves under an approved rule at any amount; materiality only picks which person decides', () => {
     const d = makeDesk();
     const pol = approvedPolicy(d);
     const atLimit = proposedUnder(d, 'gl-auto-5', pol.id, { amountUsdMinor: MATERIALITY });
     const credit = proposedUnder(d, 'gl-auto-6', pol.id, { amountUsdMinor: -MATERIALITY });
-    const below = proposedUnder(d, 'gl-auto-7', pol.id, { amountUsdMinor: MATERIALITY - 1n });
     for (const it0 of [atLimit, credit]) {
       d.approveAs('autoApprover', it0.id);
-      expect(d.item(it0.id).state).toBe('PROPOSED');
-      expect(d.lastAudit().reason).toMatch(/^materiality: /);
-      expect(d.lastAudit().reason).not.toContain('standing_approval');
+      expect(d.item(it0.id).state).toBe('APPROVED');
     }
-    d.approveAs('autoApprover', below.id);
-    expect(d.item(below.id).state).toBe('APPROVED');
+    // When no rule decided it, a person does, and materiality still routes it to the head.
+    const byHand = proposedUnder(d, 'gl-auto-7', undefined, { amountUsdMinor: MATERIALITY });
+    d.approveAs('autoApprover', byHand.id);
+    expect(d.lastAudit().reason).toMatch(/cites no policy; a person decides it$/);
+    d.approveAs('controller', byHand.id);
+    expect(d.item(byHand.id).state).toBe('PROPOSED');
+    expect(d.lastAudit().reason).toMatch(/^materiality: /);
+    d.approveAs('head', byHand.id);
+    expect(d.item(byHand.id).state).toBe('APPROVED');
   });
-
-  it('auto_approver is denied when materiality is unset (nothing is below it)', () => {
+  it('materiality does not bind the auto_approver, even unset', () => {
     const d = makeDesk();
     const pol = approvedPolicy(d);
     const it0 = proposedUnder(d, 'gl-auto-8', pol.id, { amountUsdMinor: 1n });
     d.h.withReducerTx(TestAuth.internal(), ctx => ctx.db.setting.key.delete('materiality_usd_minor'));
     d.approveAs('autoApprover', it0.id);
-    expect(d.item(it0.id).state).toBe('PROPOSED');
-    expect(d.lastAudit().reason).toContain('(unset: everything is material)');
+    expect(d.item(it0.id).state).toBe('APPROVED');
   });
-
   it('autonomy on one policy does not cover an item citing another policy, or none', () => {
     const d = makeDesk();
     const withAutonomy = approvedPolicy(d);
     const other = approvedPolicy(
       d,
-      { policyKey: 'grove-canteen-catering-broad', pattern: JSON.stringify({ vendor_id: 'ven-017' }) },
+      { policyKey: 'grove-staff-lunch-catering', pattern: JSON.stringify({ vendor_id: 'ven-017', memo_regex: 'staff lunch' }) },
       false
     );
-    const citesOther = proposedUnder(d, 'gl-auto-9', other.id);
+    // Tier 1: the two policies must not overlap on the line, or resolution cites the lowest id and
+    // citing the other is policy_conflict (SCHEMA section 11.2).
+    const citesOther = proposedUnder(d, 'gl-auto-9', other.id, { memo: 'Grove Catering - staff lunch' });
     const citesNone = proposedUnder(d, 'gl-auto-10', undefined);
 
     d.approveAs('autoApprover', citesOther.id);
     expect(d.item(citesOther.id).state).toBe('PROPOSED');
-    expect(d.lastAudit().reason).toContain(`policy ${other.id} (grove-canteen-catering-broad v1) autonomy is NONE`);
+    expect(d.lastAudit().reason).toContain(`policy ${other.id} (grove-staff-lunch-catering v1) standing approval is REVOKED`);
     expect(d.lastAudit().policyId).toBe(other.id);
 
     d.approveAs('autoApprover', citesNone.id);
     expect(d.item(citesNone.id).state).toBe('PROPOSED');
-    expect(d.lastAudit().reason).toMatch(/^standing_approval: work item \d+ cites no policy/);
+    expect(d.lastAudit().reason).toMatch(/^standing_approval: work item \d+: the proposal cites no policy/);
     expect(withAutonomy.autonomy).toBe('GRANTED');
   });
 
@@ -1153,13 +1155,21 @@ describe('earned autonomy (standing approvals)', () => {
     expect(d.h.db.policy.id.find(proposed.id)!.autonomy).toBe('NONE');
 
     d.as('head', ctx => mod.approvePolicy(ctx, { policyId: proposed.id, reason: 'ok' }));
+    expect(d.h.db.policy.id.find(proposed.id)!.autonomy).toBe('GRANTED');
     for (const who of ['controller', 'learner', 'analyst', 'redTeam', 'admin'] as const) {
-      d.as(who, ctx => mod.grantAutonomy(ctx, { policyId: proposed.id, evidence: SANDBOX_EVIDENCE, reason: 'x' }));
+      d.as(who, ctx => mod.revokeAutonomy(ctx, { policyId: proposed.id, reason: 'x' }));
       expect(d.lastAudit().allowed).toBe(false);
       expect(d.lastAudit().reason).toContain('role_not_permitted');
       expect(d.lastAudit().resourceKind).toBe('policy');
     }
-    expect(d.h.db.policy.id.find(proposed.id)!.autonomy).toBe('NONE');
+    expect(d.h.db.policy.id.find(proposed.id)!.autonomy).toBe('GRANTED');
+    d.as('head', ctx => mod.revokeAutonomy(ctx, { policyId: proposed.id, reason: 'review first' }));
+    for (const who of ['controller', 'learner', 'analyst', 'redTeam', 'admin'] as const) {
+      d.as(who, ctx => mod.grantAutonomy(ctx, { policyId: proposed.id, evidence: SANDBOX_EVIDENCE, reason: 'x' }));
+      expect(d.lastAudit().allowed).toBe(false);
+      expect(d.lastAudit().reason).toContain('role_not_permitted');
+    }
+    expect(d.h.db.policy.id.find(proposed.id)!.autonomy).toBe('REVOKED');
 
     const n = d.auditCount();
     for (const evidence of ['', 'not json', '{}', '[]', 'null', '"sandbox"']) {
@@ -1178,6 +1188,120 @@ describe('earned autonomy (standing approvals)', () => {
     expect(d.h.db.policy.id.find(proposed.id)!.autonomy).toBe('GRANTED');
     d.as('head', ctx => mod.grantAutonomy(ctx, { policyId: proposed.id, evidence: SANDBOX_EVIDENCE, reason: 'twice' }));
     expect(d.lastAudit().reason).toMatch(/^invalid_transition: autonomy in state GRANTED/);
+  });
+});
+
+// ---------------------------------------------------------------- teaching
+
+// A person's decision on a line no rule covered becomes a rule from then on (teachPolicy).
+const NARROW = { account_code: '6410', vendor_id: 'ven-017' };
+const WITHIN = { min_amount_usd_minor: -(Number(MATERIALITY) - 1), max_amount_usd_minor: Number(MATERIALITY) - 1 };
+function teachArgs(workItemId: bigint, pattern: object, over: Partial<Parameters<typeof mod.teachPolicy>[1]> = {}) {
+  return {
+    workItemId,
+    categoryCode: 'RELEVANT',
+    rulebookEntryId: 'RELEVANT@SECD-ISS07',
+    pattern: JSON.stringify(pattern),
+    reason: 'build-shift meals for the race team are F1 cost, not canteen catering',
+    ...over,
+  };
+}
+
+describe('teaching: one decision becomes a rule', () => {
+  it('a controller teaches a narrow rule within their authority; it is born APPROVED with standing approval', () => {
+    const d = makeDesk();
+    const it0 = d.sync({ id: 'gl-t1', rawRef: 'r1' });
+    d.proposeAs('analyst', it0.id, { categoryCode: 'RELEVANT', rulebookEntryId: 'RELEVANT@SECD-ISS07', proposalSource: 'llm' });
+    d.approveAs('controller', it0.id);
+    d.as('controller', ctx => mod.teachPolicy(ctx, teachArgs(it0.id, { ...NARROW, ...WITHIN })));
+    const row = d.lastAudit();
+    expect([row.action, row.resourceKind, row.allowed, row.fromState, row.toState, row.actorRole]).toEqual([
+      'teach_policy', 'policy', true, 'ABSENT', 'APPROVED', 'human_controller',
+    ]);
+    const pol = [...d.h.db.policy.iter()].at(-1)!;
+    expect([pol.policyKey, pol.version, pol.state, pol.autonomy, pol.precedentCount]).toEqual(['taught:6410|ven-017', 1, 'APPROVED', 'GRANTED', 1]);
+    expect(pol.proposedBy.isEqual(d.identity('controller'))).toBe(true);
+    expect(pol.decidedBy?.isEqual(d.identity('controller'))).toBe(true);
+    expect(pol.rationale).toMatch(/^Taught by controller on work item \d+ \(gl-t1\): build-shift meals/);
+    expect(JSON.parse(pol.cornerstones)).toEqual([{ ref: 'gl-t1', category_code: 'RELEVANT' }]);
+
+    // The next such line is decided by the rule, and approved without a person.
+    const it1 = d.sync({ id: 'gl-t2', rawRef: 'r2' });
+    d.proposeAs('analyst', it1.id, { categoryCode: 'RELEVANT', rulebookEntryId: 'RELEVANT@SECD-ISS07', policyId: pol.id });
+    d.approveAs('autoApprover', it1.id);
+    expect(d.item(it1.id).state).toBe('APPROVED');
+    expect(JSON.parse(d.lastAudit().evidence).standing_approval.autonomy_granted_by).toBe(d.identity('controller').toHexString());
+  });
+
+  it('one example earns a narrow rule only, and a controller cannot teach beyond materiality', () => {
+    const d = makeDesk();
+    const it0 = d.sync({ id: 'gl-t3', rawRef: 'r3' });
+    const n = [...d.h.db.policy.iter()].length;
+    d.as('controller', ctx => mod.teachPolicy(ctx, teachArgs(it0.id, { account_code: '6410', ...WITHIN })));
+    expect(d.lastAudit().allowed).toBe(false);
+    expect(d.lastAudit().reason).toContain('teach_too_broad: a taught rule must also pin the vendor, department or memo');
+    d.as('controller', ctx => mod.teachPolicy(ctx, teachArgs(it0.id, NARROW)));
+    expect(d.lastAudit().allowed).toBe(false);
+    expect(d.lastAudit().reason).toContain("teach_beyond_authority: a controller's rule must stay within ±materiality");
+    expect([...d.h.db.policy.iter()].length).toBe(n);
+    // The head may teach at any amount.
+    d.as('head', ctx => mod.teachPolicy(ctx, teachArgs(it0.id, NARROW)));
+    expect(d.lastAudit().allowed).toBe(true);
+    // Agents and systems may not teach.
+    for (const who of ['analyst', 'learner', 'autoApprover', 'gateway', 'redTeam'] as const) {
+      d.as(who, ctx => mod.teachPolicy(ctx, teachArgs(it0.id, NARROW)));
+      expect(d.lastAudit().allowed).toBe(false);
+      expect(d.lastAudit().reason).toContain('role_not_permitted');
+    }
+  });
+
+  it("a taught rule takes over queued lines it covers: Claude's open proposals and open questions go back to NEW", () => {
+    const d = makeDesk();
+    const taught = d.sync({ id: 'gl-t4', rawRef: 'r4' });
+    const claude = d.sync({ id: 'gl-t5', rawRef: 'r5', memo: 'Grove Catering - build shift meals' });
+    const asked = d.sync({ id: 'gl-t6', rawRef: 'r6', memo: 'Grove Catering - January' });
+    const elsewhere = d.sync({ id: 'gl-t7', rawRef: 'r7', vendorId: 'ven-099' });
+    d.proposeAs('analyst', claude.id, { proposalSource: 'llm' });
+    d.as('analyst', ctx => mod.ask(ctx, { workItemId: asked.id, question: 'canteen or partner hospitality?' }));
+    d.proposeAs('analyst', elsewhere.id, { proposalSource: 'llm' });
+    d.as('head', ctx => mod.teachPolicy(ctx, teachArgs(taught.id, NARROW)));
+    const reopened = d.audit().filter(r => r.action === 'reopen').map(r => [r.subjectId, r.fromState, r.toState]);
+    expect(reopened).toEqual([
+      [claude.id.toString(), 'PROPOSED', 'NEW'],
+      [asked.id.toString(), 'NEEDS_INFO', 'NEW'],
+    ]);
+    for (const r of d.audit().filter(r => r.action === 'reopen')) expect(r.reason).toMatch(/^rule now covers it: pol-\d+$/);
+    expect(d.lastAudit().action).toBe('teach_policy');
+    expect(d.item(elsewhere.id).state).toBe('PROPOSED');
+  });
+
+  it("a correction of a policy's decision becomes an exception under that policy", () => {
+    const d = makeDesk();
+    const parent = approvedPolicy(d, { pattern: JSON.stringify({ account_code: '6410' }) });
+    const it0 = d.sync({ id: 'gl-t8', rawRef: 'r8', memo: 'Grove Catering - engineering offsite lunch' });
+    d.proposeAs('analyst', it0.id, { policyId: parent.id });
+    d.rejectAs('head', it0.id, 'an engineering offsite lunch is F1 cost, not catering');
+    d.as('head', ctx => mod.teachPolicy(ctx, teachArgs(it0.id, { account_code: '6410', memo_regex: 'offsite' })));
+    const child = [...d.h.db.policy.iter()].at(-1)!;
+    expect(child.parentPolicyId).toBe(parent.id);
+    expect(d.lastAudit().reason).toContain(`(exception to pol-${parent.id})`);
+  });
+
+  it("a proposal built from a person's answer is approved without a person; without an answer it is not", () => {
+    const d = makeDesk();
+    const it0 = d.sync({ id: 'gl-t9', rawRef: 'r9' });
+    d.as('analyst', ctx => mod.ask(ctx, { workItemId: it0.id, question: 'canteen or partner hospitality?' }));
+    d.as('controller', ctx => mod.answer(ctx, { workItemId: it0.id, answer: 'CATERING: the factory canteen' }));
+    d.proposeAs('analyst', it0.id, { proposalSource: 'human_text' });
+    d.approveAs('autoApprover', it0.id);
+    expect(d.item(it0.id).state).toBe('APPROVED');
+    expect(JSON.parse(d.lastAudit().evidence).answered_by).toBe(d.identity('controller').toHexString());
+
+    const it1 = d.sync({ id: 'gl-t10', rawRef: 'r10' });
+    d.proposeAs('analyst', it1.id, { proposalSource: 'human_text' });
+    d.approveAs('autoApprover', it1.id);
+    expect(d.item(it1.id).state).toBe('PROPOSED');
+    expect(d.lastAudit().reason).toBe(`standing_approval: work item ${it1.id} has a human_text proposal but no answer on record`);
   });
 });
 

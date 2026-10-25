@@ -23,7 +23,7 @@ system_of_work/spacetimedb/target/
 system_of_work/spacetimedb/dist/
 
 # finance
-data/
+/data/
 keys/
 
 # cost cap desk
@@ -35,6 +35,10 @@ agents/out/
 .DS_Store
 spacetime.local.json
 research/review/redteam-repro/ts/node_modules/
+replay/.cache/
+
+# typescript incremental build info
+*.tsbuildinfo
 
 # Fetch.ai agent local storage
 agent1q*_data.json

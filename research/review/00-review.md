@@ -99,7 +99,7 @@ What to report instead:
 
 ## Order of work
 
-**Status, Oct 24:** Tier 0 is done. All ten defects are fixed and the red-team reproductions are regression tests (`agents/tests/test_redteam_*.py`, `system_of_work/spacetimedb/test/redteam.test.ts`). One extra fix landed on the way: the first live run showed the pre-checks querying an optional column in SQL, which SpacetimeDB rejects, and a split rule that flagged ordinary same-day purchases; both corrected.
+**Status, Oct 24:** Tier 0 is done. Tier 1's allocations, category limits and Ripple-Down Rule policies are done too (third run in `README.md`: 98.9% on January, the demo invoice splits exactly); the injection defences shipped in Tier 0, and the remaining Tier 1 item is presentation currency. All ten defects are fixed and the red-team reproductions are regression tests (`agents/tests/test_redteam_*.py`, `system_of_work/spacetimedb/test/redteam.test.ts`). One extra fix landed on the way: the first live run showed the pre-checks querying an optional column in SQL, which SpacetimeDB rejects, and a split rule that flagged ordinary same-day purchases; both corrected.
 
 Scope stays as it is. This is the order, with rough hours from the reviews. The total exceeds the time left, so the order is the point: each tier leaves a working demo behind it.
 

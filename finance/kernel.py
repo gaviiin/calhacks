@@ -13,7 +13,8 @@ proposal claims. A failure returns a reason written so the preparer can act on i
     K7  FX rate is the table rate for the date; USD re-computed
     K8  no duplicate (same bonus, billing or reversal already active)
     K9  a reversal references a posted entry and nets it exactly
-    K10 materiality: parks for the controller (and CFO above $1M)
+    K10 a person decides what code could not settle: parks estimates, reversals, exceptions and anything
+        an agent prepared, at any amount, for the controller (and the CFO as well at $1M or more)
     K11 segregation of duties at approval
     K12 evidence: policy IDs exist; agent entries cite a source; every quote is verbatim
 """
@@ -24,7 +25,7 @@ import json
 from functools import cached_property
 
 from .bonuses import bonuses_for
-from .config import CAPTURES_DIR, CFO_CENTS, JUDGMENT_KINDS, KIND_ACCOUNTS, MATERIALITY_CENTS
+from .config import CAPTURES_DIR, CFO_CENTS, KIND_ACCOUNTS
 from .money import prorate, to_usd
 
 
@@ -228,13 +229,23 @@ class Kernel:
         return ok("K9")
 
     def k10(self, p) -> dict:
+        # Code that books from the contract and the final result posts at any size; a person decides an
+        # estimate, a reversal, an exception to the contract or the request, and whatever an agent
+        # prepared. The amount only picks who: the controller, and the CFO as well at $1M or more.
         total = sum(x.debit for x in p.lines)
-        judgment = p.kind in JUDGMENT_KINDS or not p.preparer == "code" or p.basis.get("exception")
-        if judgment and total >= MATERIALITY_CENTS:
-            needs = ["controller", "cfo"] if total >= CFO_CENTS else ["controller"]
-            return {"id": "K10", "result": "park", "needs": needs,
-                    "reason": f"${total / 100:,.0f} {p.kind} is material (≥ ${MATERIALITY_CENTS / 100:,.0f}); needs {' and '.join(needs)}"}
-        return ok("K10")
+        if p.preparer != "code":
+            why = "was prepared by an agent: no rule covered it"
+        elif p.kind == "prize_estimate_change":
+            why = "is an estimate"
+        elif p.kind == "bonus_reversal":
+            why = "reverses a booked bonus"
+        elif p.basis.get("exception"):
+            why = "is an exception to the contract or the request"
+        else:
+            return ok("K10")
+        needs = ["controller", "cfo"] if total >= CFO_CENTS else ["controller"]
+        return {"id": "K10", "result": "park", "needs": needs,
+                "reason": f"${total / 100:,.0f} {p.kind} {why}; needs {' and '.join(needs)}"}
 
     def k12(self, p) -> dict:
         d = p.decision

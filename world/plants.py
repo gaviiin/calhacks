@@ -17,6 +17,7 @@ from __future__ import annotations
 from datetime import date, timedelta
 
 from . import company as C
+from . import generate as G
 
 EXPECTED_ACTIONS = ("reclassify", "ask", "hold", "deny", "flag")
 
@@ -55,6 +56,11 @@ ERROR_CLASSES = (
     "sporting_fine_prior_year_habit",
     "ground_transport_prior_year_habit",
     "pe_depreciation_prior_year_habit",
+    "bonus_not_formal_scheme",
+    "non_f1_apportionment_not_permitted",
+    # mixed invoices that must be split by bill line
+    "mixed_hospitality_invoice",
+    "offsite_lunch_in_canteen_invoice",
 )
 
 DEMO_PLANT = "P01"
@@ -86,15 +92,13 @@ def plant_all(st) -> None:  # noqa: C901 - a flat list of plants reads best
     # ---- P01: the demo hospitality invoice (PLAN.md demo beat 1) --------------------------------
     demo_lines = [
         ("Factory canteen - new-car build shift meals, 2-4 Jan 2026 (build team, 3 days)", 1_438_000),
-        ("Sponsor dinner - Orrery Fintech partners season preview, factory atrium, 2 Jan 2026", 985_000),
+        ("Sponsor dinner - Halcyon Energy partners season preview, factory atrium, 2 Jan 2026", 985_000),
         ("Engineering offsite lunch - aero team at Northbrook Wind Tunnel session, 2 Jan 2026", 720_000),
     ]
     p01 = line(posted=date(2026, 1, 2), acct="6420", dept="MARKETING", vendor=C.V_CANTEEN, amount=sum(a for _, a in demo_lines), ccy="GBP",
-               memo="Hospitality - Orrery season preview & build week catering (requester: Marketing)", c26="MARKETING", erp="MARKETING",
+               memo="Hospitality - Halcyon season preview & build week catering (requester: Marketing)", c26="MARKETING", erp="MARKETING",
                plant="P01", prio=0, visible=date(2026, 1, 2), bill_lines=demo_lines, bill_date=date(2026, 1, 2),
-               truth=[("CATERING", 1_438_000, 0, "bill line 1: factory canteen, D5.1.1.z"),
-                      ("MARKETING", 985_000, 0, "bill line 2: sponsor dinner, D5.1.1.a"),
-                      ("RELEVANT", 720_000, None, "bill line 3: offsite engineering lunch at a third-party wind tunnel, not premises catering")])
+               bill_cats=[G.T_CANTEEN, G.T_MARKETING, G.T_TUNNEL])
     A("P01", p01, "catering_as_marketing", "reclassify", "",
       "Demo invoice. Requester coded the whole Grove Catering bill MARKETING. Split by bill line: canteen CATERING, sponsor dinner MARKETING, wind tunnel lunch RELEVANT (GBP 7,200.00 into the cap).")
     for k, cat, why in [(1, "CATERING", "factory canteen at team premises (D5.1.1.z)"), (2, "MARKETING", "partner dinner (D5.1.1.a)"),
@@ -129,23 +133,47 @@ def plant_all(st) -> None:  # noqa: C901 - a flat list of plants reads best
     line(posted=date(2026, 3, 31), acct="5010", dept="APPLIED", vendor=None, amount=-x, ccy="GBP", entity="TECHNOLOGY",
          memo="Q1 2026 Non-F1 allocation - contra to 6810 (journal JNL-26-0331)", c26="RELEVANT", erp="RELEVANT", tag="plant_contra")
     A("P06", p, "non_f1_double_offset", "reclassify", "RELEVANT",
-      "The 40% Non-F1 share is already excluded by the dept-APPLIED 0.6 split on the payroll lines; this reclass journal (and its 5010 contra) must net to nil, not exclude it again.")
+      "Reclass journal moving 40% of Applied Technologies salaries to Non-F1. In 2026 no apportionment is permitted for generic Applied Technologies client work "
+      "(D5.1.1.h.c.A allows it only for PU supply, Customer Team Support, FIA Projects and Standard Supply Components), so the journal and its 5010 contra are both Relevant and net to nil.")
+
+    # ---- 2026 bonus definition: points, podium, performance and retention bonuses are Relevant ---------------
+    for ln in st.lines:
+        if ln.tag == "bonus" and ln.plant is None:
+            ln.plant = "P42"
+            A("P42", ln, "bonus_not_formal_scheme", "reclassify", "RELEVANT",
+              "Not Employee Bonus Costs in 2026: only a Formal Bonus Scheme determined solely by the final Constructors' classification and paid in full "
+              "after the last Competition qualifies (D1). Points, podium, race-win, annual performance and retention bonuses are Relevant; "
+              "the 2025 precedent (ISS22 allowed points, podiums and wins) is wrong for 2026.")
 
     # ---- Red Bull 4: bonus above the exclusion limit ------------------------------------------------
+    # A retention bonus sized (on the 2025 reading of the rules) to take the bonus exclusion $750k over the limit.
+    # Under the 2026 definition it is not Employee Bonus Costs at all, so it is wholly Relevant (P42).
     day = date(2026, 3, 26)
-    base_bonus_usd = sum(_usd(ln.amount, ln.ccy, ln.posted) for ln in st.lines if ln.c26 == "BONUS")
+    base_bonus_usd = sum(_usd(ln.amount, ln.ccy, ln.posted) for ln in st.lines if ln.tag == "bonus")
     fx = C.fx_rate("GBP", day.strftime("%Y-%m"))
     target_excess_usd = 75_000_000  # $750k over the Excluded Bonus Maximum
     amt = int(round((C.EXCLUDED_BONUS_MAX_USD_MINOR - base_bonus_usd + target_excess_usd) / fx / 100_000)) * 100_000
-    amt_usd = _usd(amt, "GBP", day)
-    excess_usd = max(0, base_bonus_usd + amt_usd - C.EXCLUDED_BONUS_MAX_USD_MINOR)
-    excess_gbp = int(amt * excess_usd / amt_usd)
     p = line(posted=day, acct="5060", dept="CORP", vendor=None, amount=amt, ccy="GBP", entity="TECHNOLOGY",
-             memo="Retention bonus - 2026 regulation-change programme, tranche 1 (all engineering staff)", c26="BONUS", erp="BONUS", plant="P07",
+             memo="Retention bonus - 2026 regulation-change programme, tranche 1 (all engineering staff)", c26="RELEVANT", erp="BONUS", plant="P42")
+    A("P42", p, "bonus_not_formal_scheme", "reclassify", "RELEVANT",
+      "A retention bonus is not Employee Bonus Costs in 2026 (D1: only a Formal Bonus Scheme determined solely by the final Constructors' "
+      "classification and paid after the last Competition). Wholly Relevant.")
+    # The one genuine 2026 scheme: a constructors'-classification pool, accrued Jan-Nov at the end of the stream.
+    # prio 0 and no vendor: it draws nothing from the stream's random streams, so earlier ids are unchanged.
+    day = date(2026, 11, 30)
+    fx = C.fx_rate("GBP", day.strftime("%Y-%m"))
+    amt = int(round((C.EXCLUDED_BONUS_MAX_USD_MINOR + target_excess_usd) / fx / 100_000)) * 100_000
+    amt_usd = _usd(amt, "GBP", day)
+    excess_usd = max(0, amt_usd - C.EXCLUDED_BONUS_MAX_USD_MINOR)
+    excess_gbp = int(amt * excess_usd / amt_usd)
+    p = line(posted=day, acct="5060", dept="CORP", vendor=None, amount=amt, ccy="GBP", entity="TECHNOLOGY", prio=0,
+             memo="Bonus accrual Jan-Nov 2026 - BS-26 Constructors' Championship scheme (board resolution 2026-02-20; set solely by the final "
+                  "Constructors' classification, payable in full after the last Competition)", c26="BONUS", erp="BONUS", plant="P07", limit_cat="BONUS",
              truth=[("BONUS", amt - excess_gbp, 0, "within the $12m Excluded Bonus Maximum"),
                     ("RELEVANT", excess_gbp, excess_usd, "excess over the $12m Excluded Bonus Maximum (D5.1.1.k)")])
     A("P07", p, "bonus_above_exclusion_limit", "flag", "RELEVANT",
-      f"Cumulative 2026 bonus exclusion exceeds the $12m Excluded Bonus Maximum by ${excess_usd / 100:,.0f}; that excess is Relevant.")
+      f"The BS-26 Constructors' Championship scheme is genuine Employee Bonus Costs, but the accrual exceeds the $12m Excluded Bonus Maximum "
+      f"(lower than 20% of Total Fixed Employee Remuneration) by ${excess_usd / 100:,.0f}; that excess is Relevant (split: cap_limit_excess).")
 
     # ---- Red Bull 5: gain on disposal not grossed up -----------------------------------------------
     p = line(posted=date(2026, 4, 30), acct="7500", dept="MFG", vendor=None, amount=-9_600_000, ccy="GBP", entity="TECHNOLOGY",
@@ -161,13 +189,16 @@ def plant_all(st) -> None:  # noqa: C901 - a flat list of plants reads best
     # ---- Red Bull 7/8: unproven Non-F1 share for mixed staff -----------------------------------------
     p = line(posted=date(2026, 4, 30), acct="5050", dept="APPLIED", vendor=None, amount=3_780_000, ccy="GBP", entity="TECHNOLOGY",
              memo="Employer pension true-up - Applied Technologies - Apr 2026 - 70% Non-F1 per project manager estimate (no timesheets)",
-             c26="SPLIT", erp="NON_F1", plant="P10")
-    A("P10", p, "mixed_staff_share_unproven", "ask", "",
-      "Only the evidenced share can be excluded: dept-APPLIED f1_activity_share 0.6 (40% Non-F1). A 70% claim needs timesheet evidence.")
+             c26="RELEVANT", erp="NON_F1", plant="P10")
+    A("P10", p, "mixed_staff_share_unproven", "ask", "RELEVANT",
+      "No apportionment for generic Applied Technologies client work in 2026 (D5.1.1.h.c.A: only PU supply, Customer Team Support, FIA Projects "
+      "or Standard Supply Components). The 70% estimate is irrelevant unless the staff do one of those; ask, Relevant until then.")
     p = line(posted=date(2026, 6, 26), acct="5010", dept="AERO", vendor=None, amount=8_640_000, ccy="GBP", entity="TECHNOLOGY",
              memo="Salaries - 6 aerodynamicists seconded to Applied Technologies client programme AT-131 - Jun 2026 - 50% Non-F1 claimed, no timesheets",
              c26="RELEVANT", erp="NON_F1", plant="P11")
-    A("P11", p, "mixed_staff_share_unproven", "ask", "RELEVANT", "Aero staff (share 1.0) with an unevidenced Non-F1 claim: ask for timesheets; Relevant until proven.")
+    A("P11", p, "mixed_staff_share_unproven", "ask", "RELEVANT",
+      "Aero staff with an unevidenced 50% Non-F1 claim. Client programme AT-131 is not one of the D5.1.1.h.c.A activities, so even with timesheets "
+      "no salary share is excludable; ask what the secondment is, Relevant until then.")
 
     # ---- Red Bull 9: PU transaction below fair value -------------------------------------------------
     p = line(posted=date(2026, 3, 24), acct="6105", dept="RACEOPS", vendor=C.V_PU, amount=9_000_000, ccy="EUR",
@@ -195,7 +226,7 @@ def plant_all(st) -> None:  # noqa: C901 - a flat list of plants reads best
     p.amount, p.erp, p.plant, p.c26 = 6_650_000, "RELEVANT", "P15", "ADJ_RELATED_PARTY_FAIR_VALUE"
     p.fv = ("fv-002", 65_000_000)
     A("P15", p, "related_party_recharge_clerical_error", "reclassify", "ADJ_RELATED_PARTY_FAIR_VALUE",
-      "Kestrel Technology recharge invoiced GBP 66,500.00 instead of GBP 665,000.00: below fair value (fv-002, GBP 650,000 after the 2026-07-01 update); include at fair value.")
+      "Meridian Technology recharge invoiced GBP 66,500.00 instead of GBP 665,000.00: below fair value (fv-002, GBP 650,000 after the 2026-07-01 update); include at fair value.")
 
     # ---- Red Bull 12: travel not related to Competitions ----------------------------------------------
     p = line(posted=date(2026, 4, 22), acct="6310", dept="VD", vendor="ven-037", amount=284_000, ccy="GBP",
@@ -300,6 +331,7 @@ def plant_all(st) -> None:  # noqa: C901 - a flat list of plants reads best
     excess = max(0, annual - C.PU_SECTION_A_MAX_PRICE_EUR_MINOR)
     p = line(posted=d34, acct="6100", dept="RACEOPS", vendor=C.V_PU, amount=260_000_000, ccy="EUR",
              memo="PU supply - additional ICE & ERS elements beyond season allocation (2026 power unit)", c26="PU_SUPPLY", erp="PU_SUPPLY", plant="P34",
+             limit_cat="PU_SUPPLY",
              truth=[("PU_SUPPLY", 260_000_000 - excess, 0, "within the Section A maximum price"),
                     ("RELEVANT", excess, _usd(excess, "EUR", d34), "season PU purchases above the Section A maximum (EUR 21.0m contract assumption)")])
     A("P34", p, "pu_above_max_price", "flag", "RELEVANT",
@@ -322,3 +354,43 @@ def plant_all(st) -> None:  # noqa: C901 - a flat list of plants reads best
     p.erp, p.plant = "DEPRECIATION", "P41"
     A("P41", p, "pe_depreciation_prior_year_habit", "reclassify", "RELEVANT",
       "2025 precedent: all depreciation excluded (ISS22 3.1(o)). Plant and equipment depreciation is inside the cap in 2026 (D6.1.1.k).")
+
+    # ---- Applied Technologies payroll: no apportionment for generic client work in 2026 ----------------
+    for ln in st.lines:
+        if ln.dept == "APPLIED" and ln.acct in ("5010", "5050", "5230") and ln.vendor is None and ln.plant is None and ln.tag != "plant_contra":
+            ln.plant = "P45"
+            A("P45", ln, "non_f1_apportionment_not_permitted", "reclassify", "RELEVANT",
+              "The 2025 precedent split Applied Technologies pay 60% Relevant / 40% Non-F1 (ISS22 allowed any Non-F1 activity). D5.1.1.h.c.A allows a "
+              "salary share only for PU supply, Customer Team Support, FIA Projects or Standard Supply Components; generic client work is none of these, "
+              "so the whole line is Relevant.")
+
+    # ---- mixed invoices: split by bill line ---------------------------------------------------------------
+    rng = st.rng("mixed_bills")
+    dinners = [ln for ln in st.lines if ln.tag == "partner_dinner" and ln.plant is None]
+    for ln in sorted(dinners, key=lambda x: x.posted)[::2] + sorted(dinners, key=lambda x: x.posted)[1:2]:
+        partner = ln.memo.split(" - ")[1].replace(" partners evening", "")
+        topup, lunch = G.money(rng, 1_200, 3_000), G.money(rng, 1_700, 3_000)
+        ln.bill_lines = [(G.desc_sponsor_dinner(partner, ln.posted), ln.amount - topup - lunch),
+                         (G.desc_canteen_topup(ln.posted), topup),
+                         (G.desc_tunnel_lunch(ln.posted - timedelta(days=1)), lunch)]
+        ln.bill_cats = [G.T_MARKETING, G.T_CANTEEN, G.T_TUNNEL]
+        ln.keep_bill_draw, ln.plant = True, "P43"
+        ln.memo = f"Hospitality - {partner} partners evening & build week catering (requester: Marketing)"
+        A("P43", ln, "mixed_hospitality_invoice", "reclassify", "",
+          "Grove Catering hospitality invoice coded MARKETING as a whole. Split by bill line: sponsor dinner MARKETING, canteen top-up CATERING, "
+          "wind tunnel lunch RELEVANT (same description patterns as the 2025 split invoices).")
+        for k, (cat, why) in enumerate([("MARKETING", "sponsor dinner (D5.1.1.a)"), ("CATERING", "factory canteen top-up at team premises (D5.1.1.z)"),
+                                        ("RELEVANT", "offsite engineering lunch at Northbrook Wind Tunnel")], start=1):
+            A("P43", (ln, k), "mixed_hospitality_invoice", "reclassify", cat, f"P43 bill line {k}: {why}", source="bill_line")
+    canteens = [ln for ln in st.lines if ln.tag == "canteen" and ln.memo.startswith("Factory canteen service") and ln.plant is None
+                and ln.posted.month not in (1, 8)]
+    for ln in sorted(rng.sample(canteens, 5), key=lambda x: x.posted):
+        lunch = G.money(rng, 1_700, 3_600)
+        ln.bill_lines = [(ln.memo, ln.amount - lunch), (G.desc_tunnel_lunch(ln.posted - timedelta(days=rng.randint(1, 3))), lunch)]
+        ln.bill_cats = [G.T_CANTEEN, G.T_TUNNEL]
+        ln.keep_bill_draw, ln.plant = True, "P44"
+        A("P44", ln, "offsite_lunch_in_canteen_invoice", "reclassify", "",
+          "Weekly canteen invoice (CATERING) that also bills a wind tunnel session lunch. Split by bill line: canteen CATERING, offsite lunch RELEVANT.")
+        for k, (cat, why) in enumerate([("CATERING", "factory canteen at team premises (D5.1.1.z)"),
+                                        ("RELEVANT", "offsite engineering lunch at Northbrook Wind Tunnel: not premises catering")], start=1):
+            A("P44", (ln, k), "offsite_lunch_in_canteen_invoice", "reclassify", cat, f"P44 bill line {k}: {why}", source="bill_line")

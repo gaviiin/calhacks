@@ -3,8 +3,10 @@
 // `name`, because the module's SnakeCase policy would otherwise rename them.
 // Every state-changing reducer except bootstrapAdmin goes through transition().
 import { SenderError, t } from 'spacetimedb/server';
-import spacetimedb from './schema';
+import spacetimedb, { Allocation } from './schema';
 import {
+  ALLOCATED,
+  ALLOCATION_BASES,
   ASSIGNABLE_ROLES,
   AUTONOMOUS_ROLE,
   INTEGER_SETTINGS,
@@ -21,8 +23,16 @@ import {
 } from './rules';
 import {
   REOPENABLE_STATES,
+  allocationRowsOf,
+  bookedBookings,
   bumpCap,
+  isAllocated,
+  isLocked,
+  materiality,
+  ledgerDeltas,
   lineChain,
+  plannedBookings,
+  reversedItem,
   policyRefFor,
   prefixDiff,
   reopenItem,
@@ -31,6 +41,7 @@ import {
   transition,
   workItemOrThrow,
   writePrecedent,
+  type AllocationInput,
   type CapDelta,
   type Ctx,
   type GlLine,
@@ -51,7 +62,20 @@ import {
   truncateUtf8,
   windowCoversPeriod,
   type Diff,
+  type Json,
 } from './util';
+import {
+  citationsOf,
+  flipReport,
+  flipReportJson,
+  flips,
+  lineFacts,
+  parseCornerstones,
+  policyForest,
+  type Cornerstone,
+  type FlipReport,
+  type PolicyNode,
+} from './rdr';
 
 export { default } from './schema';
 
@@ -521,13 +545,15 @@ interface ItemStep {
   reason: string;
   evidence?: string;
   proposal?: Proposal;
+  allocations?: AllocationInput[];
+  policyId?: bigint;
   patch: (item: WorkItem) => Partial<WorkItem>;
   sideEffects?: (before: WorkItem, after: WorkItem) => Diff;
 }
 
 function itemStep(ctx: Ctx, workItemId: bigint, action: Action, step: ItemStep): TransitionResult {
   const item = workItemOrThrow(ctx, workItemId, bad);
-  const policyId = step.proposal ? step.proposal.policyId : item.proposedPolicyId;
+  const policyId = step.allocations ? step.policyId : step.proposal ? step.proposal.policyId : item.proposedPolicyId;
   return transition(ctx, {
     action,
     resourceKind: 'work_item',
@@ -537,6 +563,7 @@ function itemStep(ctx: Ctx, workItemId: bigint, action: Action, step: ItemStep):
     before: snap(item),
     workItem: item,
     proposal: step.proposal,
+    allocations: step.allocations,
     apply: () => {
       const target = TRANSITIONS.work_item[item.state]![action]!;
       const after: WorkItem = { ...item, ...step.patch(item), state: target, updatedAt: ctx.timestamp };
@@ -586,6 +613,87 @@ export const propose = spacetimedb.reducer(
         decidedBy: undefined,
         decidedReason: undefined,
       }),
+      // A whole-line proposal replaces an earlier (rejected) allocated one.
+      sideEffects: before => dropAllocations(ctx, before.id),
+    });
+  }
+);
+
+function dropAllocations(ctx: Ctx, workItemId: bigint): Diff {
+  const effects: Diff = {};
+  for (const a of allocationRowsOf(ctx, workItemId)) {
+    ctx.db.allocation.id.delete(a.id);
+    effects[`allocation[${a.id}]`] = { from: toJson({ lineNo: a.lineNo, categoryCode: a.categoryCode, amountUsdMinor: a.amountUsdMinor }), to: null };
+  }
+  return effects;
+}
+
+// SCHEMA section 11.1: one gl line split across categories. Same roles, states and transition as
+// propose; the item carries proposed_category_code = proposed_rulebook_entry_id = "ALLOCATED" and
+// the split lives in the allocation table. Every validation failure is a denial.
+export const proposeAllocations = spacetimedb.reducer(
+  { name: 'proposeAllocations' },
+  {
+    workItemId: t.u64(),
+    allocations: t.array(Allocation),
+    reason: t.string(),
+    evidenceRefs: t.string(),
+    proposalSource: t.string(),
+  },
+  (ctx, { workItemId, allocations, reason, evidenceRefs, proposalSource }) => {
+    requireNonEmpty('reason', reason);
+    if (!(PROPOSAL_SOURCES as readonly string[]).includes(proposalSource)) {
+      throw bad(`proposalSource must be one of ${PROPOSAL_SOURCES.join(', ')}, got ${JSON.stringify(proposalSource)}`);
+    }
+    allocations.forEach((a, i) => {
+      if (!(ALLOCATION_BASES as readonly string[]).includes(a.basis)) {
+        throw bad(`allocations[${i}].basis must be one of ${ALLOCATION_BASES.join(', ')}, got ${JSON.stringify(a.basis)}`);
+      }
+      requireNonEmpty(`allocations[${i}].basisRef`, a.basisRef);
+      requireNonEmpty(`allocations[${i}].categoryCode`, a.categoryCode);
+      requireNonEmpty(`allocations[${i}].rulebookEntryId`, a.rulebookEntryId);
+    });
+    const allocs: AllocationInput[] = allocations.map(a => ({ ...a, policyId: a.policyId, capEffectUsdMinor: a.capEffectUsdMinor }));
+    const cited = [...new Set(allocs.map(a => a.policyId).filter((id): id is bigint => id !== undefined))];
+    itemStep(ctx, workItemId, 'propose', {
+      reason,
+      evidence: evidenceRefs,
+      allocations: allocs,
+      policyId: cited.length === 1 ? cited[0] : undefined,
+      patch: () => ({
+        proposedBy: ctx.sender,
+        proposedCategoryCode: ALLOCATED,
+        proposedRulebookEntryId: ALLOCATED,
+        proposedPolicyId: undefined,
+        capEffectUsdMinor: undefined,
+        proposalSource,
+        reason,
+        evidenceRefs,
+        decidedBy: undefined,
+        decidedReason: undefined,
+      }),
+      sideEffects: before => {
+        const effects = dropAllocations(ctx, before.id);
+        allocs.forEach((a, i) => {
+          const row = ctx.db.allocation.insert({
+            id: 0n,
+            workItemId: before.id,
+            lineNo: i + 1,
+            basis: a.basis,
+            basisRef: a.basisRef,
+            categoryCode: a.categoryCode,
+            rulebookEntryId: a.rulebookEntryId,
+            policyId: a.policyId,
+            amountUsdMinor: a.amountUsdMinor,
+            capEffectUsdMinor: a.capEffectUsdMinor,
+            postedTreatment: undefined,
+            postedCapEffectUsdMinor: undefined,
+          });
+          const { id: _id, workItemId: _w, ...shown } = row;
+          effects[`allocation[${row.id}]`] = { from: null, to: toJson(shown) };
+        });
+        return effects;
+      },
     });
   }
 );
@@ -616,23 +724,31 @@ export const answer = spacetimedb.reducer(
   }
 );
 
-// For an auto_approver call, the audit evidence names the standing approval it relies on,
-// including the human who granted autonomy, so every autonomous decision traces to them.
+// For an auto_approver call, the audit evidence names what it relied on: each cited policy with
+// the person whose approval (or teaching) gave it standing approval, or the person whose answer
+// the proposal was built from, so every decision taken without a person traces to one.
 function approvalEvidence(ctx: Ctx, workItemId: bigint): string | undefined {
   if (roleOf(ctx) !== AUTONOMOUS_ROLE) return undefined;
   const item = ctx.db.workItem.id.find(workItemId);
   if (!item) return undefined; // itemStep throws for the unknown id
-  const pol = item.proposedPolicyId !== undefined ? ctx.db.policy.id.find(item.proposedPolicyId) : null;
-  const granted = pol?.autonomy === 'GRANTED';
-  return JSON.stringify({
-    standing_approval: {
-      policy_id: toJson(item.proposedPolicyId),
+  const standing = (policyId: bigint | undefined) => {
+    const pol = policyId !== undefined ? ctx.db.policy.id.find(policyId) : null;
+    const granted = pol?.autonomy === 'GRANTED';
+    return {
+      policy_id: toJson(policyId),
       policy_key: pol?.policyKey ?? null,
       policy_version: pol?.version ?? null,
       autonomy: pol?.autonomy ?? null,
       autonomy_granted_by: granted ? toJson(pol.autonomyBy) : null,
       autonomy_granted_at: granted ? toJson(pol.autonomyAt) : null,
-    },
+    };
+  };
+  return JSON.stringify({
+    standing_approval: standing(item.proposedPolicyId),
+    allocations: isAllocated(item)
+      ? allocationRowsOf(ctx, item.id).map(a => ({ line_no: a.lineNo, basis: a.basis, ...standing(a.policyId) }))
+      : [],
+    answered_by: toJson(item.answeredBy),
     proposal_source: item.proposalSource,
     evidence_refs: item.evidenceRefs,
   });
@@ -672,29 +788,41 @@ function addToBucket(d: CapDelta, treatment: string, amount: bigint): void {
   else d.relevant = (d.relevant ?? 0n) + amount;
 }
 
-// What post books (SCHEMA section 10, defect 4): the line amount for RELEVANT and EXCLUDED,
-// the proposal's signed cap effect for an ADJUSTMENT. Re-validation guarantees the entry resolves.
-function bookedEffect(ctx: Ctx, item: WorkItem): { treatment: string; effect: bigint } {
-  const entry = ctx.db.rulebookEntry.id.find(item.proposedRulebookEntryId!)!;
-  const effect = entry.treatment === 'ADJUSTMENT' ? item.capEffectUsdMinor ?? item.amountUsdMinor : item.amountUsdMinor;
-  return { treatment: entry.treatment, effect };
+// limit_ledger: EXCLUDED amounts per cap year and category (SCHEMA section 11.1).
+function bumpLedger(ctx: Ctx, key: string, capYear: number, categoryCode: string, delta: bigint): Diff {
+  if (delta === 0n) return {};
+  const existing = ctx.db.limitLedger.key.find(key);
+  const after = { key, capYear, categoryCode, excludedUsdMinor: (existing?.excludedUsdMinor ?? 0n) + delta };
+  if (existing) ctx.db.limitLedger.key.update(after);
+  else ctx.db.limitLedger.insert(after);
+  return prefixDiff(`limit_ledger[${key}]`, snap(existing), snap(after));
 }
 
-// `after` already carries posted_treatment and posted_cap_effect_usd_minor. A reversal first
-// subtracts exactly what the reversed item booked (once: it is then marked superseded), in
-// the reversal's own period, never the reversed item's, which may be locked.
+// `after` already carries posted_treatment and posted_cap_effect_usd_minor. Each booking (one per
+// allocation for an allocated item) goes to its treatment's bucket and, when EXCLUDED, to the
+// limit ledger. A reversal first subtracts exactly what the reversed item booked (per allocation
+// for an allocated item; once: it is then marked superseded), in the reversal's own period, never
+// the reversed item's, which may be locked; its ledger amounts come off the cap year they were
+// booked in.
 function postEffects(ctx: Ctx, after: WorkItem): Diff {
   const d: CapDelta = { pending: -after.amountUsdMinor, posted: 1 };
-  addToBucket(d, after.postedTreatment!, after.postedCapEffectUsdMinor!);
   const effects: Diff = {};
-  if (after.kind === 'reversal' && after.reversesItemId !== undefined) {
-    const rev = ctx.db.workItem.id.find(after.reversesItemId);
-    if (rev && rev.state === 'POSTED' && !rev.superseded && rev.postedTreatment !== undefined && rev.postedCapEffectUsdMinor !== undefined) {
-      addToBucket(d, rev.postedTreatment, -rev.postedCapEffectUsdMinor);
-      ctx.db.workItem.id.update({ ...rev, superseded: true, updatedAt: ctx.timestamp });
-      effects[`work_item[${rev.id}].superseded`] = { from: false, to: true };
-    }
+  const deltas = ledgerDeltas(ctx, after);
+  for (const b of plannedBookings(ctx, after)) {
+    addToBucket(d, b.treatment, b.effect);
+    if (b.allocationId === undefined) continue;
+    const row = ctx.db.allocation.id.find(b.allocationId)!;
+    ctx.db.allocation.id.update({ ...row, postedTreatment: b.treatment, postedCapEffectUsdMinor: b.effect });
+    effects[`allocation[${row.id}].posted_treatment`] = { from: null, to: b.treatment };
+    effects[`allocation[${row.id}].posted_cap_effect_usd_minor`] = { from: null, to: toJson(b.effect) };
   }
+  const rev = reversedItem(ctx, after);
+  if (rev) {
+    for (const b of bookedBookings(ctx, rev)) addToBucket(d, b.treatment, -b.effect);
+    ctx.db.workItem.id.update({ ...rev, superseded: true, updatedAt: ctx.timestamp });
+    effects[`work_item[${rev.id}].superseded`] = { from: false, to: true };
+  }
+  for (const [key, { capYear, categoryCode, delta }] of deltas) Object.assign(effects, bumpLedger(ctx, key, capYear, categoryCode, delta));
   return { ...effects, ...bumpCap(ctx, after.periodKey, d) };
 }
 
@@ -705,9 +833,16 @@ export const post = spacetimedb.reducer(
     requireNonEmpty('erpEntryId', erpEntryId);
     itemStep(ctx, workItemId, 'post', {
       reason: `posted as ${erpEntryId}`,
+      // What post books (SCHEMA section 10, defect 4; 11.1): the line amount for RELEVANT and
+      // EXCLUDED, the proposal's signed cap effect for an ADJUSTMENT. An allocated item records
+      // posted_treatment "ALLOCATED" and the sum of its allocations' effects; each allocation row
+      // records its own. Re-validation guarantees the entries resolve.
       patch: item => {
-        const { treatment, effect } = bookedEffect(ctx, item);
-        return { erpEntryId, postedTreatment: treatment, postedCapEffectUsdMinor: effect };
+        const bookings = plannedBookings(ctx, item);
+        if (isAllocated(item)) {
+          return { erpEntryId, postedTreatment: ALLOCATED, postedCapEffectUsdMinor: bookings.reduce((s, b) => s + b.effect, 0n) };
+        }
+        return { erpEntryId, postedTreatment: bookings[0]!.treatment, postedCapEffectUsdMinor: bookings[0]!.effect };
       },
       sideEffects: (_before, after) => postEffects(ctx, after),
     });
@@ -715,6 +850,65 @@ export const post = spacetimedb.reducer(
 );
 
 // ---------------------------------------------------------------- policies
+
+// The RDR checks and evidence of a policy draft (SCHEMA section 11.2), computed once for both the
+// denial reasons and the audit evidence. Cornerstones whose ref is a gl_line row are checked here:
+// the draft must apply to its own, and a child must not apply to its parent's cornerstones of the
+// parent's category. Other refs (2025 history) are checked by the proposer and marked so.
+interface DraftAnalysis {
+  violations: string[];
+  evidence: string;
+  flipReport: FlipReport;
+}
+
+function analyseDraft(ctx: Ctx, draft: PolicyNode, cornerstones: Cornerstone[], evidenceRefs: string): DraftAnalysis {
+  const forest = policyForest(ctx, [draft]);
+  const violations: string[] = [];
+  const own = { checked: [] as string[], checked_by_proposer: [] as string[] };
+  const notMatched: string[] = [];
+  for (const c of cornerstones) {
+    const line = ctx.db.glLine.id.find(c.ref);
+    if (!line) {
+      own.checked_by_proposer.push(c.ref);
+      continue;
+    }
+    own.checked.push(c.ref);
+    if (!forest.appliesIgnoringOwnState(draft, lineFacts(ctx, line), line.periodKey)) notMatched.push(c.ref);
+  }
+  if (notMatched.length > 0) {
+    violations.push(`cornerstone_mismatch: the policy does not apply to its own cornerstones ${notMatched.join(', ')}`);
+  }
+  let parentCheck: { policy_id: Json; checked: string[]; checked_by_proposer: string[] } | null = null;
+  const parent = draft.parentPolicyId !== undefined ? ctx.db.policy.id.find(draft.parentPolicyId) : undefined;
+  if (parent) {
+    const pc = { policy_id: toJson(parent.id), checked: [] as string[], checked_by_proposer: [] as string[] };
+    parentCheck = pc;
+    const parsed = parseCornerstones(parent.cornerstones || '[]');
+    const conflicting: string[] = [];
+    for (const c of typeof parsed === 'string' ? [] : parsed) {
+      if (c.category_code !== parent.categoryCode) continue;
+      const line = ctx.db.glLine.id.find(c.ref);
+      if (!line) {
+        pc.checked_by_proposer.push(c.ref);
+        continue;
+      }
+      pc.checked.push(c.ref);
+      if (forest.appliesIgnoringOwnState(draft, lineFacts(ctx, line), line.periodKey)) conflicting.push(c.ref);
+    }
+    if (conflicting.length > 0) {
+      violations.push(
+        `conflicting_cornerstone: the exception matches cornerstones of parent pol-${parent.id} (${parent.categoryCode}): ${conflicting.join(', ')}`
+      );
+    }
+  }
+  const report = flipReport(ctx, flips(ctx, forest, draft.id, it => subjectLine(ctx, it)), pk => isLocked(ctx, pk));
+  const evidence = JSON.stringify({
+    evidence_refs: evidenceRefs,
+    cornerstones: { ...own, parent: parentCheck },
+    flip_report: flipReportJson(report),
+  });
+  return { violations, evidence, flipReport: report };
+}
 
 export const proposePolicy = spacetimedb.reducer(
   { name: 'proposePolicy' },
@@ -729,6 +923,9 @@ export const proposePolicy = spacetimedb.reducer(
     precedentCount: t.u32(),
     effectiveFrom: t.string(),
     effectiveTo: t.option(t.string()),
+    // SCHEMA section 11.2, appended after effectiveTo.
+    parentPolicyId: t.option(t.u64()),
+    cornerstones: t.string(),
   },
   (ctx, args) => {
     requireNonEmpty('policyKey', args.policyKey);
@@ -741,6 +938,13 @@ export const proposePolicy = spacetimedb.reducer(
       requireIsoDate('effectiveTo', args.effectiveTo);
       if (args.effectiveTo < args.effectiveFrom) throw bad('effectiveTo is before effectiveFrom');
     }
+    // "" is read as no cornerstones.
+    const cornerstonesText = args.cornerstones.trim() === '' ? '[]' : args.cornerstones;
+    const cornerstones = parseCornerstones(cornerstonesText);
+    if (typeof cornerstones === 'string') throw bad(cornerstones);
+    if (args.parentPolicyId !== undefined && !ctx.db.policy.id.find(args.parentPolicyId)) {
+      throw bad(`unknown parent policy ${args.parentPolicyId}`);
+    }
     const siblings = [...ctx.db.policy.policyKey.filter(args.policyKey)];
     const latest = siblings.reduce((m, p) => Math.max(m, p.version), 0);
     // version 0 means "next version for this policy_key".
@@ -748,6 +952,24 @@ export const proposePolicy = spacetimedb.reducer(
     if (siblings.some(p => p.version === version)) {
       throw bad(`policy ${args.policyKey} v${version} already exists (latest is v${latest}); pass 0 for the next version`);
     }
+    const nextId = [...ctx.db.policy.iter()].reduce((m, p) => (p.id > m ? p.id : m), 0n) + 1n;
+    const analysis = analyseDraft(
+      ctx,
+      {
+        id: nextId,
+        policyKey: args.policyKey,
+        version,
+        categoryCode: args.categoryCode,
+        rulebookEntryId: args.rulebookEntryId,
+        pattern: args.pattern,
+        parentPolicyId: args.parentPolicyId,
+        state: 'APPROVED', // hypothetically, for the flip report
+        effectiveFrom: args.effectiveFrom,
+        effectiveTo: args.effectiveTo,
+      },
+      cornerstones,
+      args.evidenceRefs
+    );
     transition(ctx, {
       action: 'propose_policy',
       resourceKind: 'policy',
@@ -759,12 +981,16 @@ export const proposePolicy = spacetimedb.reducer(
         categoryCode: args.categoryCode,
         rulebookEntryId: args.rulebookEntryId,
         effectiveFrom: args.effectiveFrom,
+        rdrViolations: analysis.violations,
       },
       apply: () => {
         const row = ctx.db.policy.insert({
           id: 0n,
           ...args,
           effectiveTo: args.effectiveTo,
+          parentPolicyId: args.parentPolicyId,
+          cornerstones: cornerstonesText,
+          flipReport: JSON.stringify(flipReportJson(analysis.flipReport)),
           version,
           state: 'PROPOSED',
           proposedBy: ctx.sender,
@@ -781,11 +1007,11 @@ export const proposePolicy = spacetimedb.reducer(
         return {
           after: snap(row),
           policyRef: { id: row.id, version },
-          reason: `policy ${row.id} ${args.policyKey} v${version}: ${args.rationale}`,
+          reason: `policy ${row.id} ${args.policyKey} v${version}${args.parentPolicyId !== undefined ? ` (exception to pol-${args.parentPolicyId})` : ''}: ${args.rationale}`,
         };
       },
       reason: args.rationale,
-      evidence: args.evidenceRefs,
+      evidence: analysis.evidence,
     });
   }
 );
@@ -802,20 +1028,97 @@ function decidePolicy(ctx: Ctx, policyId: bigint, action: 'approve_policy' | 're
     before: snap(pol),
     policy: pol,
     apply: () => {
-      const after = {
+      let after = {
         ...pol,
         state: TRANSITIONS.policy[pol.state]![action]!,
         decidedBy: ctx.sender,
         decidedReason: reason,
         decidedAt: ctx.timestamp,
+        ...(action === 'approve_policy' && pol.autonomy === 'NONE' ? standingApproval(ctx, 'standing approval comes with approval') : {}),
       };
       ctx.db.policy.id.update(after);
-      return { after: snap(after), effects: action === 'approve_policy' ? supersedeOlderVersions(ctx, after) : undefined };
+      if (action !== 'approve_policy') return { after: snap(after) };
+      const isNewVersion = [...ctx.db.policy.policyKey.filter(after.policyKey)].some(
+        p => p.id !== after.id && p.version < after.version && p.state === 'APPROVED'
+      );
+      const effects = supersedeOlderVersions(ctx, after);
+      if (after.parentPolicyId !== undefined || isNewVersion) {
+        const { effects: e, postedLocked } = exceptionApproved(ctx, after);
+        Object.assign(effects, e);
+        if (postedLocked.length > 0) {
+          // Locked-period items are left alone and stay listed in the flip report.
+          after = { ...after, flipReport: mergePostedLocked(after.flipReport, postedLocked) };
+          ctx.db.policy.id.update(after);
+        }
+      }
+      Object.assign(effects, ruleCoversOpenItems(ctx, after));
+      return { after: snap(after), effects };
     },
     reason,
     evidence: pol.evidenceRefs,
     policyRef: { id: pol.id, version: pol.version },
   });
+}
+
+function mergePostedLocked(report: string, ids: bigint[]): string {
+  let r: Record<string, Json> = {};
+  try {
+    const parsed: unknown = JSON.parse(report || '{}');
+    if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) r = parsed as Record<string, Json>;
+  } catch {
+    r = {};
+  }
+  const merged: Json[] = Array.isArray(r.posted_locked) ? [...r.posted_locked] : [];
+  for (const id of ids) if (!merged.includes(toJson(id))) merged.push(toJson(id));
+  return JSON.stringify({ open: [], posted_open_period: [], usd_minor_by_state: {}, ...r, posted_locked: merged });
+}
+
+// Approval of a child (an exception) or of a new version (SCHEMA section 11.2):
+// - open items (PROPOSED, APPROVED) citing an ancestor of the approved policy, where the approved
+//   policy applies to the line (or to the cited bill line), go back to NEW (audit `reopen`, reason
+//   `exception approved: pol-<id>`), so the analyst re-proposes under the exception;
+// - POSTED items in unlocked periods whose line now resolves to the approved policy with a
+//   different category get a `reversal` work item (if the item is still the line's latest);
+// - POSTED items in locked periods are left alone and returned for the flip report.
+function exceptionApproved(ctx: Ctx, approved: { id: bigint }): { effects: Diff; postedLocked: bigint[] } {
+  const effects: Diff = {};
+  const forest = policyForest(ctx);
+  const node = forest.byId.get(approved.id)!;
+  const ancestors = new Set(forest.ancestors(node).map(a => a.id));
+  if (ancestors.size > 0) {
+    for (const state of ['PROPOSED', 'APPROVED']) {
+      for (const it of [...ctx.db.workItem.state.filter(state)].sort((a, b) => Number(a.id - b.id))) {
+        const line = subjectLine(ctx, it);
+        if (!line) continue;
+        const facts = lineFacts(ctx, line);
+        const hit = citationsOf(ctx, it).some(
+          c => c.policyId !== undefined && ancestors.has(c.policyId) && forest.applies(node, facts, it.periodKey, c.billLineId)
+        );
+        if (!hit) continue;
+        Object.assign(effects, reopenItem(ctx, it, `exception approved: pol-${approved.id}`, JSON.stringify([line.rawRef])).effects);
+      }
+    }
+  }
+  const postedLocked: bigint[] = [];
+  for (const f of flips(ctx, forest, approved.id, it => subjectLine(ctx, it))) {
+    if (f.item.state !== 'POSTED') continue;
+    if (isLocked(ctx, f.item.periodKey)) {
+      postedLocked.push(f.item.id);
+      continue;
+    }
+    const head = lineChain(ctx, f.line.id).at(-1);
+    if (!head || head.id !== f.item.id) continue; // a newer item (or an open reversal) already follows it
+    const { effects: e } = createWorkItem(
+      ctx,
+      'reversal',
+      f.line,
+      `reversal: exception approved: pol-${approved.id} reclassifies gl line ${f.line.id} ${f.from} -> ${f.to} after work item ${f.item.id} was POSTED`,
+      f.item
+    );
+    Object.assign(effects, e);
+  }
+  if (postedLocked.length > 0) effects['flip_report.posted_locked'] = { from: null, to: postedLocked.map(id => toJson(id)) };
+  return { effects, postedLocked };
 }
 
 // Approving version n+1 (SCHEMA section 10, defect 3): every lower APPROVED version of the
@@ -840,7 +1143,8 @@ function supersedeOlderVersions(ctx: Ctx, newer: { id: bigint; policyKey: string
     }
     for (const state of ['PROPOSED', 'APPROVED']) {
       for (const it of [...ctx.db.workItem.state.filter(state)]) {
-        if (it.proposedPolicyId !== old.id) continue;
+        // The whole-line citation, or any allocation's (SCHEMA section 11.1).
+        if (!citationsOf(ctx, it).some(c => c.policyId === old.id)) continue;
         if (!windowCoversPeriod(newer.effectiveFrom, newer.effectiveTo, it.periodKey)) continue;
         const line = subjectLine(ctx, it);
         const { effects: e } = reopenItem(ctx, it, 'policy superseded', JSON.stringify(line ? [line.rawRef] : []));
@@ -863,6 +1167,146 @@ export const rejectPolicy = spacetimedb.reducer(
   (ctx, { policyId, reason }) => {
     requireNonEmpty('reason', reason);
     decidePolicy(ctx, policyId, 'reject_policy', reason);
+  }
+);
+
+// Standing approval comes with approval: the lines an approved rule decides need no person. The
+// head withdraws it with revokeAutonomy, and every later line of that rule goes back to people.
+function standingApproval(ctx: Ctx, reason: string) {
+  return { autonomy: 'GRANTED', autonomyBy: ctx.sender, autonomyReason: reason, autonomyAt: ctx.timestamp };
+}
+
+// A rule approved or taught now covers lines a person was about to decide: open items no rule
+// decided (a Claude proposal, a question) that the rule applies to go back to NEW with an audit
+// `reopen`, so the analyst re-proposes them under the rule and nobody is asked the same thing twice.
+function ruleCoversOpenItems(ctx: Ctx, approved: { id: bigint }): Diff {
+  const effects: Diff = {};
+  const forest = policyForest(ctx);
+  const node = forest.byId.get(approved.id);
+  if (!node) return effects;
+  for (const state of ['PROPOSED', 'NEEDS_INFO']) {
+    for (const it of [...ctx.db.workItem.state.filter(state)].sort((a, b) => Number(a.id - b.id))) {
+      if (it.kind !== 'classification' || (state === 'PROPOSED' && it.proposalSource !== 'llm')) continue;
+      const line = subjectLine(ctx, it);
+      if (!line || isLocked(ctx, it.periodKey)) continue;
+      if (!forest.applies(node, lineFacts(ctx, line), it.periodKey)) continue;
+      Object.assign(effects, reopenItem(ctx, it, `rule now covers it: pol-${approved.id}`, JSON.stringify([line.rawRef])).effects);
+    }
+  }
+  return effects;
+}
+
+// A person decided a line and asked the system to remember it. The rule is born APPROVED with
+// standing approval, authored and approved by that person in one transition; a correction of a
+// policy's decision becomes an exception under that policy. One example earns a narrow rule: the
+// pattern pins the account and the vendor, department or memo (broader rules come from history
+// or several alike corrections, through the Policy Learner), and a controller may teach only
+// within the authority they hold: the rule must stay below materiality.
+export const teachPolicy = spacetimedb.reducer(
+  { name: 'teachPolicy' },
+  { workItemId: t.u64(), categoryCode: t.string(), rulebookEntryId: t.string(), pattern: t.string(), reason: t.string() },
+  (ctx, args) => {
+    requireNonEmpty('categoryCode', args.categoryCode);
+    requireNonEmpty('rulebookEntryId', args.rulebookEntryId);
+    requireNonEmpty('reason', args.reason);
+    const item = ctx.db.workItem.id.find(args.workItemId);
+    if (!item) throw bad(`unknown work item ${args.workItemId}`);
+    const line = subjectLine(ctx, item);
+    if (!line) throw bad(`work item ${item.id} has no ledger line to learn from`);
+    const pattern = parsePattern(args.pattern);
+    const narrow: string[] = [];
+    if (pattern.account_code === undefined) narrow.push('teach_too_broad: a taught rule must pin account_code');
+    if (pattern.vendor_id === undefined && pattern.department_id === undefined && pattern.memo_regex === undefined && pattern.description_regex === undefined) {
+      narrow.push('teach_too_broad: a taught rule must also pin the vendor, department or memo; one example earns a narrow rule');
+    }
+    if (roleOf(ctx) === 'human_controller') {
+      const m = materiality(ctx);
+      const capped =
+        m !== undefined &&
+        pattern.max_amount_usd_minor !== undefined &&
+        pattern.max_amount_usd_minor < m &&
+        pattern.min_amount_usd_minor !== undefined &&
+        pattern.min_amount_usd_minor > -m;
+      if (!capped) narrow.push(`teach_beyond_authority: a controller's rule must stay within ±materiality (set min/max_amount_usd_minor inside ${m ?? 'materiality'})`);
+    }
+    const prior = item.proposedPolicyId !== undefined ? ctx.db.policy.id.find(item.proposedPolicyId) : undefined;
+    const parentPolicyId = prior && prior.state === 'APPROVED' && prior.categoryCode !== args.categoryCode ? prior.id : undefined;
+    const policyKey = `taught:${pattern.account_code ?? '-'}|${pattern.vendor_id ?? pattern.department_id ?? 'memo'}`;
+    const version = [...ctx.db.policy.policyKey.filter(policyKey)].reduce((m, p) => Math.max(m, p.version), 0) + 1;
+    const effectiveFrom = `${item.periodKey}-01`;
+    const cornerstones: Cornerstone[] = [{ ref: line.id, category_code: args.categoryCode }];
+    const evidenceRefs = JSON.stringify([line.id, `work_item:${item.id}`]);
+    const nextId = [...ctx.db.policy.iter()].reduce((m, p) => (p.id > m ? p.id : m), 0n) + 1n;
+    const analysis = analyseDraft(
+      ctx,
+      {
+        id: nextId,
+        policyKey,
+        version,
+        categoryCode: args.categoryCode,
+        rulebookEntryId: args.rulebookEntryId,
+        pattern: args.pattern,
+        parentPolicyId,
+        state: 'APPROVED',
+        effectiveFrom,
+        effectiveTo: undefined,
+      },
+      cornerstones,
+      evidenceRefs
+    );
+    const who = ctx.db.role.identity.find(ctx.sender)?.label ?? roleOf(ctx);
+    const rationale = `Taught by ${who} on work item ${item.id} (${line.id}): ${args.reason}`;
+    transition(ctx, {
+      action: 'teach_policy',
+      resourceKind: 'policy',
+      machine: 'policy',
+      subjectId: policyKey,
+      fromState: 'ABSENT',
+      before: null,
+      policyDraft: {
+        categoryCode: args.categoryCode,
+        rulebookEntryId: args.rulebookEntryId,
+        effectiveFrom,
+        rdrViolations: [...narrow, ...analysis.violations],
+      },
+      apply: () => {
+        const row = ctx.db.policy.insert({
+          id: 0n,
+          policyKey,
+          version,
+          categoryCode: args.categoryCode,
+          rulebookEntryId: args.rulebookEntryId,
+          pattern: args.pattern,
+          rationale,
+          evidenceRefs,
+          precedentCount: 1,
+          effectiveFrom,
+          effectiveTo: undefined,
+          parentPolicyId,
+          cornerstones: JSON.stringify(cornerstones),
+          flipReport: JSON.stringify(flipReportJson(analysis.flipReport)),
+          state: 'APPROVED',
+          proposedBy: ctx.sender,
+          decidedBy: ctx.sender,
+          decidedReason: args.reason,
+          createdAt: ctx.timestamp,
+          decidedAt: ctx.timestamp,
+          autonomyEvidence: '',
+          ...standingApproval(ctx, 'taught by a person: standing approval comes with it'),
+        });
+        const effects = supersedeOlderVersions(ctx, row);
+        if (row.parentPolicyId !== undefined || version > 1) Object.assign(effects, exceptionApproved(ctx, row).effects);
+        Object.assign(effects, ruleCoversOpenItems(ctx, row));
+        return {
+          after: snap(row),
+          effects,
+          policyRef: { id: row.id, version },
+          reason: `policy ${row.id} ${policyKey} v${version}${parentPolicyId !== undefined ? ` (exception to pol-${parentPolicyId})` : ''}: ${rationale}`,
+        };
+      },
+      reason: rationale,
+      evidence: analysis.evidence,
+    });
   }
 );
 
