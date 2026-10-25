@@ -1,5 +1,5 @@
 import { useMemo } from 'react';
-import { useRace } from '../lib/race';
+import { RaceScope, latestMeeting, useRace } from '../lib/race';
 import { sortTime } from '../lib/raceModel';
 import { AccountPanel, accountHeadline } from './raceday/AccountPanel';
 import { AskPanel, askHeadline } from './raceday/AskPanel';
@@ -23,7 +23,20 @@ const STAGES: { id: string; title: string; head: (r: ReturnType<typeof useRace>)
   { id: 'close', title: 'Close', head: closeHeadline, Panel: ClosePanel },
 ];
 
+const WEEKENDS: Record<number, string> = { 1249: 'São Paulo Grand Prix 2024', 1285: 'Canadian Grand Prix 2026', 1254: 'Australian Grand Prix 2025' };
+const SESSIONS: Record<number, string> = { 9627: 'Qualifying', 9636: 'Race', 11291: 'Race', 9693: 'Race' };
+
 export function RaceDayView() {
+  const all = useRace();
+  const meeting = useMemo(() => latestMeeting(all), [all]);
+  return (
+    <RaceScope meeting={meeting}>
+      <Weekend meeting={meeting} />
+    </RaceScope>
+  );
+}
+
+function Weekend({ meeting }: { meeting: number | null }) {
   const race = useRace();
   const latest = useMemo(() => race.events.reduce<string>((m, e) => (sortTime(e.at) > sortTime(m || '1970-01-01T00:00:00Z') ? e.at : m), ''), [race.events]);
   const session = useMemo(() => {
@@ -34,10 +47,12 @@ export function RaceDayView() {
     <div className="raceday">
       <header className="raceday-head">
         <div>
-          <p className="eyebrow">Race day · Williams Racing</p>
+          <p className="eyebrow">Race day · Williams Racing{meeting && WEEKENDS[meeting] ? ` · ${WEEKENDS[meeting]}` : ''}</p>
           <h1>{race.events.length ? 'From the moment a car stops to the CFO’s brief' : 'Waiting for the weekend'}</h1>
         </div>
-        <p className="muted mono">{latest ? `session ${session} · race time ${clock(latest)} UTC` : race.connected ? 'connected · no events yet' : 'connecting to pit-wall…'}</p>
+        <p className="muted mono">
+          {latest ? `${session !== null ? SESSIONS[session] ?? `session ${session}` : ''} · race time ${clock(latest)} UTC` : race.connected ? 'connected · no events yet' : 'connecting to pit-wall…'}
+        </p>
       </header>
       <ol className="rail" aria-label="The flow">
         {STAGES.map((s, i) => {

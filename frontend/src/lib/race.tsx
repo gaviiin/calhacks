@@ -162,3 +162,42 @@ export function RaceBridge({ children }: { children: ReactNode }) {
 export function useRace(): RaceData {
   return useContext(Ctx);
 }
+
+/** The same race data narrowed to one meeting (a race weekend), for pages that tell one weekend's story. Rows are
+ *  matched by their event's meeting; incidents, sims and closes carry the meeting themselves. */
+export function scopeToMeeting(race: RaceData, meeting: number | null): RaceData {
+  if (meeting === null) return race;
+  const events = race.events.filter((e) => e.meetingKey === meeting);
+  const keys = new Set(events.map((e) => e.eventKey));
+  const incidents = race.incidents.filter((i) => i.meetingKey === meeting);
+  const incKeys = new Set(incidents.map((i) => i.incidentKey));
+  const cars = new Set(events.map((e) => e.driverNumber));
+  return {
+    ...race,
+    events,
+    cars: race.cars.filter((c) => cars.has(c.driverNumber)),
+    effects: race.effects.filter((e) => keys.has(e.eventKey)),
+    forecasts: race.forecasts.filter((f) => keys.has(f.eventKey)),
+    incidents,
+    beliefs: race.beliefs.filter((b) => incKeys.has(b.incidentKey)),
+    actions: race.actions.filter((a) => incKeys.has(a.incidentKey)),
+    entries: race.entries.filter((e) => incKeys.has(e.incidentKey)),
+    entryLines: race.entryLines.filter((l) => race.entries.some((e) => e.entryKey === l.entryKey && incKeys.has(e.incidentKey))),
+    questions: race.questions.filter((q) => incKeys.has(q.incidentKey)),
+    sims: race.sims.filter((x) => x.meetingKey === meeting),
+    closes: race.closes.filter((c) => c.meetingKey === meeting),
+  };
+}
+
+/** The latest weekend the desk wrote to: the meeting of the most recently ingested event. */
+export function latestMeeting(race: Pick<RaceData, 'events'>): number | null {
+  let best: { at: string; m: number } | null = null;
+  for (const e of race.events) if (!best || e.ingestedAt > best.at) best = { at: e.ingestedAt, m: e.meetingKey };
+  return best ? best.m : null;
+}
+
+export function RaceScope({ meeting, children }: { meeting: number | null; children: ReactNode }) {
+  const race = useRace();
+  const scoped = useMemo(() => scopeToMeeting(race, meeting), [race, meeting]);
+  return <Ctx.Provider value={scoped}>{children}</Ctx.Provider>;
+}
