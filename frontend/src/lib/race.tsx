@@ -22,6 +22,13 @@ export interface CorrectArgs {
   at: string;
 }
 
+export interface ConfirmArgs {
+  effectKey: string;
+  reason: string;
+  by: string;
+  at: string;
+}
+
 export interface RaceData {
   connected: boolean;
   identityHex: string | null;
@@ -33,6 +40,8 @@ export interface RaceData {
   precedents: readonly RacePrecedents[];
   /** Calls the correct_race_effect reducer; rejects with the module's refusal when not permitted. */
   correct: (args: CorrectArgs) => Promise<void>;
+  /** Calls confirm_race_effect: the band stands as booked, the precedent records that a person checked it. */
+  confirm: (args: ConfirmArgs) => Promise<void>;
 }
 
 const Ctx = createContext<RaceData>({
@@ -45,6 +54,7 @@ const Ctx = createContext<RaceData>({
   policies: [],
   precedents: [],
   correct: () => Promise.reject(new Error('not connected to pit-wall')),
+  confirm: () => Promise.reject(new Error('not connected to pit-wall')),
 });
 
 export function RaceBridge({ children }: { children: ReactNode }) {
@@ -67,9 +77,18 @@ export function RaceBridge({ children }: { children: ReactNode }) {
     [getConnection]
   );
 
+  const confirm = useCallback(
+    async (args: ConfirmArgs) => {
+      const c = getConnection() as DbConnection | null;
+      if (!c) throw new Error('not connected to pit-wall');
+      await c.reducers.confirmRaceEffect(args);
+    },
+    [getConnection]
+  );
+
   const value = useMemo<RaceData>(
-    () => ({ connected: conn.isActive, identityHex, events, cars, effects, forecasts, policies, precedents, correct }),
-    [conn.isActive, identityHex, events, cars, effects, forecasts, policies, precedents, correct]
+    () => ({ connected: conn.isActive, identityHex, events, cars, effects, forecasts, policies, precedents, correct, confirm }),
+    [conn.isActive, identityHex, events, cars, effects, forecasts, policies, precedents, correct, confirm]
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

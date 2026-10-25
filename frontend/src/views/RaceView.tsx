@@ -340,11 +340,7 @@ function CorrectForm({ effect, onDone }: { effect: RaceEffects; onDone: () => vo
       onDone();
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      setError(
-        /race_head|unauthorized/i.test(msg)
-          ? `This browser's pit-wall identity does not hold the Head of Racing Finance seat. Grant it with: uv run python scripts/race_grant.py --role race_head --identity ${race.identityHex ?? '<hex>'}`
-          : msg
-      );
+      setError(grantHint(msg, race.identityHex));
     } finally {
       setBusy(false);
     }
@@ -388,12 +384,61 @@ function CorrectForm({ effect, onDone }: { effect: RaceEffects; onDone: () => vo
   );
 }
 
+function grantHint(msg: string, identityHex: string | null): string {
+  return /race_head|unauthorized/i.test(msg)
+    ? `This browser's pit-wall identity does not hold the Head of Racing Finance seat. Grant it with: uv run python scripts/race_grant.py --role race_head --identity ${identityHex ?? '<hex>'}`
+    : msg;
+}
+
+/** One click: the band stands, and the precedent store learns that a person checked a case Jev was unsure of. */
+function ConfirmButton({ effect, connected }: { effect: RaceEffects; connected: boolean }) {
+  const race = useRace();
+  const { person } = useSeat();
+  const [busy, setBusy] = useState(false);
+  const [error, setError] = useState<string | null>(null);
+  const confirm = async () => {
+    setBusy(true);
+    setError(null);
+    try {
+      await race.confirm({ effectKey: effect.effectKey, reason: 'Confirmed as booked by a person', by: person.name, at: new Date().toISOString() });
+    } catch (e) {
+      setError(grantHint(e instanceof Error ? e.message : String(e), race.identityHex));
+    } finally {
+      setBusy(false);
+    }
+  };
+  return (
+    <>
+      <button type="button" className="btn btn--small btn--primary" onClick={confirm} disabled={!connected || busy} title="The band stands as booked; the precedent records that you checked it">
+        {busy ? 'Confirming…' : 'Confirm'}
+      </button>
+      {error && (
+        <p className="outcome outcome--alert" role="alert">
+          <IconDenied size={14} />
+          <span>{error}</span>
+        </p>
+      )}
+    </>
+  );
+}
+
+const STATE_CHIP: Record<string, { cls: string; label: string }> = {
+  proposed: { cls: 'proposed', label: 'proposed' },
+  needs_person: { cls: 'hold', label: 'asks you' },
+  confirmed: { cls: 'approved', label: 'confirmed' },
+  corrected: { cls: 'rejected', label: 'corrected' },
+};
+
 function EffectRow({ effect, connected }: { effect: RaceEffects; connected: boolean }) {
   const [open, setOpen] = useState(false);
   const tier = tierOf(effect.decidedBy);
   const jev = tier === 'jev' ? readJev(effect.jevJson) : null;
   const corrected = effect.status === 'corrected';
-  const cls = ['effect', `effect--${tier}`, effect.status === 'proposed' && 'effect--proposed', corrected && 'effect--corrected'].filter(Boolean).join(' ');
+  const waiting = effect.status === 'proposed' || effect.status === 'needs_person';
+  const chip = STATE_CHIP[effect.status];
+  const cls = ['effect', `effect--${tier}`, effect.status === 'proposed' && 'effect--proposed', effect.status === 'needs_person' && 'effect--asks', corrected && 'effect--corrected']
+    .filter(Boolean)
+    .join(' ');
   return (
     <li className={cls}>
       <div className="effect-top">
@@ -408,7 +453,7 @@ function EffectRow({ effect, connected }: { effect: RaceEffects; connected: bool
         </span>
         <span className="effect-car mono">{carLabel(effect.driverNumber)}</span>
         <span className="effect-bucket mono muted">{effect.bucket}</span>
-        {effect.status !== 'autonomous' && <span className={`state state--${effect.status === 'proposed' ? 'proposed' : 'rejected'}`}>{effect.status}</span>}
+        {chip && <span className={`state state--${chip.cls}`}>{chip.label}</span>}
         <span className="effect-time mono muted">{utcClock(effect.at)}</span>
       </div>
       <div className="effect-line">
@@ -423,6 +468,7 @@ function EffectRow({ effect, connected }: { effect: RaceEffects; connected: bool
         <span className="muted mono">
           {effect.basis} · {effect.decidedBy}
         </span>
+        {waiting && !open && <ConfirmButton effect={effect} connected={connected} />}
         {!corrected && !open && (
           <button
             type="button"
@@ -490,11 +536,22 @@ function CostChart({ effects, events }: { effects: readonly RaceEffects[]; event
 
 function Money({ effects, events, led, connected }: { effects: readonly RaceEffects[]; events: readonly RaceEvents[]; led: Ledger; connected: boolean }) {
   const latest = useMemo(() => effects.slice().sort((a, b) => sortTime(b.at) - sortTime(a.at)).slice(0, 20), [effects]);
+  const asks = useMemo(() => effects.filter((e) => e.status === 'needs_person').length, [effects]);
   return (
     <section className="race-money panel" aria-labelledby="money-h">
       <div className="sec-head">
         <h2 id="money-h">Money</h2>
-        <span className="muted">{effects.filter(live).length} live effects</span>
+        <span className="muted">
+          {effects.filter(live).length} live effects
+          {asks > 0 && (
+            <>
+              {' · '}
+              <b className="tone-hold">
+                {asks} {asks === 1 ? 'question' : 'questions'} for you
+              </b>
+            </>
+          )}
+        </span>
       </div>
       <dl className="money-grid">
         <div className="money-cell money-cell--lead">

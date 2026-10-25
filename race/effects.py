@@ -31,6 +31,20 @@ LIKELY = 0.5  # a part counts in the low band when P(damaged) >= LIKELY ...
 POSSIBLE = 0.2  # ... and in the high band when P(damaged) >= POSSIBLE
 
 
+def ask_floor() -> float:
+    """Below this severity confidence a Jev-decided crash line waits for a person. A setting a person controls."""
+    return float(os.environ.get("RACE_ASK_FLOOR", "0.5"))
+
+
+def jev_unsure(jev: JevAnswers, sev_p: dict[str, float]) -> tuple[bool, str, float]:
+    """(ask?, the severity Jev picked, its confidence). Jev's own confidence when it gave one, else the top probability."""
+    sev = max(sev_p, key=sev_p.get) if sev_p else "light"
+    conf = jev.confidence.get("severity")
+    if conf is None:
+        conf = max(sev_p.values()) if sev_p else 0.0
+    return conf < ask_floor(), sev, float(conf)
+
+
 def _band(lo: float, mid: float, hi: float) -> tuple[int, int, int]:
     a, b, c = sorted((int(round(lo)), int(round(mid)), int(round(hi))))
     return a, b, c
@@ -166,6 +180,16 @@ def crash_effects(event: RaceEvent, jev: JevAnswers, policy: Policy | None, ctx:
     elif jev.relevant < RELEVANCE_FLOOR or (1 - sev_p.get("none", 0.0)) < 0.3:
         return []
 
+    # Jev is the last resort after granted policies and precedents, so what reaches it is the least familiar case.
+    # When it is unsure, the crash lines wait for a person; the question leads `why` so the 512-char cut keeps it.
+    ask = ""
+    if decided_by == "jev":
+        unsure, jev_sev, conf = jev_unsure(jev, sev_p)
+        if unsure:
+            status = "needs_person"
+            ask = (f"Asks the Head of Racing Finance: Jev is unsure (severity {jev_sev}, P={conf:.2f} < {ask_floor():.2f}). "
+                   "Confirm or correct. ")
+
     out: list[Effect] = []
     if "cost_cents" in tpl:
         lo, mid, hi = _band(*tpl["cost_cents"])
@@ -191,7 +215,7 @@ def crash_effects(event: RaceEvent, jev: JevAnswers, policy: Policy | None, ctx:
         ctx.booked[car] = {"lap": prev["lap"], "mid": mid, "low": lo, "high": hi}
         ctx.race_cost_mid += d_mid
         out.append(Effect("cost", "6050", d_lo, d_mid, d_hi, f"Crash damage revision - car {car} - {reason.lower()}",
-                          "assumption", decided_by, "Revised estimate after new evidence: " + why, jev.log(), status))
+                          "assumption", decided_by, ask + "Revised estimate after new evidence: " + why, jev.log(), status))
         out.append(Effect("cap_headroom", "cap_headroom", ctx.cap_headroom_cents(), ctx.cap_headroom_cents(), ctx.cap_headroom_cents(),
                           "Cap headroom after revision", "policy", "code", "2026 cap less relevant costs to date less this race's crash damage (mid).", {}, "autonomous"))
         return out
@@ -201,12 +225,12 @@ def crash_effects(event: RaceEvent, jev: JevAnswers, policy: Policy | None, ctx:
     ctx.booked[car] = {"lap": event.lap, "mid": mid, "low": lo, "high": hi}
     parts_txt = ", ".join(f"{d['label']} {int(d['p'] * 100)}%" for d in detail[:5]) or "fixed band"
     basis = "precedent" if precedent and not policy else "assumption"
-    out.append(Effect("cost", "6050", lo, mid, hi, f"Crash damage - car {car} - {parts_txt}", basis, decided_by, why, jev.log(), status))
+    out.append(Effect("cost", "6050", lo, mid, hi, f"Crash damage - car {car} - {parts_txt}", basis, decided_by, ask + why, jev.log(), status))
     labour = P.REPAIR_LABOUR.get(sev)
     if labour and labour.mid > 0:
         l, m, h = (ctx.gbp_cents(labour.low), ctx.gbp_cents(labour.mid), ctx.gbp_cents(labour.high))
         out.append(Effect("cost", "5200", l, m, h, f"Crash repair labour ({sev}) - car {car}", labour.basis, decided_by,
-                          f"Overtime and contract labour for a {sev} repair.", {}, status))
+                          ask + f"Overtime and contract labour for a {sev} repair.", {}, status))
         mid += m
         lo += l
         hi += h
@@ -214,7 +238,7 @@ def crash_effects(event: RaceEvent, jev: JevAnswers, policy: Policy | None, ctx:
         f = P.EXPEDITED_FREIGHT
         l, m, h = (ctx.gbp_cents(f.low), ctx.gbp_cents(f.mid), ctx.gbp_cents(f.high))
         out.append(Effect("cost", "6300", l, m, h, f"Priority air freight of replacement parts - car {car}", f.basis, decided_by,
-                          f"Next race is a flyaway in {ctx.next_race_days} days; parts travel by priority air.", {}, status))
+                          ask + f"Next race is a flyaway in {ctx.next_race_days} days; parts travel by priority air.", {}, status))
         mid += m
     ctx.race_cost_mid += mid
     hr = ctx.cap_headroom_cents()

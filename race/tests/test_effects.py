@@ -111,4 +111,5 @@ def test_shadow_policy_yields_proposed():
     jev = offline_decide(e, {"team_cars": [23, 55]})
     cost = next(x for x in effects_for(e, jev, policy, c) if x.bucket == "6050")
     # a shadow only watches: Jev decides, the row names the draft that would have matched
-    assert cost.status == "proposed" and cost.decided_by == "jev" and "shadow policy light-contact" in cost.why
+    # (offline Jev calls a plain collision light at P=0.45, under the 0.5 floor, so the line also asks a person)
+    assert cost.status == "needs_person" and cost.decided_by == "jev" and "shadow policy light-contact" in cost.why

@@ -1611,6 +1611,14 @@ code {
   color: var(--alert);
 }
 
+.state--hold {
+  padding: 1px 6px;
+  border-radius: 2px;
+  background: var(--hold-wash);
+  color: var(--hold);
+  font-weight: 600;
+}
+
 /* ---------------------------------------------------------------- revenue */
 
 .run-bar {
@@ -5499,6 +5507,11 @@ code {
 
 .effect--corrected {
   opacity: 0.6;
+}
+
+.effect--asks {
+  border-left-color: var(--hold);
+  background: var(--hold-wash);
 }
 
 .effect-top {

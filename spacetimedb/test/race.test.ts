@@ -100,7 +100,7 @@ describe('race_effects', () => {
     d.as('race', ctx => mod.recordRaceEvent(ctx, { event: d.event(), state: undefined }));
     expect(() => d.as('race', ctx => mod.recordRaceEffects(ctx, { eventKey: KEY_A, effects: [d.effect(0, { lowCents: 500n })] }))).toThrow(/low <= mid <= high/);
     expect(() => d.as('race', ctx => mod.recordRaceEffects(ctx, { eventKey: KEY_A, effects: [d.effect(0, { kind: 'tip' })] }))).toThrow(/unknown kind/);
-    expect(() => d.as('race', ctx => mod.recordRaceEffects(ctx, { eventKey: KEY_A, effects: [d.effect(0, { status: 'corrected' })] }))).toThrow(/proposed or autonomous/);
+    expect(() => d.as('race', ctx => mod.recordRaceEffects(ctx, { eventKey: KEY_A, effects: [d.effect(0, { status: 'corrected' })] }))).toThrow(/status must be proposed, needs_person or autonomous/);
     expect(() => d.as('race', ctx => mod.recordRaceEffects(ctx, { eventKey: KEY_A, effects: [d.effect(0, { effectKey: `${KEY_B}:0` })] }))).toThrow(/start with eventKey/);
     d.as('race', ctx => mod.recordRaceEffects(ctx, { eventKey: KEY_A, effects: [d.effect(0), d.effect(1, { kind: 'cap_headroom', bucket: 'cap_headroom' })] }));
     d.as('race', ctx => mod.recordRaceEffects(ctx, { eventKey: KEY_A, effects: [d.effect(0)] }));
@@ -184,5 +184,25 @@ describe('the licence', () => {
     d.as('head', ctx => mod.setRacePolicyAutonomy(ctx, { policyId: 'strong', autonomy: 'REVOKED', by: 'head', at: AT }));
     expect(() => d.as('race', ctx => mod.proposeRacePolicy(ctx, { policy: { ...base, policyId: 'strong', precedentCount: 40, consistencyPct: 100 } }))).toThrow(/already decided/);
     expect(() => d.as('race', ctx => mod.proposeRacePolicy(ctx, { policy: { ...base, policyId: 'x', precedentCount: 5, consistencyPct: 101 } }))).toThrow(/0-100/);
+  });
+});
+
+describe('asking a person when Jev is unsure', () => {
+  it('records needs_person, and a confirmation by race_head keeps the band and writes a precedent', () => {
+    const d = makeDesk();
+    d.as('race', ctx => mod.recordRaceEvent(ctx, { event: d.event(), state: undefined }));
+    d.as('race', ctx => mod.recordRaceEffects(ctx, { eventKey: KEY_A, effects: [d.effect(0, { status: 'needs_person' }), d.effect(1, { decidedBy: 'policy:p1', status: 'autonomous' })] }));
+    expect(d.h.db.raceEffects.effectKey.find(`${KEY_A}:0`)?.status).toBe('needs_person');
+    expect(() => d.as('race', ctx => mod.recordRaceEffects(ctx, { eventKey: KEY_A, effects: [d.effect(2, { status: 'confirmed' })] }))).toThrow(/status must be/);
+    const args = { effectKey: `${KEY_A}:0`, reason: 'garage confirms the floor', by: 'head', at: '2026-05-25T09:00:00Z' };
+    expect(() => d.as('race', ctx => mod.confirmRaceEffect(ctx, args))).toThrow(/unauthorized/);
+    d.as('head', ctx => mod.confirmRaceEffect(ctx, args));
+    d.as('head', ctx => mod.confirmRaceEffect(ctx, args)); // the same confirmation twice: one precedent
+    const row = d.h.db.raceEffects.effectKey.find(`${KEY_A}:0`);
+    expect(row?.status).toBe('confirmed');
+    expect(d.h.db.racePrecedents.count()).toBe(1n);
+    const p = d.h.db.racePrecedents.precedentKey.find(`${KEY_A}:0@2026-05-25T09:00:00Z`);
+    expect([p?.correctedLowCents, p?.correctedMidCents, p?.correctedHighCents]).toEqual([100n, 200n, 300n]);
+    expect(() => d.as('head', ctx => mod.confirmRaceEffect(ctx, { ...args, effectKey: `${KEY_A}:1`, at: '2026-05-25T09:01:00Z' }))).toThrow(/not waiting/);
   });
 });

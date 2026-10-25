@@ -122,7 +122,7 @@ class Effect:
     decided_by: str  # policy:<id> | jev | claude:<key> | code
     why: str
     jev: dict = field(default_factory=dict)
-    status: str = "proposed"  # proposed | autonomous
+    status: str = "proposed"  # proposed | needs_person | autonomous | confirmed | corrected
     currency: str = "USD"
 
     def __post_init__(self) -> None:

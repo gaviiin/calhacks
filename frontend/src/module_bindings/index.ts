@@ -34,6 +34,7 @@ import {
 } from "spacetimedb";
 
 // Import all reducer arg schemas
+import ConfirmRaceEffectReducer from "./confirm_race_effect_reducer";
 import CorrectRaceEffectReducer from "./correct_race_effect_reducer";
 import IngestDecisionReducer from "./ingest_decision_reducer";
 import IngestDocumentReducer from "./ingest_document_reducer";
@@ -217,6 +218,7 @@ const tablesSchema = __schema({
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
+  __reducerSchema("confirm_race_effect", ConfirmRaceEffectReducer),
   __reducerSchema("correct_race_effect", CorrectRaceEffectReducer),
   __reducerSchema("ingest_decision", IngestDecisionReducer),
   __reducerSchema("ingest_document", IngestDocumentReducer),

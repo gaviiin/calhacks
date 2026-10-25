@@ -170,7 +170,7 @@ const raceEffects = table(
     decidedBy: t.string(),
     jevJson: t.string(),
     why: t.string(),
-    status: t.string(), // proposed | autonomous | corrected
+    status: t.string(), // proposed | needs_person (Jev unsure, a person must confirm) | autonomous | confirmed | corrected
     at: t.string(),
   }
 );
@@ -475,7 +475,8 @@ const RACE_SOURCES = ['openf1_replay', 'openf1_live', 'test_fixture'];
 const CAR_STATUSES = ['running', 'pit', 'retired_suspected', 'retired'];
 const EFFECT_KINDS = ['cost', 'revenue_projection', 'bonus', 'cap_headroom'];
 const EFFECT_BASES = ['press', 'assumption', 'contract', 'ladder', 'policy', 'precedent'];
-const EFFECT_STATUSES = ['proposed', 'autonomous', 'corrected'];
+const EFFECT_STATUSES = ['proposed', 'needs_person', 'autonomous', 'confirmed', 'corrected'];
+const RECORDABLE_EFFECT_STATUSES = ['proposed', 'needs_person', 'autonomous'];
 const FORECAST_STATUSES = ['running', 'ready', 'failed', 'offline'];
 const AUTONOMY = ['SHADOW', 'GRANTED', 'REVOKED', 'SUSPENDED'];
 const HEX64 = /^[0-9a-f]{64}$/;
@@ -537,7 +538,7 @@ export const recordRaceEffects = spacetimedb.reducer(
       if (!e.effectKey.startsWith(`${eventKey}:`)) throw new SenderError('invalid effect: effectKey must start with eventKey');
       if (!EFFECT_KINDS.includes(e.kind)) throw new SenderError(`invalid effect: unknown kind ${e.kind}`);
       if (!EFFECT_BASES.includes(e.basis)) throw new SenderError('invalid effect: unknown basis');
-      if (!['proposed', 'autonomous'].includes(e.status)) throw new SenderError('invalid effect: status must be proposed or autonomous');
+      if (!RECORDABLE_EFFECT_STATUSES.includes(e.status)) throw new SenderError('invalid effect: status must be proposed, needs_person or autonomous');
       if (!(e.lowCents <= e.midCents && e.midCents <= e.highCents)) throw new SenderError('invalid effect: band must be low <= mid <= high');
       if (e.jevJson.length > 2048 || e.why.length > 512 || e.memo.length > 512) throw new SenderError('invalid effect: text too long');
       requireIso('effect.at', e.at);
@@ -664,5 +665,27 @@ export const correctRaceEffect = spacetimedb.reducer(
       const pol = ctx.db.racePolicies.policyId.find(policyId);
       if (pol) ctx.db.racePolicies.policyId.update({ ...pol, contradictions: pol.contradictions + 1, updatedAt: at });
     }
+  }
+);
+
+// A person confirms a band as booked. The precedent carries the unchanged numbers (a confirmation teaches as
+// much as a correction), and the row stays in the totals: corrected rows leave them, confirmed rows do not.
+export const confirmRaceEffect = spacetimedb.reducer(
+  { effectKey: t.string(), reason: t.string(), by: t.string(), at: t.string() },
+  (ctx, { effectKey, reason, by, at }) => {
+    requireRole(ctx, 'race_head');
+    const eff = ctx.db.raceEffects.effectKey.find(effectKey);
+    if (!eff) throw new SenderError('no such effect');
+    const precedentKey = `${effectKey}@${at}`;
+    if (ctx.db.racePrecedents.precedentKey.find(precedentKey)) return; // the same confirmation twice
+    if (eff.status !== 'proposed' && eff.status !== 'needs_person') throw new SenderError('invalid confirmation: effect is not waiting for a person');
+    if (reason.trim().length === 0 || reason.length > 512) throw new SenderError('invalid confirmation: reason');
+    requireIso('at', at);
+    const m = /^policy:(.+)$/.exec(eff.decidedBy);
+    ctx.db.racePrecedents.insert({
+      precedentKey, effectKey, eventKey: eff.eventKey, policyId: m ? m[1]! : '', correctedLowCents: eff.lowCents,
+      correctedMidCents: eff.midCents, correctedHighCents: eff.highCents, reason, by, at,
+    });
+    ctx.db.raceEffects.effectKey.update({ ...eff, status: 'confirmed' });
   }
 );

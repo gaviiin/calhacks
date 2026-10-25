@@ -6,6 +6,7 @@
 import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
+import ConfirmRaceEffectReducer from "../confirm_race_effect_reducer";
 import CorrectRaceEffectReducer from "../correct_race_effect_reducer";
 import IngestDecisionReducer from "../ingest_decision_reducer";
 import IngestDocumentReducer from "../ingest_document_reducer";
@@ -20,6 +21,7 @@ import SetRacePolicyAutonomyReducer from "../set_race_policy_autonomy_reducer";
 import SetReviewStatusReducer from "../set_review_status_reducer";
 import SetWriterReducer from "../set_writer_reducer";
 
+export type ConfirmRaceEffectParams = __Infer<typeof ConfirmRaceEffectReducer>;
 export type CorrectRaceEffectParams = __Infer<typeof CorrectRaceEffectReducer>;
 export type IngestDecisionParams = __Infer<typeof IngestDecisionReducer>;
 export type IngestDocumentParams = __Infer<typeof IngestDocumentReducer>;
