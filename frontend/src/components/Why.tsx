@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import type { AgentStep, AuditLog, Policy, WorkItem } from '../cost_cap_bindings/types';
 import { abs, needsHead, proposedCapEffect, useCostCap } from '../lib/costcap';
 import { categoryName, clock, parseJson, refusalText, revenueReason, tidyMemo, usd, usdShort } from '../lib/format';
-import { useRevenue, type Parked, type Why as EntryWhyData } from '../lib/revenue';
+import { useRevenue, type Parked, type Question, type Why as EntryWhyData } from '../lib/revenue';
 import { useSeat } from '../lib/seat';
 import { useSeatConnection } from '../lib/seatConnection';
 import { IconAgent, IconApproved, IconDenied, IconPerson, IconQuestion, IconWaiting } from './icons';
@@ -41,6 +41,7 @@ export function WhyPane({ entry, status }: { entry: InboxItem | null; status: Se
   }
   if (entry.kind === 'item') return <WorkItemWhy item={entry.item} status={status} />;
   if (entry.kind === 'policy') return <PolicyWhy policy={entry.policy} status={status} />;
+  if (entry.kind === 'question') return <QuestionWhy question={entry.question} />;
   return <EntryWhy entry={entry.entry} />;
 }
 
@@ -655,11 +656,21 @@ function EntryWhy({ entry }: { entry: Parked }) {
     };
   }, [entry.je_id, rev.why]);
   const approver = person.revenue;
-  const canAct = approver && entry.needs.includes(approver.role);
+  const done = entry.approved_roles ?? [];
+  const remaining = entry.needs.filter((r) => !done.includes(r));
+  const canAct = approver && remaining.includes(approver.role);
+  const roleName = (r: string) => (r === 'cfo' ? 'CFO' : r === 'controller' ? 'Controller' : r);
   const act = async (decision: 'approve' | 'reject') => {
     if (!approver) return;
     try {
-      setResult(await rev.approve(entry.je_id, approver.approver, approver.role, decision, text.trim()));
+      const status = await rev.approve(entry.je_id, approver.approver, approver.role, decision, text.trim());
+      setResult(
+        status.startsWith('parked')
+          ? `Your ${decision === 'approve' ? 'approval' : 'rejection'} is recorded; it still needs ${remaining.filter((r) => r !== approver.role).map(roleName).join(' and ') || 'another approver'}.`
+          : status.startsWith('posted')
+            ? 'Approved and posted to the books.'
+            : status
+      );
     } catch (e) {
       setResult(`Refused: ${e instanceof Error ? e.message : String(e)}`);
     }
@@ -670,7 +681,7 @@ function EntryWhy({ entry }: { entry: Parked }) {
     <aside className="why">
       <header className="why-head">
         <span className="flag flag--hold">
-          <IconWaiting size={13} /> Parked for {entry.needs.map((n) => (n === 'cfo' ? 'CFO' : 'Controller')).join(' and ')}
+          <IconWaiting size={13} /> {done.length ? `${done.map(roleName).join(' and ')} approved; waiting for ${remaining.map(roleName).join(' and ')}` : `Parked for ${entry.needs.map(roleName).join(' and ')}`}
         </span>
         <h2>{tidyMemo(entry.memo)}</h2>
         <p className="why-sub mono">
@@ -724,7 +735,12 @@ function EntryWhy({ entry }: { entry: Parked }) {
       )}
       <footer className="decide">
         {!approver && <p className="decide-hint">Take the Controller or CFO seat to approve revenue entries.</p>}
-        {approver && !canAct && <p className="decide-hint">{person.title} is not one of the approvals this entry still needs.</p>}
+        {approver && !canAct && (
+          <p className="decide-hint">
+            {done.includes(approver.role) ? `${person.title} has already approved it.` : `${person.title} is not one of the approvals this entry still needs.`} Waiting for{' '}
+            {remaining.map(roleName).join(' and ')}.
+          </p>
+        )}
         <label className="field">
           <span>Reason</span>
           <input value={text} onChange={(e) => setText(e.target.value)} disabled={!canAct} />
@@ -735,6 +751,63 @@ function EntryWhy({ entry }: { entry: Parked }) {
           </button>
           <button className="btn" disabled={!canAct || rev.busy !== null} onClick={() => act('reject')}>
             <IconDenied size={14} /> Reject
+          </button>
+        </div>
+        {result && <p className="outcome">{result}</p>}
+      </footer>
+    </aside>
+  );
+}
+
+// ---------------------------------------------------------------- revenue question
+
+function QuestionWhy({ question }: { question: Question }) {
+  const rev = useRevenue();
+  const { person } = useSeat();
+  const [text, setText] = useState('');
+  const [result, setResult] = useState<string | null>(null);
+  useEffect(() => {
+    setText('');
+    setResult(null);
+  }, [question.q_id]);
+  const canAct = person.revenue?.role === question.to_role;
+  const send = async () => {
+    try {
+      await rev.answer(question.q_id, text.trim());
+      setResult('Answered. The revenue desk applies it now, and to every later case of this clause.');
+    } catch (e) {
+      setResult(`Not sent: ${e instanceof Error ? e.message : String(e)}`);
+    }
+  };
+  return (
+    <aside className="why">
+      <header className="why-head">
+        <span className="flag flag--hold">
+          <IconQuestion size={13} /> Question for the {question.to_role === 'cfo' ? 'CFO' : 'Controller'}
+        </span>
+        <h2>{question.text}</h2>
+        <p className="why-sub mono">
+          {question.subject} · asked {question.asked_at.replace('T', ' ').slice(0, 16)} · revenue desk
+        </p>
+      </header>
+      <section className="why-sec">
+        <h3>
+          <IconAgent size={14} /> Why it asks
+        </h3>
+        <p className="why-reason">
+          The contract does not settle this case on its own, so the revenue desk books nothing until a person rules. One ruling is
+          enough: it becomes the rule for this clause, and later cases are booked without asking.
+        </p>
+      </section>
+      <footer className="decide">
+        {!canAct && <p className="decide-hint">Take the {question.to_role === 'cfo' ? 'CFO' : 'Controller'} seat to answer.</p>}
+        <label className="field">
+          <span>Your ruling</span>
+          <textarea value={text} onChange={(e) => setText(e.target.value)} rows={2} disabled={!canAct} />
+        </label>
+        <div className="decide-actions">
+          <button className="btn btn--primary" disabled={!canAct || !text.trim() || rev.busy !== null} onClick={send}>
+            Send ruling as {person.name}
           </button>
         </div>
         {result && <p className="outcome">{result}</p>}

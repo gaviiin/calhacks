@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useRef, useState } from 'react';
-import { IconApproved, IconDenied, IconExternal, IconShield, IconWaiting } from '../components/icons';
-import { dayTime, usdShort } from '../lib/format';
-import { DEMO_STOP_BEFORE, useRevenue, type Round, type Weekend } from '../lib/revenue';
+import { IconApproved, IconArrow, IconDenied, IconExternal, IconShield, IconWaiting } from '../components/icons';
+import { dayTime, tidyMemo, usdShort } from '../lib/format';
+import { DEMO_STOP_BEFORE, useRevenue, type Round, type ScenarioResult, type Weekend } from '../lib/revenue';
 
 // The revenue desk in race time: real 2024 results and real FIA documents drive the books.
 
@@ -199,6 +199,67 @@ function WeekendSpine({ weekend }: { weekend: Weekend }) {
   );
 }
 
+/** Act 2: a stewards' decision lands after the books are closed. The desk reverses what it booked;
+ * whatever needs a person comes into the inbox. */
+function StewardsDecision({ round, name }: { round: number; name: string }) {
+  const rev = useRevenue();
+  const [car, setCar] = useState('44');
+  const [result, setResult] = useState<ScenarioResult | null>(null);
+  const [error, setError] = useState<string | null>(null);
+  const run = async () => {
+    const n = Number(car);
+    if (!Number.isInteger(n) || n <= 0) return setError('Enter a car number.');
+    setError(null);
+    try {
+      setResult(await rev.stewardsDecision(round, n));
+    } catch (e) {
+      setError(e instanceof Error ? e.message : String(e));
+    }
+  };
+  const waiting = result?.entries.filter((e) => e.status === 'parked').length ?? 0;
+  return (
+    <section className="stewards" aria-labelledby="stewards-h">
+      <div className="sec-head">
+        <h2 id="stewards-h">Replay a stewards' decision</h2>
+        <p className="muted">
+          A hypothetical disqualification from the {name} race, after the books closed. The desk reverses the bonuses it booked and
+          drafts any credit note; whatever needs a person comes into the inbox.
+        </p>
+      </div>
+      <form
+        className="stewards-form"
+        onSubmit={(e) => {
+          e.preventDefault();
+          void run();
+        }}
+      >
+        <label className="field">
+          <span>Car</span>
+          <input inputMode="numeric" value={car} onChange={(e) => setCar(e.target.value)} />
+        </label>
+        <button className="btn btn--primary" type="submit" disabled={rev.busy !== null}>
+          {rev.busy?.startsWith('Replaying') ? rev.busy : `Disqualify car ${car || '?'} from R${round}`}
+        </button>
+      </form>
+      {error && <p className="tone-alert">{error}</p>}
+      {result && (
+        <div className="outcome">
+          <p>
+            {tidyMemo(result.text)} Revenue moves by <b className="mono">{usdShort(result.revenue_delta_cents)}</b>.{' '}
+            {waiting ? (
+              <a className="link" href="#/inbox">
+                {waiting} new item{waiting === 1 ? '' : 's'} waiting in the inbox <IconArrow size={12} />
+              </a>
+            ) : (
+              'Nothing needs a person.'
+            )}
+          </p>
+        </div>
+      )}
+    </section>
+  );
+}
+
 export function RevenueView() {
   const rev = useRevenue();
   const [weekend, setWeekend] = useState<Weekend | null>(null);
@@ -283,6 +344,9 @@ export function RevenueView() {
             <b>{s.model.model_calls}</b> Claude calls, {s.model.cost_cents < 1 ? 'under 1¢' : `${s.model.cost_cents.toFixed(1)}¢`}
           </dd>
           <dd>
+            <b>{usdShort(rev.sponsors.reduce((t, sp) => t + (sp.receivable_usd_cents ?? 0), 0))}</b> still owed by sponsors
+          </dd>
+          <dd>
             independent auditor: <b>{rev.audit ? rev.audit.opinion : 'not run'}</b>
           </dd>
         </dl>
@@ -305,6 +369,30 @@ export function RevenueView() {
                     The FIA document <IconExternal size={11} />
                   </a>
                 )}
+              </li>
+            ))}
+          </ul>
+        </section>
+      )}
+
+      {(() => {
+        const last = [...rev.timeline].reverse().find((r) => r.final);
+        return last ? <StewardsDecision round={last.round} name={last.name} /> : null;
+      })()}
+
+      {rev.queue && rev.queue.held_billing.length > 0 && (
+        <section aria-labelledby="held-h">
+          <h2 id="held-h">Billing requests on hold</h2>
+          <ul className="held">
+            {rev.queue.held_billing.map((b) => (
+              <li key={b.request_id}>
+                <span className="mono">{b.request_id}</span>
+                <span>
+                  {b.sponsor_id} · car {b.car} · R{b.round} {b.session} ·{' '}
+                  {(b.amount_orig / 100).toLocaleString('en-US', { style: 'currency', currency: b.currency })}
+                </span>
+                <span className="tone-hold">{b.reason.replace(/_/g, ' ')}</span>
+                {b.note && <span className="muted">"{b.note}"</span>}
               </li>
             ))}
           </ul>

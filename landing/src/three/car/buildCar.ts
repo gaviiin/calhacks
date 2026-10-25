@@ -40,11 +40,11 @@ function leaningPlate(x: number, z: number, yBot: number, yTop: number, t: numbe
   return ring;
 }
 
-export function buildCar() {
-  // ---------------------------------------------------------------- central body
-  // Nose → monocoque → rear crash structure. Box sections with fillets: flat decks,
-  // vertical flanks, rounded lower edges, a round tapering nose.
-  const bodyStations: BodyStation[] = [
+/** Where the monocoque ends and the removable rear bodywork begins (the rear bulkhead). */
+export const SEAM_X = -0.35;
+
+/** Control stations of the central body, nose → tail. Exported so internals can be fitted inside the shell. */
+export const BODY_STATIONS: BodyStation[] = [
     { x: 2.76, top: 0.305, bot: 0.25, hwTop: 0.028, hwBot: 0.028, rt: 0.026, rb: 0.026 },
     { x: 2.55, top: 0.33, bot: 0.235, hwTop: 0.058, hwBot: 0.054, rt: 0.045, rb: 0.045 },
     { x: 2.25, top: 0.365, bot: 0.22, hwTop: 0.095, hwBot: 0.085, rt: 0.06, rb: 0.07 },
@@ -55,6 +55,7 @@ export function buildCar() {
     { x: 0.6, top: 0.665, bot: 0.1, hwTop: 0.32, hwBot: 0.27, rt: 0.11, rb: 0.1 },
     { x: 0.2, top: 0.675, bot: 0.1, hwTop: 0.33, hwBot: 0.28, rt: 0.12, rb: 0.1 },
     { x: -0.2, top: 0.67, bot: 0.1, hwTop: 0.32, hwBot: 0.28, rt: 0.12, rb: 0.1 },
+    { x: SEAM_X, top: 0.651, bot: 0.1, hwTop: 0.309, hwBot: 0.276, rt: 0.128, rb: 0.1 },
     { x: -0.6, top: 0.62, bot: 0.1, hwTop: 0.29, hwBot: 0.27, rt: 0.14, rb: 0.1 },
     { x: -1.0, top: 0.58, bot: 0.1, hwTop: 0.24, hwBot: 0.24, rt: 0.15, rb: 0.1 },
     { x: -1.4, top: 0.53, bot: 0.1, hwTop: 0.18, hwBot: 0.2, rt: 0.13, rb: 0.1 },
@@ -62,11 +63,10 @@ export function buildCar() {
     { x: -2.2, top: 0.44, bot: 0.17, hwTop: 0.08, hwBot: 0.1, rt: 0.07, rb: 0.08 },
     { x: -2.5, top: 0.42, bot: 0.25, hwTop: 0.058, hwBot: 0.058, rt: 0.05, rb: 0.05 },
     { x: -2.66, top: 0.405, bot: 0.3, hwTop: 0.04, hwBot: 0.04, rt: 0.035, rb: 0.035 },
-  ];
-  const body = loft(densify(bodyStations, 4).map(s => bodyRing(s)), { start: true, end: true });
+];
 
-  // Airbox + engine cover: rounded-triangle intake above the driver, tapering spine to the tail.
-  const airboxStations = [
+/** Airbox + engine cover stations: rounded-triangle intake above the driver, tapering spine to the tail. */
+export const AIRBOX_STATIONS = [
     { x: -0.05, apex: 0.98, base: 0.7, hw: 0.15, r: 0.045 },
     { x: -0.35, apex: 0.96, base: 0.66, hw: 0.19, r: 0.06 },
     { x: -0.8, apex: 0.83, base: 0.58, hw: 0.21, r: 0.08 },
@@ -74,8 +74,19 @@ export function buildCar() {
     { x: -1.8, apex: 0.57, base: 0.4, hw: 0.1, r: 0.055 },
     { x: -2.3, apex: 0.48, base: 0.37, hw: 0.055, r: 0.035 },
     { x: -2.62, apex: 0.43, base: 0.36, hw: 0.03, r: 0.025 },
-  ];
-  const airbox = loft(densify(airboxStations, 4).map(s => triRing(s.x, s.apex, s.base, s.hw, s.r)), { start: true, end: true });
+];
+
+export function buildCar() {
+  // ---------------------------------------------------------------- central body
+  // Nose → monocoque → rear crash structure. Box sections with fillets: flat decks,
+  // vertical flanks, rounded lower edges, a round tapering nose. One spline, lofted
+  // in two pieces: the monocoque (capped at the rear bulkhead) and the rear bodywork,
+  // an open shell that lifts off with the engine cover.
+  const bodyRings = densify(BODY_STATIONS, 4).map(s => ({ x: s.x, ring: bodyRing(s) }));
+  const body = loft(bodyRings.filter(r => r.x >= SEAM_X - 1e-6).map(r => r.ring), { start: true, end: true });
+  const bodyRear = loft(bodyRings.filter(r => r.x <= SEAM_X + 1e-6).map(r => r.ring), { start: false, end: true });
+
+  const airbox = loft(densify(AIRBOX_STATIONS, 4).map(s => triRing(s.x, s.apex, s.base, s.hw, s.r)), { start: true, end: true });
   const intake = loft([triRing(-0.025, 0.945, 0.79, 0.125, 0.035), triRing(-0.3, 0.93, 0.78, 0.115, 0.035)], { start: true, end: true });
 
   // Sidepod (right-hand side; mirrored in the component): lipped inlet, undercut, downwash ramp, coke-bottle.
@@ -219,7 +230,7 @@ export function buildCar() {
   );
 
   return {
-    body, airbox, intake, sidepod, inlet,
+    body, bodyRear, airbox, intake, sidepod, inlet,
     floor, diffuser, diffuserWall, floorEdge,
     fwMain, fwFlap2, fwFlap3, fwFlap4, fwEndplate, fwEndplateRoll,
     rwMain, rwFlap, rwEndplate, beam1, beam2, pylon,

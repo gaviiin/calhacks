@@ -1,14 +1,15 @@
 import type { Policy, WorkItem } from '../cost_cap_bindings/types';
 import { abs, needsHead, type CostCapData } from '../lib/costcap';
 import { tidyMemo } from '../lib/format';
-import type { Parked, Queue } from '../lib/revenue';
+import type { Parked, Queue, Question } from '../lib/revenue';
 
 // Everything that waits for a person, from both desks, in one list.
 
 export type InboxItem =
   | { kind: 'item'; key: string; desk: 'cost'; item: WorkItem; needs: string; amount: number; title: string; sub: string }
   | { kind: 'policy'; key: string; desk: 'cost'; policy: Policy; needs: string; amount: number; title: string; sub: string }
-  | { kind: 'entry'; key: string; desk: 'revenue'; entry: Parked; needs: string; amount: number; title: string; sub: string };
+  | { kind: 'entry'; key: string; desk: 'revenue'; entry: Parked; needs: string; amount: number; title: string; sub: string }
+  | { kind: 'question'; key: string; desk: 'revenue'; question: Question; needs: string; amount: number; title: string; sub: string };
 
 export function inboxItems(cc: CostCapData, queue: Queue | null): InboxItem[] {
   const out: InboxItem[] = [];
@@ -52,7 +53,20 @@ export function inboxItems(cc: CostCapData, queue: Queue | null): InboxItem[] {
       sub: e.je_id,
     });
   }
-  const rank = (i: InboxItem) => (i.kind === 'entry' ? 0 : i.kind === 'item' && i.item.state === 'NEEDS_INFO' ? 2 : i.kind === 'policy' ? 3 : 1);
+  for (const q of queue?.questions ?? []) {
+    out.push({
+      kind: 'question',
+      key: `question:${q.q_id}`,
+      desk: 'revenue',
+      question: q,
+      needs: q.to_role === 'cfo' ? 'CFO' : 'Controller',
+      amount: 0,
+      title: q.text,
+      sub: q.subject,
+    });
+  }
+  const rank = (i: InboxItem) =>
+    i.kind === 'entry' ? 0 : i.kind === 'question' || (i.kind === 'item' && i.item.state === 'NEEDS_INFO') ? 2 : i.kind === 'policy' ? 3 : 1;
   return out.sort((a, b) => rank(a) - rank(b) || b.amount - a.amount);
 }
 

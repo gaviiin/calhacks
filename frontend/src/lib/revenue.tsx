@@ -17,8 +17,36 @@ export interface Parked {
   memo: string;
   total_cents: number;
   needs: string[];
+  /** roles that have already approved it (it posts once every role in `needs` has) */
+  approved_roles?: string[];
   reason: string;
   recorded_at: string;
+}
+
+export interface Question {
+  q_id: string;
+  to_role: string;
+  subject: string;
+  text: string;
+  asked_at: string;
+}
+
+export interface HeldBilling {
+  request_id: string;
+  reason: string;
+  sponsor_id: string;
+  round: number;
+  session: string;
+  car: number;
+  amount_orig: number;
+  currency: string;
+  note?: string;
+}
+
+export interface ScenarioResult {
+  text: string;
+  revenue_delta_cents: number;
+  entries: { je_id: string; status: string; memo: string; needs: string[] }[];
 }
 
 export interface Alert {
@@ -32,8 +60,8 @@ export interface Alert {
 
 export interface Queue {
   parked: Parked[];
-  questions: { q_id: string; text?: string; question?: string; asked_at?: string; [k: string]: unknown }[];
-  held_billing: { request_id: string; [k: string]: unknown }[];
+  questions: Question[];
+  held_billing: HeldBilling[];
   alerts: Alert[];
 }
 
@@ -52,6 +80,7 @@ export interface Sponsor {
   sponsor_id: string;
   name: string;
   currency: string;
+  receivable_usd_cents: number;
   bonuses_earned: number;
   bonuses_reversed: number;
   billing: Record<string, number>;
@@ -120,6 +149,8 @@ export interface RevenueState {
   why: (je: string) => Promise<Why | null>;
   weekend: (round: number) => Promise<Weekend | null>;
   runAudit: () => Promise<void>;
+  answer: (qId: string, text: string) => Promise<string>;
+  stewardsDecision: (round: number, car: number) => Promise<ScenarioResult>;
 }
 
 const Ctx = createContext<RevenueState | null>(null);
@@ -238,6 +269,17 @@ export function RevenueProvider({ children }: { children: ReactNode }) {
       runAudit: () =>
         act('Running the independent audit', async () => {
           if (runRef.current) await post(`/api/runs/${runRef.current.run_id}/audit`, {});
+        }),
+      answer: (qId, text) =>
+        act('Sending the answer', async () => {
+          if (!runRef.current) return 'no run';
+          await post(`/api/runs/${runRef.current.run_id}/answer`, { q_id: qId, answer: text });
+          return 'answered';
+        }),
+      stewardsDecision: (round, car) =>
+        act(`Replaying a disqualification of car ${car}`, async () => {
+          if (!runRef.current) throw new Error('no season is running');
+          return post<ScenarioResult>(`/api/runs/${runRef.current.run_id}/scenario`, { round, car, action: 'dsq' });
         }),
     }),
     [online, run, queue, scorecard, sponsors, timeline, impact, audit, busy, error, refresh, act, why, weekend]

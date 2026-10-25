@@ -15,7 +15,8 @@ export function InboxView({ inbox, selected, select, status }: { inbox: InboxIte
   const mine = (i: InboxItem) =>
     (person.costCapRole === 'human_head_of_cost_cap' && i.desk === 'cost') ||
     (person.costCapRole === 'human_controller' && i.desk === 'cost' && i.needs !== 'Head of Cost Cap') ||
-    (!!person.revenue && i.kind === 'entry' && i.entry.needs.includes(person.revenue.role));
+    (!!person.revenue && i.kind === 'entry' && i.entry.needs.includes(person.revenue.role) && !(i.entry.approved_roles ?? []).includes(person.revenue.role)) ||
+    (!!person.revenue && i.kind === 'question' && i.question.to_role === person.revenue.role);
   const shown = useMemo(
     () => inbox.filter((i) => filter === 'all' || (filter === 'mine' ? mine(i) : i.desk === filter)),
     // eslint-disable-next-line react-hooks/exhaustive-deps

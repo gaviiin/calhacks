@@ -136,6 +136,82 @@ export function pitBoxTexture(): THREE.CanvasTexture {
   return tex;
 }
 
+/** Fine vertical fins for the radiator cores. */
+function finTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 512;
+  c.height = 64;
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = '#6b7178';
+  ctx.fillRect(0, 0, 512, 64);
+  for (let x = 0; x < 512; x += 4) {
+    ctx.fillStyle = x % 8 ? '#3a3e44' : '#9aa1a8';
+    ctx.fillRect(x, 0, 2, 64);
+  }
+  const t = new THREE.CanvasTexture(c);
+  t.wrapS = t.wrapT = THREE.RepeatWrapping;
+  t.repeat.set(2, 1);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/** Drilled carbon brake disc face. */
+function discTexture(): THREE.CanvasTexture {
+  const size = 512;
+  const c = document.createElement('canvas');
+  c.width = c.height = size;
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = '#2b2d30';
+  ctx.fillRect(0, 0, size, size);
+  ctx.fillStyle = '#121314';
+  for (let ring = 0; ring < 5; ring++) {
+    const r = 150 + ring * 18;
+    const n = 48 + ring * 8;
+    for (let i = 0; i < n; i++) {
+      const a = (i / n) * Math.PI * 2 + ring * 0.07;
+      ctx.beginPath();
+      ctx.arc(size / 2 + Math.cos(a) * r, size / 2 + Math.sin(a) * r, 3.2, 0, Math.PI * 2);
+      ctx.fill();
+    }
+  }
+  ctx.strokeStyle = '#3c3f43';
+  ctx.lineWidth = 6;
+  ctx.beginPath();
+  ctx.arc(size / 2, size / 2, 140, 0, Math.PI * 2);
+  ctx.stroke();
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
+/** Steering-wheel display: a handful of telemetry bars and a gear number. */
+function screenTexture(): THREE.CanvasTexture {
+  const c = document.createElement('canvas');
+  c.width = 256;
+  c.height = 160;
+  const ctx = c.getContext('2d')!;
+  ctx.fillStyle = '#05070a';
+  ctx.fillRect(0, 0, 256, 160);
+  const colours = ['#c9ff4b', '#c9ff4b', '#ffd21f', '#ff2e3c'];
+  for (let i = 0; i < 12; i++) {
+    ctx.fillStyle = colours[Math.min(3, Math.floor(i / 3))];
+    ctx.fillRect(14 + i * 19, 14, 14, 10);
+  }
+  ctx.fillStyle = '#e8eef0';
+  ctx.font = '700 72px "IBM Plex Mono", monospace';
+  ctx.textAlign = 'center';
+  ctx.fillText('6', 128, 112);
+  ctx.font = '500 16px "IBM Plex Mono", monospace';
+  ctx.fillStyle = '#7fd1ff';
+  ctx.textAlign = 'left';
+  ctx.fillText('BAL 54.2', 14, 150);
+  ctx.textAlign = 'right';
+  ctx.fillText('SOC 71%', 242, 150);
+  const t = new THREE.CanvasTexture(c);
+  t.colorSpace = THREE.SRGBColorSpace;
+  return t;
+}
+
 export type CarMaterials = ReturnType<typeof createCarMaterials>;
 
 export function createCarMaterials() {
@@ -159,6 +235,12 @@ export function createCarMaterials() {
     paint: paintBase(-1),
     /** Sidepods: same zoning, own opacity so they can go translucent while exploded. */
     pod: paintBase(-1),
+    /** Rear bodywork: an open shell, so both faces render once it lifts off. */
+    shell: (() => {
+      const mat = paintBase(-1);
+      mat.side = THREE.DoubleSide;
+      return mat;
+    })(),
     /** Forced accent (DRS flap, wing tips, stripes on separate parts). */
     accent: paintBase(2),
     /** Forced secondary (dark carbon-painted parts). */
@@ -188,7 +270,7 @@ export function createCarMaterials() {
       envMapIntensity: 0.8,
       transparent: true,
     }),
-    cover: new THREE.MeshPhysicalMaterial({ color: '#1d2126', metalness: 0.9, roughness: 0.36, clearcoat: 0.6, clearcoatRoughness: 0.2, envMapIntensity: 1.2, transparent: true }),
+    cover: new THREE.MeshPhysicalMaterial({ color: '#5a606a', metalness: 0.7, roughness: 0.42, clearcoat: 0.5, clearcoatRoughness: 0.2, envMapIntensity: 1.2, transparent: true }),
     aluminium: new THREE.MeshStandardMaterial({ color: '#9aa1a8', metalness: 1.0, roughness: 0.34, envMapIntensity: 0.9 }),
     titanium: new THREE.MeshStandardMaterial({ color: '#8a8f96', metalness: 1.0, roughness: 0.34, envMapIntensity: 1.3 }),
     /** Blued exhaust tip. */
@@ -222,6 +304,12 @@ export function createCarMaterials() {
       blending: THREE.AdditiveBlending,
       side: THREE.DoubleSide,
     }),
+    /** Cast alloy for the generated power unit. */
+    alloy: new THREE.MeshStandardMaterial({ color: '#767c84', metalness: 0.92, roughness: 0.42, envMapIntensity: 1.1 }),
+    radiator: new THREE.MeshStandardMaterial({ color: '#ffffff', map: finTexture(), metalness: 0.85, roughness: 0.55, envMapIntensity: 0.8 }),
+    brakeDisc: new THREE.MeshStandardMaterial({ color: '#ffffff', map: discTexture(), metalness: 0.3, roughness: 0.7 }),
+    screen: new THREE.MeshBasicMaterial({ map: screenTexture(), toneMapped: false }),
+    suede: new THREE.MeshStandardMaterial({ color: '#1c1d20', roughness: 1, metalness: 0 }),
     /** Evidence particles flowing into the sidepod. */
     stream: new THREE.MeshBasicMaterial({ color: '#c9ff4b', transparent: true, opacity: 0.95, blending: THREE.AdditiveBlending, depthWrite: false }),
   };
@@ -229,5 +317,34 @@ export function createCarMaterials() {
 
 /** Everything that fades for x-ray mode. */
 export function skinMaterials(m: CarMaterials) {
-  return [m.paint, m.pod, m.accent, m.dark, m.carbon, m.matte, m.rubber, m.cover] as THREE.Material[];
+  return [m.paint, m.pod, m.shell, m.accent, m.dark, m.carbon, m.matte, m.rubber, m.cover] as THREE.Material[];
+}
+
+/**
+ * Neutral clay set for the orthographic reference renders that livery sheets are
+ * painted onto: painted panels light grey, carbon dark grey, everything else muted.
+ */
+export function createClayMaterials(): CarMaterials {
+  const m = createCarMaterials();
+  const clay = (color: string, roughness = 0.62) => new THREE.MeshPhysicalMaterial({ color, roughness, metalness: 0, transparent: true });
+  m.paint = clay('#c9ccd0');
+  m.pod = clay('#c9ccd0');
+  m.shell = clay('#c9ccd0');
+  m.accent = clay('#c9ccd0');
+  m.dark = clay('#9a9ea4');
+  m.carbon = clay('#2a2d31', 0.5);
+  m.matte = new THREE.MeshStandardMaterial({ color: '#0e1012', roughness: 0.95, transparent: true });
+  m.rubber = clay('#141516', 0.8);
+  m.cover = clay('#3a3e44', 0.45);
+  m.aluminium = new THREE.MeshStandardMaterial({ color: '#9aa1a8', metalness: 0.2, roughness: 0.4 });
+  m.titanium = new THREE.MeshStandardMaterial({ color: '#8a8f96', metalness: 0.2, roughness: 0.4 });
+  m.exhaust = m.titanium;
+  m.visor = clay('#202428', 0.3);
+  m.rainLight = new THREE.MeshStandardMaterial({ color: '#552226', roughness: 0.5 });
+  m.radiator = clay('#5a5f66', 0.6);
+  m.alloy = new THREE.MeshStandardMaterial({ color: '#767c84', metalness: 0.2, roughness: 0.5 });
+  m.brakeDisc = clay('#2a2d31', 0.7);
+  m.screen = new THREE.MeshBasicMaterial({ color: '#202428' });
+  m.suede = clay('#1c1d20', 1);
+  return m;
 }

@@ -5,12 +5,14 @@ import type { InboxItem } from './inboxModel';
 function KindIcon({ item }: { item: InboxItem }) {
   if (item.kind === 'policy') return <IconPolicy size={14} />;
   if (item.kind === 'entry') return <IconEntry size={14} />;
+  if (item.kind === 'question') return <IconQuestion size={14} />;
   return item.item.state === 'NEEDS_INFO' ? <IconQuestion size={14} /> : <IconAgent size={14} />;
 }
 
 function kindLabel(item: InboxItem): string {
   if (item.kind === 'policy') return 'Policy';
   if (item.kind === 'entry') return 'Revenue entry';
+  if (item.kind === 'question') return 'Revenue question';
   if (item.item.state === 'NEEDS_INFO') return 'Question';
   return item.item.proposalSource === 'llm' ? 'New scenario' : 'Proposal';
 }
@@ -23,7 +25,9 @@ export function InboxRow({ item, selected, onSelect }: { item: InboxItem; select
         : categoryName(item.item.proposedCategoryCode)
       : item.kind === 'policy'
         ? `→ ${categoryName(item.policy.categoryCode)}`
-        : item.entry.kind.replace(/_/g, ' ');
+        : item.kind === 'question'
+          ? 'asks about a contract clause'
+          : item.entry.kind.replace(/_/g, ' ');
   return (
     <li>
       <button className={selected ? 'inbox-row inbox-row--on' : 'inbox-row'} onClick={onSelect} aria-current={selected ? 'true' : undefined}>

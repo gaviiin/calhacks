@@ -1748,6 +1748,38 @@ code {
   max-width: 90ch;
 }
 
+.stewards-form {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  gap: 10px;
+}
+
+.stewards-form .field {
+  width: 96px;
+}
+
+.stewards .outcome {
+  margin-top: 12px;
+}
+
+.held {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.held li {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+}
+
 .proof-line {
   display: flex;
   align-items: center;

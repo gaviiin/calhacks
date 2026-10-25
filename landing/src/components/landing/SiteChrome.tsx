@@ -1,6 +1,7 @@
 import { useEffect, useRef } from 'react';
 import { RAIL } from '../../data/story';
 import { sceneState } from '../../three/state';
+import { teardownStatus } from '../../three/car/explode';
 
 export function SiteNav() {
   return (
@@ -52,16 +53,19 @@ export function Telemetry() {
     const cells = el.querySelectorAll<HTMLElement>('b');
     let raf = 0;
     let last = 0;
+    let lastFactor = 0;
     const tick = (t: number) => {
       raf = requestAnimationFrame(tick);
       if (t - last < 80) return;
       last = t;
       const s = sceneState;
-      const explode = Math.max(s.explodeFront, s.explodeMid, s.explodeRear, s.explodeTop);
+      const td = teardownStatus();
+      const falling = td.factor < lastFactor - 0.002;
+      lastFactor = td.factor;
       cells[0].textContent = `${s.fov.toFixed(1)}°`;
       cells[1].textContent = `${Math.hypot(s.camX - s.lookX, s.camY - s.lookY, s.camZ - s.lookZ).toFixed(2)} M`;
-      cells[2].textContent = `${(explode * 100).toFixed(0).padStart(3, '0')} %`;
-      cells[3].textContent = s.xray > 0.5 ? 'DIAGNOSTIC' : s.streams > 0.5 ? 'INGEST' : s.audit > 0.5 ? 'AUDIT' : 'NOMINAL';
+      cells[2].textContent = td.detached ? `${td.detached} ${td.detached === 1 ? 'PART' : 'PARTS'} OUT` : 'COMPLETE';
+      cells[3].textContent = td.factor > 0.03 ? (falling ? 'REASSEMBLY' : 'TEARDOWN') : s.xray > 0.5 ? 'DIAGNOSTIC' : s.streams > 0.5 ? 'INGEST' : s.audit > 0.5 ? 'AUDIT' : 'NOMINAL';
     };
     raf = requestAnimationFrame(tick);
     return () => cancelAnimationFrame(raf);
@@ -78,7 +82,7 @@ export function Telemetry() {
       </div>
       <div>
         <small>ASSEMBLY</small>
-        <b>000 %</b>
+        <b>COMPLETE</b>
       </div>
       <div>
         <small>MODE</small>

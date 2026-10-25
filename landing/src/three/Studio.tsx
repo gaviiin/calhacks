@@ -65,10 +65,12 @@ function Dome() {
 
 /** Procedural automotive studio: long strip lights over the car, soft walls, dark gradient dome. */
 export function StudioEnvironment() {
-  if (CAR_ASSETS.envMap) return <Environment files={CAR_ASSETS.envMap} resolution={512} />;
+  // A generated garage panorama (equirectangular) replaces the gradient dome behind the
+  // same strip softboxes, so the paint reflects a real room while the key highlights stay.
+  const files = CAR_ASSETS.envMap ?? undefined;
   return (
-    <Environment resolution={512} frames={1} near={0.5} far={120}>
-      <Dome />
+    <Environment resolution={512} frames={1} near={0.5} far={120} files={files} background={!!files} backgroundBlurriness={0.55} backgroundIntensity={0.22}>
+      {!files && <Dome />}
       {/* key stripe: the long overhead softbox every car studio uses */}
       <Softbox position={[0, 5.2, 1.4]} rotation={[Math.PI / 2, 0, 0]} scale={[14, 1.6]} intensity={9} color="#fff6ea" feather={0.3} />
       {/* second stripe behind, cooler, for the top-rear surfaces */}
@@ -107,8 +109,9 @@ export function StudioLights() {
       glow.current.intensity = 14 * s.rim * (1 - s.fade * 0.7);
     }
     if (sweep.current) {
-      sweep.current.position.x = -5 + 10 * s.sweep;
-      sweep.current.intensity = Math.sin(Math.PI * Math.min(1, s.sweep)) * 140;
+      const sw = s.flash > 0 ? 1 - s.flash : s.sweep;
+      sweep.current.position.x = -5 + 10 * sw;
+      sweep.current.intensity = Math.sin(Math.PI * Math.min(1, sw)) * 140;
       sweep.current.target.position.set(sweep.current.position.x, 0.4, 0);
       sweep.current.target.updateMatrixWorld();
     }

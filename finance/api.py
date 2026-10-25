@@ -172,7 +172,10 @@ def why(run_id: str, je_id: str):
 def queue(run_id: str):
     led = get_run(run_id).ledger
     return {
-        "parked": [{k: e[k] for k in ("je_id", "kind", "memo", "total_cents", "needs", "reason", "recorded_at")} for e in led.entries(status="parked")],
+        "parked": [{
+            **{k: e[k] for k in ("je_id", "kind", "memo", "total_cents", "needs", "reason", "recorded_at")},
+            "approved_roles": [a["role"] for a in e["approvals"] if a["decision"] == "approve"],
+        } for e in led.entries(status="parked")],
         "questions": [dict(q) for q in led.q("SELECT q_id, to_role, subject, text, status, asked_at FROM questions WHERE status='open'")],
         "held_billing": [{"request_id": b["request_id"], "reason": b["reason_code"], **{k: b["payload"][k] for k in ("sponsor_id", "round", "session", "car", "amount_orig", "currency", "note")}}
                          for b in led.billings("hold")],
