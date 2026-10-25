@@ -1,0 +1,26 @@
+{
+ "_note": "Written by race/trueup.py. Multiply a price-book band for an incident of this severity by its factor; 'all' applies when the severity is unknown. 1.0 when nothing has been learned.",
+ "method": "weighted mean of log(actual / sealed mid) per severity, shrunk toward 0 by n / (n + 1)",
+ "updated_at": "2026-10-25T07:14:34.917Z",
+ "factors": {
+  "all": 1.0096,
+  "heavy": 1.0096,
+  "light": 1.0096
+ },
+ "observations": [
+  {
+   "meeting_key": 1249,
+   "weekend": "São Paulo 2024",
+   "close_key": "close-1249",
+   "root_hash": "93f8e8956dc90f23c72839b748cd4a108984dbf421dae2b8cec0462912c342b6",
+   "actual_cents": 400000000,
+   "estimate_mid_cents": 392475940,
+   "multiplier": 1.0192,
+   "by_severity_cents": {
+    "heavy": 360433595,
+    "light": 32042345
+   },
+   "source": "https://racingnews365.com/williams-denied-cost-cap-request-by-fia-report"
+  }
+ ]
+}

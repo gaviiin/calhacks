@@ -1,0 +1,175 @@
+/* Stage 7 close and stage 8 true-up. Tokens from styles.css; print shows only the visible brief. */
+
+.close-seal {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+}
+
+.close-root {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.close-root code {
+  padding: 2px 6px;
+  border: 1px solid var(--line);
+  background: var(--panel-2);
+  font-size: 12.5px;
+}
+
+.close-totals {
+  display: grid;
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 1px;
+  margin: 14px 0 0;
+  border: 1px solid var(--line-soft);
+  background: var(--line-soft);
+}
+
+.close-totals > div {
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--panel);
+}
+
+.close-totals dt {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.close-totals dd {
+  margin: 2px 0 0;
+}
+
+.close-totals dd.mono {
+  font-size: 20px;
+  font-variant-numeric: tabular-nums;
+}
+
+.close-trueup {
+  margin: 12px 0 0;
+  padding: 8px 12px;
+  border-left: 3px solid var(--line);
+  background: var(--panel-2);
+  font-size: 14px;
+}
+
+.close-trueup--in {
+  border-left-color: var(--lime);
+}
+
+.close-trueup--out {
+  border-left-color: var(--alert);
+}
+
+.close-status {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px 16px;
+  margin-top: 12px;
+}
+
+.close-status p {
+  margin: 0;
+}
+
+.close-status strong {
+  text-transform: uppercase;
+  font-family: var(--mono);
+  font-size: 12.5px;
+  margin-right: 4px;
+}
+
+.close-tabs {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin-top: 16px;
+}
+
+.close-print {
+  margin-left: auto;
+}
+
+.close-brief {
+  margin-top: 10px;
+  padding: 14px 16px;
+  border: 1px solid var(--line-soft);
+  background: var(--panel);
+}
+
+.close-print-head {
+  display: none;
+}
+
+.close-brief-text {
+  margin: 0;
+  max-width: 78ch;
+  white-space: pre-wrap;
+  font: 14.5px/1.6 var(--body);
+}
+
+.close-cite {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.close-by {
+  margin: 10px 0 0;
+}
+
+@media (max-width: 900px) {
+  .close-totals {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media print {
+  body.close-printing * {
+    visibility: hidden;
+  }
+  body.close-printing .close-brief,
+  body.close-printing .close-brief * {
+    visibility: visible;
+  }
+  body.close-printing .close-brief {
+    position: fixed;
+    inset: 0;
+    margin: 0;
+    padding: 0;
+    border: 0;
+    background: #fff;
+    color: #000;
+  }
+  body.close-printing .close-print-head {
+    display: block;
+    margin-bottom: 12px;
+    border-bottom: 1px solid #000;
+  }
+  body.close-printing .close-print-head h3 {
+    margin: 0 0 4px;
+    font: 700 18pt var(--display);
+    text-transform: uppercase;
+  }
+  body.close-printing .close-print-head p {
+    margin: 0 0 8px;
+    word-break: break-all;
+  }
+  body.close-printing .close-brief-text {
+    max-width: none;
+    font-size: 11pt;
+    color: #000;
+  }
+  body.close-printing .close-cite,
+  body.close-printing .close-by {
+    color: #555;
+  }
+}

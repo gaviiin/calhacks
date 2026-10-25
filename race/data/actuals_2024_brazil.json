@@ -1,0 +1,61 @@
+{
+  "_note": "Press figures for the 2024 São Paulo Grand Prix weekend (meeting 1249), published in the weeks after. Williams does not publish its crash costs; every figure is a press estimate, quoted with its source. race/trueup.py measures the sealed Sunday-night estimate against `primary`.",
+  "meeting_key": 1249,
+  "weekend": "São Paulo Grand Prix 2024",
+  "primary": "amus-weekend",
+  "eur_usd": 1.08,
+  "eur_usd_note": "ASSUMPTION: about the ECB reference rate in November 2024, used only to compare the euro figures",
+  "actuals": [
+    {
+      "id": "amus-weekend",
+      "scope": "weekend",
+      "what": "Crash damage, São Paulo weekend (Colapinto and Albon in qualifying, Colapinto in the race)",
+      "usd": 4000000,
+      "quote": "nearly $4 million in crash damage",
+      "source": "Auto Motor und Sport, via RacingNews365",
+      "url": "https://racingnews365.com/williams-denied-cost-cap-request-by-fia-report",
+      "published": "2024-12-11",
+      "verified": true,
+      "also": "The same report: Williams asked the FIA to write off some crash damage outside the cost cap; the request was denied."
+    },
+    {
+      "id": "planetf1-weekend",
+      "scope": "weekend",
+      "what": "Crash damage, São Paulo weekend, F1Maximaal's per-part tally",
+      "eur": 2296800,
+      "per_incident": [
+        {"driver": 23, "session": "Qualifying", "eur": 800000, "note": "over EUR 800,000"},
+        {"driver": 43, "session": "Race", "eur": 1490200, "note": "the race crash behind the safety car"}
+      ],
+      "source": "PlanetF1 (F1Maximaal estimates)",
+      "url": "https://www.planetf1.com/news/williams-counting-huge-cost-three-brazilian-gp-crash",
+      "published": "2024-11-06",
+      "verified": true,
+      "note": "A lower, part-by-part estimate; the per-incident figures do not account for the whole weekend total."
+    },
+    {
+      "id": "vowles-mexico-brazil",
+      "scope": "Mexico City and São Paulo 2024 (five crashes)",
+      "what": "Vowles' own range for the crashes across the two weekends, and the parts destroyed",
+      "usd_low": 3000000,
+      "usd_high": 10000000,
+      "quote": "less than 10 but more than three",
+      "parts": {"front_wing": 5, "floor": 5, "rear_wing": 5, "gearbox": 3, "power_unit": 2, "chassis": 2},
+      "source": "James Vowles, Williams team principal, via crash.net",
+      "url": "https://www.crash.net/f1/news/1060561/1/james-vowles-reveals-recent-crashes-cost-williams-more-3m",
+      "published": "2024-11-22",
+      "verified": true,
+      "note": "Covers two weekends, so it bounds the São Paulo parts count from above; not used as the weekend actual."
+    },
+    {
+      "id": "planetf1-season",
+      "scope": "season 2024",
+      "what": "Williams' 2024 crash damage, the most of any team (Colapinto EUR 5,054,000, Albon EUR 4,975,400, Sargeant EUR 3,810,200)",
+      "eur": 13839600,
+      "source": "PlanetF1 (F1Maximaal estimates)",
+      "url": "https://www.planetf1.com/features/f1-2024-crash-damage-standings",
+      "published": "2024-12-11",
+      "verified": true
+    }
+  ]
+}

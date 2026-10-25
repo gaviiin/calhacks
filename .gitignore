@@ -45,3 +45,6 @@ agent1q*_data.json
 
 # OpenF1 response cache (race/)
 race/.cache/
+
+# race day: weekend snapshots are regenerated on every run (race/close.py writes them; the root hash is in race_closes)
+race/data/closes/
