@@ -34,7 +34,7 @@ The views follow an incident in the order it reaches each person. They read the 
 
 The pitch deck's seven-stage view is at `#/day/flow`, off the switcher. The 3-minute demo script is [docs/DEMO.md](docs/DEMO.md).
 
-The bar above every view says which services the run really used. On the last demo run: OpenF1 live (the REST API, responses cached), SpacetimeDB live (2,927 reducer calls, 0 refused), Jev live (117 decisions, mean 114 ms), Claude live (4 repair plans, 4 of 4 briefs), the ERP live (3 entries posted through the gateway, 7 held for review); notifications are not configured until Slack, email, Teams or SMS credentials are added in Connect (then dry run until `PITWALL_NOTIFY=live`). OpenF1's live MQTT feed needs its paid tier (`race/live.py`).
+Under each view, pit-wall's own rows show who is watching, how long an event takes from read to commit to screen, and every decision on the record, allowed or refused (the money rules are enforced in the module). The bar above every view says which services the run really used. On the last demo run: OpenF1 live (the REST API, responses cached), SpacetimeDB live (2,927 reducer calls, 0 refused), Jev live (117 decisions, mean 114 ms), Claude live (4 repair plans, 4 of 4 briefs), the ERP live (3 entries posted through the gateway, 7 held for review); notifications are not configured until Slack, email, Teams or SMS credentials are added in Connect (then dry run until `PITWALL_NOTIFY=live`). OpenF1's live MQTT feed needs its paid tier (`race/live.py`).
 
 ```bash
 make stdb-start                  # SpacetimeDB on :3000 (another terminal)

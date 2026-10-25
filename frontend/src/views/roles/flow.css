@@ -161,10 +161,12 @@
 }
 
 .fl-label {
+  overflow: hidden;
   margin-top: 4px;
   color: var(--muted);
   font: 600 10.5px var(--body);
   letter-spacing: 0.05em;
+  text-overflow: ellipsis;
   text-transform: uppercase;
   white-space: nowrap;
 }
@@ -223,6 +225,24 @@
     padding: 0 0 8px;
     border-right: 0;
     border-bottom: 1px solid var(--line-soft);
+    scrollbar-width: none;
+  }
+
+  .fl-step a {
+    padding: 6px 6px 8px;
+  }
+
+  .fl-label {
+    font-size: 10px;
+    letter-spacing: 0.03em;
+    white-space: normal;
+  }
+
+  .fl-sub {
+    display: -webkit-box;
+    white-space: normal;
+    -webkit-box-orient: vertical;
+    -webkit-line-clamp: 2;
   }
 
   .fl-steps {
