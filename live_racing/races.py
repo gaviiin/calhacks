@@ -36,6 +36,17 @@ class IncidentFocus:
 
 
 @dataclass(frozen=True)
+class Withdrawal:
+    """A car that did not take the start, as known before the start (a team's own announcement).
+    It is pre-race knowledge, so the replay may use it from the first record; the timing feed then
+    confirms it when the car starts no lap."""
+
+    driver_number: int
+    note: str
+    known_from: str  # what made it knowable before the start
+
+
+@dataclass(frozen=True)
 class Race:
     race_id: str
     name: str
@@ -51,6 +62,8 @@ class Race:
     incident_focus: tuple[IncidentFocus, ...] = ()
     corroboration: tuple[Corroboration, ...] = ()
     openf1_meeting_key_hint: int | None = None
+    pre_race_withdrawals: tuple[Withdrawal, ...] = ()
+    scheduled_laps: int | None = None
     extra: dict = field(default_factory=dict)
 
 
@@ -67,6 +80,11 @@ SAO_PAULO_2024 = Race(
     sporting_source_date="2024-11-03",
     team_cars_note="Meridian Racing mirrors Mercedes' real results: cars 63 (Russell) and 44 (Hamilton). "
     "Car 43 (Colapinto) drove for Williams; the fictional Meridian garage investigation is a demo device.",
+    scheduled_laps=69,
+    pre_race_withdrawals=(
+        Withdrawal(23, "Williams withdrew Albon's car before the start: the chassis damaged in his qualifying crash could not be repaired in time",
+                   "the team's announcement before the race (the 2024 classification lists him as did not start)"),
+    ),
     incident_focus=(
         IncidentFocus(
             label="car43_lap32_stop",

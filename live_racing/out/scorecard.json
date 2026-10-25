@@ -1,5 +1,5 @@
 {
- "generated_at_utc": "2026-10-25T06:47:35Z",
+ "generated_at_utc": "2026-10-25T07:32:34Z",
  "how": "scripts/live_scorecard.py on this machine; nothing typed in",
  "jev_routing": {
   "mode": "offline mock transport",
@@ -195,7 +195,7 @@
    "escalations": 1,
    "automatic_steps": 12,
    "human_steps": 3,
-   "replay_seconds_laps_28_34": 0.95
+   "replay_seconds_laps_28_34": 0.96
   },
   "competitor_crash": {
    "team": "mercedes",
@@ -215,7 +215,7 @@
   "unauthorized_actions_executed": 0,
   "cases_closed_autonomously": 2,
   "jev_calls_on_telemetry_ticks": 0,
-  "publish_p95_ms": 71
+  "publish_p95_ms": 79
  },
  "headline": {
   "jev_routing": "11/11 labeled cases routed as expected (offline mock transport)",

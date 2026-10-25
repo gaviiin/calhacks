@@ -40,13 +40,16 @@ export interface Weather {
 export interface DriverState {
   driver_number: number;
   name_acronym: string | null;
+  full_name?: string | null;
   team: string | null;
   position: number | null;
   lap: number | null;
   compound: string | null;
   tyre_age_laps: number | null;
   last_pit_lap: number | null;
-  status: 'running' | 'in_pit' | 'stopped_candidate' | 'unknown';
+  /** dns: never started; retired: out per timing. Neither is a finishing position. */
+  status: 'running' | 'in_pit' | 'stopped_candidate' | 'dns' | 'retired' | 'unknown';
+  out_reason?: string | null;
 }
 
 export interface ForecastLine {
@@ -263,6 +266,162 @@ export interface TyreContext {
   note: string;
 }
 
+/** What a stop costs in race time under one racing condition, and how that was established (pit_model.py). */
+export interface PitLoss {
+  condition: 'green' | 'vsc' | 'safety_car' | 'red_flag';
+  seconds: number | null;
+  low_s: number | null;
+  high_s: number | null;
+  method: 'measured' | 'derived' | 'prior' | 'unmeasured' | 'suspension';
+  samples: number;
+  basis: string;
+}
+
+export interface PaceNote {
+  compound: string | null;
+  own_recent_s: number | null;
+  field_fresh_s: number | null;
+  gain_per_lap_s: number | null;
+  laps_to_recover: number | null;
+  laps_remaining: number | null;
+  samples: number;
+  note: string;
+}
+
+export type OptionKey = 'stay_out' | 'pit_now' | 'pit_alt_compound' | 'pit_if_green' | 'tyres_in_suspension' | 'retire';
+
+/** One decision the pit wall could make now. `payout_after` is the team payout if the position right after it held to the flag. */
+export interface StrategyOption {
+  key: OptionKey;
+  label: string;
+  feasible: boolean;
+  why_not: string | null;
+  condition: string | null;
+  compound_after: string | null;
+  position_now: number | null;
+  position_after: number | null;
+  position_best: number | null;
+  position_worst: number | null;
+  cars_passed: number[];
+  cars_maybe: number[];
+  payout_now_cents: number;
+  payout_after_cents: number;
+  delta_cents: number;
+  delta_best_cents: number;
+  delta_worst_cents: number;
+  lines_lost: string[];
+  lines_gained: string[];
+  expected_final_cents: number | null;
+  expected_final_status: string;
+  cost_cap_cents: number | null;
+  cost_cap_status: string;
+  pit_loss: PitLoss | null;
+  pace: PaceNote | null;
+  assumptions: string[];
+  unknowns: string[];
+}
+
+export interface CarComparison {
+  car: number;
+  driver_name: string;
+  status: string;
+  out_reason: string | null;
+  position: number | null;
+  compound: string | null;
+  tyre_age_laps: number | null;
+  payout_now_cents: number;
+  options: StrategyOption[];
+  lowest_risk: OptionKey | null;
+  summary: string;
+}
+
+export interface ChampionshipContext {
+  position: number;
+  points: number;
+  prize_cents: number;
+  above_team: string | null;
+  above_gap_points: number | null;
+  prize_up_one_cents: number | null;
+  below_team: string | null;
+  below_gap_points: number | null;
+  prize_down_one_cents: number | null;
+  points_this_race: number;
+  note: string;
+}
+
+/** The provisional team payout over the whole race (race_timeline records). */
+export interface TimelinePoint {
+  t: string;
+  lap: number | null;
+  cents: number;
+  delta_cents: number | null;
+  cause: string | null;
+  flag: string | null;
+  positions: Record<string, number | null>;
+}
+
+export interface TimelineMarker {
+  id: string;
+  t: string;
+  lap: number | null;
+  kind: 'flag' | 'rain' | 'pit' | 'money' | 'out' | 'incident' | 'jev';
+  label: string;
+  detail: string;
+  car: number | null;
+  delta_cents: number | null;
+  tone: 'neutral' | 'ok' | 'hold' | 'alert';
+  ref: string | null;
+}
+
+export interface RaceTimeline {
+  race_id: string;
+  replay_id: string;
+  version: number;
+  mode: Mode;
+  start_utc: string | null;
+  now_utc: string | null;
+  lap: number | null;
+  joined_at_utc: string | null;
+  joined_lap: number | null;
+  scheduled_laps: number | null;
+  team_cars: number[];
+  laps: { lap: number; t: string }[];
+  points: TimelinePoint[];
+  markers: TimelineMarker[];
+  flags: { from: string; flag: string }[];
+  rain: { from: string; rain: boolean }[];
+}
+
+export interface WorkflowStep {
+  key: 'detected' | 'jev' | 'analyst' | 'cost_cap' | 'action' | 'outcome';
+  label: string;
+  actor: string;
+  status: 'done' | 'skipped' | 'waiting' | 'escalated' | 'refused' | 'not_required';
+  at_utc: string | null;
+  race_clock_utc: string | null;
+  latency_ms: number | null;
+  detail: string;
+}
+
+/** One material event followed through the agents, every status read from the replay's own records. */
+export interface AgentWorkflow {
+  workflow_id: string;
+  replay_id: string;
+  race_id: string;
+  version: number;
+  kind: string;
+  title: string;
+  lap: number | null;
+  event_time_utc: string;
+  car: number | null;
+  scope: 'own_team' | 'competitor' | 'race';
+  route: string | null;
+  case_id: string | null;
+  steps: WorkflowStep[];
+  needs_person: boolean;
+  outcome: string;
+}
+
 /** The money on every strategic lever, as of now. Arithmetic on the timing feed and the contracts; no pace model. */
 export interface StrategyAdvice {
   schema_version: number;
@@ -282,6 +441,11 @@ export interface StrategyAdvice {
   weather_note: string;
   /** plain-English lines: what a place, a stop, the tyres and the weather are worth right now */
   levers?: string[];
+  comparisons?: CarComparison[];
+  pit_losses?: PitLoss[];
+  championship?: ChampionshipContext | null;
+  cap_headroom_cents?: number | null;
+  cap_headroom_source?: string | null;
   status: 'indicative';
   financial_source: 'synthetic';
   basis: string;
@@ -590,6 +754,8 @@ interface Snapshot {
   feed?: FeedHealth | null;
   cases?: FinanceCase[];
   team?: { id: string; label: string | null } | null;
+  timeline?: RaceTimeline | null;
+  workflows?: AgentWorkflow[];
 }
 
 export interface LiveState {
@@ -623,6 +789,10 @@ export interface LiveState {
   cases: Published<FinanceCase>[];
   /** which constructor the customer mirrors on the current replay */
   team: { id: string; label: string | null } | null;
+  /** the whole race's provisional payout and its markers, as of the replay clock */
+  timeline: RaceTimeline | null;
+  /** each material event followed through the agents, latest version each, oldest first */
+  workflows: AgentWorkflow[];
   /** the measured scorecard (scripts/live_scorecard.py), when it exists */
   scorecard: Scorecard | null;
   metrics: Metrics | null;
@@ -648,7 +818,7 @@ export const SPA = '2024_belgian_gp';
 export const BRAZIL_WINDOW = { from_lap: 28, to_lap: 34, speed: 20 };
 export const SPA_SPEED = 120;
 
-const KINDS = ['race_state', 'incident_signal', 'jev_decision', 'finance_impact', 'result_change', 'replay_status', 'strategy_advice', 'incident_plan', 'feed_health', 'finance_case'] as const;
+const KINDS = ['race_state', 'incident_signal', 'jev_decision', 'finance_impact', 'result_change', 'replay_status', 'strategy_advice', 'incident_plan', 'feed_health', 'finance_case', 'race_timeline', 'agent_workflow'] as const;
 
 interface Store {
   replay: ReplayStatus | null;
@@ -666,6 +836,8 @@ interface Store {
   cases: Map<string, Published<FinanceCase>>;
   feed: Published<FeedHealth> | null;
   feedAt: number;
+  timeline: RaceTimeline | null;
+  workflows: Map<string, AgentWorkflow>;
   lastSeq: number;
   /** when the current replay's first status was published; state updates from before it are another story */
   replayStartedAt: string;
@@ -677,8 +849,27 @@ const impactKey = (p: FinanceImpactUpdate) => `${p.incident_id}:${p.received_at_
 
 const empty = (): Store => ({
   replay: null, race: null, states: [], moves: [], incidents: new Map(), results: new Map(), jev: new Map(), impacts: new Map(),
-  strategy: null, strategyMoves: [], plans: new Map(), cases: new Map(), feed: null, feedAt: 0, lastSeq: 0, replayStartedAt: '',
+  strategy: null, strategyMoves: [], plans: new Map(), cases: new Map(), feed: null, feedAt: 0, timeline: null, workflows: new Map(), lastSeq: 0, replayStartedAt: '',
 });
+
+/** Case ids are stable per incident, so a re-run of the same race reuses them: versions only compare within one replay. */
+function newerCase(cur: Published<FinanceCase> | undefined, next: Published<FinanceCase>): boolean {
+  if (!cur) return true;
+  if (cur.payload.replay_id !== next.payload.replay_id) return next.payload.opened_at_utc >= cur.payload.opened_at_utc;
+  return next.version >= cur.version;
+}
+
+function takeTimeline(s: Store, t: RaceTimeline): void {
+  if (s.replay && t.replay_id !== s.replay.replay_id) return; // another run's chart
+  if (s.timeline && s.timeline.replay_id === t.replay_id && t.version < s.timeline.version) return;
+  s.timeline = t;
+}
+
+function takeWorkflow(s: Store, w: AgentWorkflow): void {
+  const cur = s.workflows.get(w.workflow_id);
+  if (cur && cur.replay_id === w.replay_id && w.version < cur.version) return;
+  s.workflows = new Map(s.workflows).set(w.workflow_id, w);
+}
 
 /** A new replay: the exposure story starts again and the previous race's state is not this one's. */
 function newReplay(s: Store, p: ReplayStatus, startedAt: string): void {
@@ -692,6 +883,8 @@ function newReplay(s: Store, p: ReplayStatus, startedAt: string): void {
   s.states = [];
   s.strategy = null;
   s.strategyMoves = [];
+  s.timeline = null;
+  s.workflows = new Map();
   s.replayStartedAt = startedAt;
 }
 
@@ -770,12 +963,17 @@ function fold(s: Store, r: Published<unknown>): void {
       takePlan(s, r as Published<IncidentPlan>);
       break;
     case 'finance_case': {
-      const cur = s.cases.get(r.id);
-      if (!cur || r.version >= cur.version) s.cases = new Map(s.cases).set(r.id, r as Published<FinanceCase>);
+      if (newerCase(s.cases.get(r.id), r as Published<FinanceCase>)) s.cases = new Map(s.cases).set(r.id, r as Published<FinanceCase>);
       break;
     }
     case 'feed_health':
       takeFeed(s, r as Published<FeedHealth>);
+      break;
+    case 'race_timeline':
+      takeTimeline(s, r.payload as RaceTimeline);
+      break;
+    case 'agent_workflow':
+      takeWorkflow(s, r.payload as AgentWorkflow);
       break;
   }
 }
@@ -830,9 +1028,11 @@ function seed(s: Store, snap: Snapshot): void {
     }
   }
   if (snap.feed) takeFeed(s, { kind: 'feed_health', id: snap.feed.replay_id ?? '', version: 1, status: snap.feed.state, published_at_utc: snap.feed.now_utc, payload: snap.feed, seq: seedSeq });
+  if (snap.timeline) takeTimeline(s, snap.timeline);
+  for (const w of snap.workflows ?? []) takeWorkflow(s, w);
   for (const c of snap.cases ?? []) {
-    const cur = s.cases.get(c.case_id);
-    if (!cur || c.version >= cur.version) s.cases = new Map(s.cases).set(c.case_id, { kind: 'finance_case', id: c.case_id, version: c.version, status: c.state, published_at_utc: c.updated_at_utc, payload: c, seq: seedSeq });
+    const rec: Published<FinanceCase> = { kind: 'finance_case', id: c.case_id, version: c.version, status: c.state, published_at_utc: c.updated_at_utc, payload: c, seq: seedSeq };
+    if (newerCase(s.cases.get(c.case_id), rec)) s.cases = new Map(s.cases).set(c.case_id, rec);
   }
 }
 
@@ -1005,6 +1205,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     const states = [...store.states].sort((a, b) => a.payload.event_time_utc.localeCompare(b.payload.event_time_utc) || a.seq - b.seq);
     const plans = [...store.plans.values()].sort((a, b) => a.payload.as_of_utc.localeCompare(b.payload.as_of_utc) || a.published_at_utc.localeCompare(b.published_at_utc));
     const cases = [...store.cases.values()].sort((a, b) => a.payload.opened_at_utc.localeCompare(b.payload.opened_at_utc));
+    const workflows = [...store.workflows.values()].filter((w) => !store.replay || w.replay_id === store.replay.replay_id).sort((a, b) => a.event_time_utc.localeCompare(b.event_time_utc));
     const decide = async (path: string, body: unknown): Promise<string | null> => {
       try {
         await post(path, body);
@@ -1016,7 +1217,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     };
     return {
       online, streaming, replay: store.replay, replayStartedAt: store.replayStartedAt, race: store.race, states, moves: store.moves, incidents, resultChanges, jevDecisions, financeImpacts,
-      strategy: store.strategy?.payload ?? null, strategyMoves: store.strategyMoves, plans, cases, team, scorecard, feed: store.feed?.payload ?? null, feedAt: store.feedAt, metrics, log, busy, error,
+      strategy: store.strategy?.payload ?? null, strategyMoves: store.strategyMoves, plans, cases, team, scorecard, timeline: store.timeline, workflows, feed: store.feed?.payload ?? null, feedAt: store.feedAt, metrics, log, busy, error,
       start: (body) => act('Starting the replay', () => post('/live/replay', body)),
       approve: (caseId, role, by, decision, reason = '') => decide(`/live/cases/${encodeURIComponent(caseId)}/approve`, { role, by, decision, reason }),
       garageReport: (caseId) => decide(`/live/cases/${encodeURIComponent(caseId)}/garage-report`, null),

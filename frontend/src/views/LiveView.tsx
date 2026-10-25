@@ -61,7 +61,7 @@ const FLAG_WORDS: Record<string, string> = {
 const flagWord = (f: string | null | undefined) => (f ? FLAG_WORDS[f] ?? sentence(words(f).toLowerCase()) : 'No flag yet');
 const COMPOUND: Record<string, string> = { SOFT: 'Softs', MEDIUM: 'Mediums', HARD: 'Hards', INTERMEDIATE: 'Intermediates', WET: 'Wets' };
 const compound = (c: string | null | undefined) => (c ? COMPOUND[c] ?? sentence(words(c).toLowerCase()) : 'tyre unknown');
-const DRIVER_STATUS: Record<DriverState['status'], string> = { running: 'Running', in_pit: 'In the pits', stopped_candidate: 'Stopped?', unknown: 'Unknown' };
+const DRIVER_STATUS: Record<DriverState['status'], string> = { running: 'Running', in_pit: 'In the pits', stopped_candidate: 'Stopped?', dns: 'Did not start', retired: 'Out', unknown: 'Unknown' };
 
 const TYPE_WORDS: Record<IncidentSignal['type'], string> = {
   potential_crash: 'Potential crash',

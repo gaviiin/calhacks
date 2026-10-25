@@ -48,8 +48,13 @@ export const flagTone = (f: string | null | undefined): 'neutral' | 'ok' | 'hold
 export const COMPOUND: Record<string, string> = { SOFT: 'Soft', MEDIUM: 'Medium', HARD: 'Hard', INTERMEDIATE: 'Inter', WET: 'Wet' };
 export const compoundWord = (c: string | null | undefined): string => (c ? COMPOUND[c] ?? sentence(words(c).toLowerCase()) : '?');
 
-export const DRIVER_NAMES: Record<number, string> = { 63: 'Russell', 44: 'Hamilton', 43: 'Colapinto', 30: 'Lawson' };
-export const driverName = (car: number, d?: DriverState | null): string => DRIVER_NAMES[car] ?? d?.name_acronym ?? `Car ${car}`;
+export const DRIVER_NAMES: Record<number, string> = { 63: 'Russell', 44: 'Hamilton', 43: 'Colapinto', 23: 'Albon', 30: 'Lawson', 31: 'Ocon', 10: 'Gasly', 1: 'Verstappen', 4: 'Norris' };
+/** The feed's full name first (OpenF1 drivers), then the short list, then the acronym; never a bare "Car 2" when the feed knows the driver. */
+export const driverName = (car: number, d?: DriverState | null): string => {
+  const full = d?.full_name?.trim();
+  if (full) return sentence(full.split(' ').slice(-1)[0].toLowerCase());
+  return DRIVER_NAMES[car] ?? d?.name_acronym ?? `Car ${car}`;
+};
 
 export const ROUTE_WORDS: Record<string, string> = {
   crash_finance: 'Crash finance',

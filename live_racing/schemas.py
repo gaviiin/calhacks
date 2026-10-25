@@ -54,13 +54,16 @@ class Weather(BaseModel):
 class DriverState(BaseModel):
     driver_number: int
     name_acronym: str | None = None
+    full_name: str | None = None
     team: str | None = None
     position: int | None = None
     lap: int | None = None
     compound: str | None = None
     tyre_age_laps: int | None = None
     last_pit_lap: int | None = None
-    status: Literal["running", "in_pit", "stopped_candidate", "unknown"] = "unknown"
+    # dns: never started (a pre-race withdrawal, or no lap by the time the leader began lap 2); retired: out per timing
+    status: Literal["running", "in_pit", "stopped_candidate", "dns", "retired", "unknown"] = "unknown"
+    out_reason: str | None = None
 
 
 class ForecastLine(BaseModel):
@@ -327,6 +330,94 @@ class TyreContext(BaseModel):
     note: str
 
 
+class PitLoss(BaseModel):
+    """What a stop costs in race time under one racing condition, and how that was established."""
+
+    condition: Literal["green", "vsc", "safety_car", "red_flag"]
+    seconds: float | None  # None when only a range is honest
+    low_s: float | None = None
+    high_s: float | None = None
+    method: Literal["measured", "derived", "prior", "unmeasured", "suspension"]
+    samples: int = 0
+    basis: str = ""
+
+
+class PaceNote(BaseModel):
+    compound: str | None
+    own_recent_s: float | None = None
+    field_fresh_s: float | None = None
+    gain_per_lap_s: float | None = None
+    laps_to_recover: float | None = None
+    laps_remaining: int | None = None
+    samples: int = 0
+    note: str = ""
+
+
+class StrategyOption(BaseModel):
+    """One decision the pit wall could make now, priced on the contracts. `immediate` is the payout if
+    the position right after the decision held to the flag; the expected race-end value needs a
+    calibrated finishing model and is reported unavailable until there is one."""
+
+    key: Literal["stay_out", "pit_now", "pit_alt_compound", "pit_if_green", "tyres_in_suspension", "retire"]
+    label: str
+    feasible: bool = True
+    why_not: str | None = None
+    condition: str | None = None
+    compound_after: str | None = None
+    position_now: int | None = None
+    position_after: int | None = None
+    position_best: int | None = None
+    position_worst: int | None = None
+    cars_passed: list[int] = Field(default_factory=list)
+    cars_maybe: list[int] = Field(default_factory=list)
+    payout_now_cents: int = 0
+    payout_after_cents: int = 0
+    delta_cents: int = 0
+    delta_best_cents: int = 0
+    delta_worst_cents: int = 0
+    lines_lost: list[str] = Field(default_factory=list)
+    lines_gained: list[str] = Field(default_factory=list)
+    expected_final_cents: int | None = None
+    expected_final_status: str = "forecast unavailable: no calibrated finishing-position model"
+    cost_cap_cents: int | None = None
+    cost_cap_status: str = ""
+    pit_loss: PitLoss | None = None
+    pace: PaceNote | None = None
+    assumptions: list[str] = Field(default_factory=list)
+    unknowns: list[str] = Field(default_factory=list)
+
+
+class CarComparison(BaseModel):
+    car: int
+    driver_name: str
+    status: str
+    out_reason: str | None = None
+    position: int | None
+    compound: str | None
+    tyre_age_laps: int | None
+    payout_now_cents: int = 0
+    options: list[StrategyOption] = Field(default_factory=list)
+    lowest_risk: str | None = None  # the option key with the best immediate outcome (ties go to staying out)
+    summary: str = ""
+
+
+class ChampionshipContext(BaseModel):
+    """Where the constructors' table would stand if this running order were the result, against the real
+    standings through the previous round. The prize table is synthetic."""
+
+    position: int
+    points: float
+    prize_cents: int
+    above_team: str | None = None
+    above_gap_points: float | None = None
+    prize_up_one_cents: int | None = None
+    below_team: str | None = None
+    below_gap_points: float | None = None
+    prize_down_one_cents: int | None = None
+    points_this_race: float = 0.0
+    note: str = ""
+
+
 class StrategyAdvice(BaseModel):
     """Person 1 -> the pit wall: the money on every strategic lever, as of now. No model of tyre
     degradation or pace is pretended; gaps come from the timing feed, pit loss from this race's stops."""
@@ -348,6 +439,11 @@ class StrategyAdvice(BaseModel):
     weather_note: str = ""
     # plain-English lines the pit wall can read out: what a place, a stop, the tyres and the weather are worth right now
     levers: list[str] = Field(default_factory=list)
+    comparisons: list[CarComparison] = Field(default_factory=list)
+    pit_losses: list[PitLoss] = Field(default_factory=list)
+    championship: ChampionshipContext | None = None
+    cap_headroom_cents: int | None = None
+    cap_headroom_source: str | None = None
     status: Literal["indicative"] = "indicative"
     financial_source: Literal["synthetic"] = "synthetic"
     basis: str = ""
@@ -578,3 +674,93 @@ class FinanceCase(BaseModel):
     closed_reason: str | None = None
     steps: list[CaseStep] = Field(default_factory=list)
     stages: list[dict[str, str]] = Field(default_factory=list)  # the workflow checklist the page draws
+
+
+# ---------------------------------------------------------------------- the race-long financial timeline
+
+
+class TimelinePoint(BaseModel):
+    """The provisional (if-finished-now) team payout at one moment, and what changed it."""
+
+    t: str
+    lap: int | None = None
+    cents: int
+    delta_cents: int | None = None
+    cause: str | None = None
+    flag: str | None = None
+    positions: dict[str, int | None] = Field(default_factory=dict)  # team car -> classified position
+
+
+class TimelineMarker(BaseModel):
+    id: str
+    t: str
+    lap: int | None = None
+    kind: Literal["flag", "rain", "pit", "money", "out", "incident", "jev"]
+    label: str
+    detail: str = ""
+    car: int | None = None
+    delta_cents: int | None = None
+    tone: Literal["neutral", "ok", "hold", "alert"] = "neutral"
+    ref: str | None = None  # the record this marker opens (an incident id, a Jev decision key, a workflow id)
+
+
+class RaceTimeline(BaseModel):
+    """Everything the money chart draws, built from the first record of the race (including the part
+    replayed silently before the join), each point as of its own time."""
+
+    schema_version: int = SCHEMA_VERSION
+    race_id: str
+    replay_id: str
+    version: int = 1
+    mode: Mode = "replay"
+    start_utc: str | None = None
+    now_utc: str | None = None
+    lap: int | None = None
+    joined_at_utc: str | None = None
+    joined_lap: int | None = None
+    scheduled_laps: int | None = None
+    team_cars: list[int] = Field(default_factory=list)
+    laps: list[dict] = Field(default_factory=list)  # [{lap, t}] leader lap starts
+    points: list[TimelinePoint] = Field(default_factory=list)
+    markers: list[TimelineMarker] = Field(default_factory=list)
+    flags: list[dict] = Field(default_factory=list)  # [{from, flag}] in order
+    rain: list[dict] = Field(default_factory=list)  # [{from, rain}] in order
+    status: Literal["indicative"] = "indicative"
+
+
+# ---------------------------------------------------------------------- the agents' workflow per event
+
+
+class WorkflowStep(BaseModel):
+    key: Literal["detected", "jev", "analyst", "cost_cap", "action", "outcome"]
+    label: str
+    actor: str
+    status: Literal["done", "skipped", "waiting", "escalated", "refused", "not_required"]
+    at_utc: str | None = None  # wall clock when the step finished
+    race_clock_utc: str | None = None
+    latency_ms: int | None = None
+    detail: str = ""
+
+
+class AgentWorkflow(BaseModel):
+    """One material event, followed through the agents: detected, routed by Jev, calculated by the
+    financial analyst, reviewed by the cost cap agent when money would be spent, then an automatic
+    authorized action or a person's review, and the recorded outcome. Every status is read from the
+    replay's own records; nothing is drawn as done that did not happen."""
+
+    schema_version: int = SCHEMA_VERSION
+    workflow_id: str
+    replay_id: str
+    race_id: str
+    version: int = 1
+    kind: str
+    title: str
+    lap: int | None = None
+    event_time_utc: str
+    car: int | None = None
+    scope: Literal["own_team", "competitor", "race"] = "race"
+    route: str | None = None
+    case_id: str | None = None
+    steps: list[WorkflowStep] = Field(default_factory=list)
+    needs_person: bool = False
+    outcome: str = ""

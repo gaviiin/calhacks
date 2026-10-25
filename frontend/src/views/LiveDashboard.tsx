@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Figure } from '../components/Figure';
 import { IconAgent, IconApproved, IconBolt, IconChart, IconDenied, IconDoc, IconExternal, IconFlag, IconLive, IconPlay, IconRadio, IconShield, IconStop, IconWaiting } from '../components/icons';
-import { BRAZIL, SPA, useLive, type AdvisorNote, type CaseStep, type DriverState, type FeedHealth, type FinanceCase, type IncidentSignal, type JevDecision, type LiveState, type Published, type RaceStateUpdate } from '../lib/live';
+import { BRAZIL, SPA, useLive, type AdvisorNote, type CaseStep, type FeedHealth, type FinanceCase, type IncidentSignal, type JevDecision, type LiveState, type Published } from '../lib/live';
 import {
   buildStory,
   clock,
@@ -10,7 +10,6 @@ import {
   exposureSeries,
   feedAge,
   flagSegments,
-  flagTone,
   flagWord,
   frac,
   KIND_WORDS,
@@ -31,6 +30,7 @@ import {
   type StoryKind,
   type Tone,
 } from '../lib/liveStory';
+import { AgentsPanel, Chip, Delta, FinancialTimeline, Opportunities, StatusStrip, StrategyComparator } from './LiveCockpit';
 import '../live-dashboard.css';
 
 // The live race, read as a finance desk reads it: what the money is right now, what every lever
@@ -54,30 +54,16 @@ async function post(path: string, body: unknown): Promise<unknown> {
   return data;
 }
 
-function Chip({ tone = 'neutral', icon, children, title, className = '' }: { tone?: Tone; icon?: ReactNode; children: ReactNode; title?: string; className?: string }) {
-  return (
-    <span className={`ld-chip ld-chip--${tone} ${className}`} title={title}>
-      {icon}
-      <span>{children}</span>
-    </span>
-  );
-}
-
-function Delta({ cents, strong = false }: { cents: number | null | undefined; strong?: boolean }) {
-  const tone = (cents ?? 0) < 0 ? 'alert' : (cents ?? 0) > 0 ? 'ok' : 'neutral';
-  return <span className={`ld-delta ld-delta--${tone} ${strong ? 'ld-delta--strong' : ''}`}>{signed(cents)}</span>;
-}
-
 // ---------------------------------------------------------------- command bar
 
-const TEAMS = [
-  { id: 'williams', label: 'As our car crashes', note: 'Williams-mirror: car 43 is ours; the full crash case' },
-  { id: 'mercedes', label: 'As the championship money', note: 'Mercedes-mirror: cars 63 and 44; car 43 is a competitor' },
+export const TEAMS = [
+  { id: 'alpine', label: 'Strategy upside', note: 'Alpine-mirror: cars 31 and 10 run at the front, so stops, flags and rain move real clauses; car 43 is a competitor' },
+  { id: 'mercedes', label: 'Championship money', note: 'Mercedes-mirror: cars 63 and 44; the VSC stop that cost Russell the lead; car 43 is a competitor' },
+  { id: 'williams', label: 'Our car crashes', note: "Williams-mirror: Colapinto's #43 is ours (Albon did not start); the full crash, cost cap and approval case" },
 ] as const;
+export type TeamId = (typeof TEAMS)[number]['id'];
 
-function CommandBar({ live }: { live: LiveState }) {
-  const [speed, setSpeed] = useState<number>(20);
-  const [team, setTeam] = useState<'williams' | 'mercedes'>('williams');
+function CommandBar({ live, team, setTeam, speed, setSpeed }: { live: LiveState; team: TeamId; setTeam: (t: TeamId) => void; speed: number; setSpeed: (n: number) => void }) {
   const [pauseAt32, setPauseAt32] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -109,13 +95,18 @@ function CommandBar({ live }: { live: LiveState }) {
           ))}
         </div>
         <div className="ld-knobs">
-          <div className="ld-team" role="group" aria-label="Which car is ours">
+          <div className="ld-team" role="group" aria-label="Which team's books (applies to the next replay)">
             {TEAMS.map((t) => (
-              <button key={t.id} type="button" className={`ld-filter ${team === t.id ? 'ld-filter--on' : ''}`} onClick={() => setTeam(t.id)} title={t.note}>
+              <button key={t.id} type="button" className={`ld-filter ${team === t.id ? 'ld-filter--on' : ''}`} onClick={() => setTeam(t.id)} title={t.note} aria-pressed={team === t.id}>
                 {t.label}
               </button>
             ))}
           </div>
+          {live.team && live.team.id !== team && rp?.race_id === BRAZIL ? (
+            <button type="button" className="btn" disabled={!!busy} onClick={() => void start({ ...PRESETS[0], body: { from_lap: rp?.lap ? Math.max(1, rp.lap - 1) : 28, to_lap: null } } as unknown as (typeof PRESETS)[number])}>
+              Re-run as {TEAMS.find((t) => t.id === team)?.label.toLowerCase()}
+            </button>
+          ) : null}
           <label className="ld-knob">
             <span>Speed</span>
             <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} aria-label="Replay speed">
@@ -194,32 +185,6 @@ function HealthStrip({ feed, feedAt, now, running }: { feed: FeedHealth | null; 
 }
 
 // ---------------------------------------------------------------- hero cards
-
-function ClockCard({ race, rp }: { race: RaceStateUpdate | null; rp: LiveState['replay'] }) {
-  const w = race?.weather;
-  return (
-    <section className="ld-card ld-clock" aria-labelledby="ld-clock-h">
-      <h2 id="ld-clock-h" className="ld-h">
-        Race clock
-      </h2>
-      <div className="ld-clock-big mono">{race ? `${clock(race.event_time_utc)}Z` : '--:--:--'}</div>
-      <div className="ld-clock-lap">
-        Lap <b className="mono">{race?.lap ?? '—'}</b> <span className="ld-muted">of 69</span>
-      </div>
-      <div className="ld-chips">
-        <Chip tone={flagTone(race?.flag_status)} icon={<IconFlag />}>
-          {flagWord(race?.flag_status)}
-        </Chip>
-        <Chip tone={w?.rainfall ? 'hold' : 'neutral'} icon={<IconRadio />}>
-          {w ? `${w.rainfall ? 'Rain' : 'Dry'} · track ${w.track_temperature_c ?? '?'}°C · air ${w.air_temperature_c ?? '?'}°C` : 'Weather unknown'}
-        </Chip>
-      </div>
-      <p className="ld-muted ld-small">
-        {rp?.race_id === SPA ? '2024 Belgian Grand Prix, from the FIA documents at their real publication times.' : '2024 São Paulo Grand Prix, from OpenF1 timing, weather, race control and car data.'}
-      </p>
-    </section>
-  );
-}
 
 function Sparkline({ points, width = 320, height = 64, tone = 'ink' }: { points: { v: number; t: string }[]; width?: number; height?: number; tone?: 'ink' | 'lime' | 'hold' }) {
   if (points.length < 2) return <svg className="ld-spark" viewBox={`0 0 ${width} ${height}`} aria-hidden="true" />;
@@ -389,79 +354,6 @@ function JevCard({ live, feed }: { live: LiveState; feed: FeedHealth | null }) {
   );
 }
 
-// ---------------------------------------------------------------- the two cars
-
-function CarCard({ car, race, advice }: { car: number; race: RaceStateUpdate | null; advice: Advice | null }) {
-  const d: DriverState | undefined = race?.driver_states.find((x) => x.driver_number === car);
-  const place = advice?.places.find((p) => p.car === car);
-  const pit = advice?.pit.find((p) => p.car === car);
-  const tyre = advice?.tyres.find((t) => t.car === car);
-  const earning = place?.value_now_cents ?? 0;
-  const statusTone: Tone = d?.status === 'stopped_candidate' ? 'alert' : d?.status === 'in_pit' ? 'hold' : 'neutral';
-  const under = pit?.under;
-  const factor = under === 'RED_FLAG' ? 'red flag' : under?.startsWith('SAFETY') ? 'Safety Car' : under?.startsWith('VSC') ? 'VSC' : null;
-  const hasGreen = pit?.green_positions_lost !== undefined && pit?.green_positions_lost !== null;
-  return (
-    <section className="ld-card ld-car" aria-label={`Car ${car}`}>
-      <div className="ld-car-head">
-        <div className="ld-car-num mono">{car}</div>
-        <div>
-          <div className="ld-car-name">{driverName(car, d)}</div>
-          <div className="ld-chips">
-            <Chip tone={statusTone} icon={d?.status === 'stopped_candidate' ? <IconDenied /> : <IconLive />}>
-              {d?.status === 'in_pit' ? 'In the pits' : d?.status === 'stopped_candidate' ? 'Stopped' : d ? 'Running' : 'Unknown'}
-            </Chip>
-            <Chip tone="neutral" icon={<IconRadio />}>
-              {compoundWord(d?.compound)}s · {d?.tyre_age_laps ?? '?'} laps{tyre?.field_median_age_laps !== null && tyre?.field_median_age_laps !== undefined ? ` (field ${tyre.field_median_age_laps.toFixed(0)})` : ''}
-            </Chip>
-          </div>
-        </div>
-        <div className="ld-car-pos">
-          <span className="ld-muted">Position</span>
-          <b className="mono">{d?.position ? `P${d.position}` : '—'}</b>
-        </div>
-      </div>
-      <dl className="ld-levers">
-        <div>
-          <dt>Provisional payout now</dt>
-          <dd className={`mono ${earning ? 'ld-ok' : ''}`}>{money(earning)}</dd>
-        </div>
-        <div>
-          <dt>One place up</dt>
-          <dd>
-            <Delta cents={place?.up_one_cents ?? 0} />
-          </dd>
-        </div>
-        <div>
-          <dt>One place down</dt>
-          <dd>
-            <Delta cents={place?.down_one_cents ?? 0} />
-          </dd>
-        </div>
-        <div>
-          <dt>Pit now, position-related bonus change{factor ? ` (${factor})` : ''}</dt>
-          <dd>
-            <Delta cents={pit?.delta_cents ?? 0} />{' '}
-            <span className="ld-muted ld-small">
-              {pit ? `${pit.positions_lost} place${pit.positions_lost === 1 ? '' : 's'}, ${pit.pit_loss_s.toFixed(0)} s${pit.rejoin_position ? `, rejoin P${pit.rejoin_position}` : ''}` : ''}
-            </span>
-          </dd>
-        </div>
-        {pit && hasGreen && factor && factor !== 'red flag' ? (
-          <div>
-            <dt>Same stop under green</dt>
-            <dd>
-              <Delta cents={pit.green_delta_cents ?? 0} /> <span className="ld-muted ld-small">{pit.green_positions_lost ?? '?'} places, {pit.green_pit_loss_s?.toFixed(0) ?? '?'} s</span>
-            </dd>
-          </div>
-        ) : null}
-      </dl>
-      {pit?.cars_passed.length ? <p className="ld-small ld-muted">A stop now lets {pit.cars_passed.map((c) => `car ${c}`).join(', ')} past{pit.cars_maybe.length ? `; ${pit.cars_maybe.map((c) => `car ${c}`).join(', ')} too close to call` : ''}.</p> : null}
-      {tyre ? <p className="ld-small ld-muted">{tyre.note}</p> : null}
-    </section>
-  );
-}
-
 // ---------------------------------------------------------------- conditions
 
 function Strip({ segments, from, to, kind }: { segments: { from: string; to: string; label: string }[]; from: string; to: string; kind: 'flag' | 'rain' }) {
@@ -547,7 +439,7 @@ function ConditionsCard({ live, advice }: { live: LiveState; advice: Advice | nu
             <p className="ld-muted">The lever lines appear with the first strategy advice (a team car moving, a flag, a pit stop).</p>
           )}
           <p className="ld-small ld-muted">
-            Pit loss is this race's median pit-lane time ({advice?.pit[0]?.pit_loss_basis ?? 'default until a stop is seen'}); under the Safety Car a stop costs about half the track position, under a red flag nothing. Gaps come from when each car started its current lap. No tyre-wear or pace model is pretended.
+            A stop's cost is measured from this race's own stops under each condition ({advice?.pit[0]?.pit_loss_basis ?? 'a prior until a stop is measured'}); a red flag is a suspension, where tyre changes keep track position. Gaps come from when each car started its current lap. No tyre-wear model is pretended.
           </p>
         </div>
       </div>
@@ -1171,8 +1063,8 @@ function CasePanel({ c, live }: { c: Published<FinanceCase> | null; live: LiveSt
   );
 }
 
-function CaseList({ cases, selected, select }: { cases: Published<FinanceCase>[]; selected: string | null; select: (id: string) => void }) {
-  if (cases.length < 2) return null;
+function CaseList({ cases, selected, select, always = false }: { cases: Published<FinanceCase>[]; selected: string | null; select: (id: string) => void; always?: boolean }) {
+  if (cases.length < (always ? 1 : 2)) return null;
   return (
     <div className="ld-caselist" role="tablist" aria-label="Cases">
       {cases.map((c) => (
@@ -1200,6 +1092,11 @@ function ScorecardPanel({ live }: { live: LiveState }) {
             <li key={k}>
               <span className="ld-muted">{k.replace(/_/g, ' ')}</span>
               <b>{String(v)}</b>
+              {k === 'jev_routing' && String(v).includes('offline') ? (
+                <Chip tone="hold" title="a labeled test run against a mock transport; it is not a measurement of live Jev routing accuracy">
+                  offline test, not live accuracy
+                </Chip>
+              ) : null}
             </li>
           ))}
           <li>
@@ -1219,6 +1116,8 @@ function ScorecardPanel({ live }: { live: LiveState }) {
 export function LiveDashboard() {
   const live = useLive();
   const [now, setNow] = useState(() => Date.now());
+  const [team, setTeam] = useState<TeamId>('alpine');
+  const [speed, setSpeed] = useState<number>(20);
   useEffect(() => {
     const t = window.setInterval(() => setNow(Date.now()), 500);
     return () => window.clearInterval(t);
@@ -1232,7 +1131,6 @@ export function LiveDashboard() {
   }, [live, since]);
   const story = useMemo(() => buildStory(scoped), [scoped]);
   const running = live.replay?.state === 'running' || live.replay?.state === 'fast_forward';
-  const cars = live.race?.team_cars ?? [63, 44];
   const isSpa = live.replay?.race_id === SPA;
   const cases = scoped.cases;
   const [picked, setPicked] = useState<string | null>(null);
@@ -1240,51 +1138,93 @@ export function LiveDashboard() {
     if (!cases.length) return null;
     const byId = cases.find((c) => c.id === picked);
     if (byId) return byId;
-    // the most recently updated own-team case that still needs someone, else the newest case
+    // an open case takes the panel (our own first); once every case is closed the panel goes back to
+    // the monitored opportunities, and a closed case stays one click away in the list
     const open = cases.filter((c) => !['closed', 'rejected'].includes(c.payload.state));
     const own = open.filter((c) => c.payload.scope === 'own_team');
-    return (own.length ? own : open.length ? open : cases).slice(-1)[0];
-  }, [cases, picked]);
+    return (own.length ? own : open).slice(-1)[0] ?? (isSpa ? cases.slice(-1)[0] : null);
+  }, [cases, picked, isSpa]);
+  const openCase = (id: string) => {
+    setPicked(id);
+    window.setTimeout(() => document.getElementById('ld-case')?.scrollIntoView({ behavior: 'smooth', block: 'start' }), 30);
+  };
+  const replayFrom = (lap: number) => {
+    void live.start({ race_id: BRAZIL, from_lap: lap, to_lap: null, speed, team: live.team?.id ?? team, demo: true, pause_at_lap: null });
+  };
+  const feedAgeS = feedAge(live.feed, live.feedAt, now);
   return (
     <div className="ld">
       <header className="ld-title">
         <div>
-          <p className="crumbs">Pit wall › Live race</p>
+          <p className="crumbs">Pit wall › Live financial command</p>
           <h1>Financial command · {isSpa ? 'Belgian GP 2024' : 'São Paulo GP 2024'}</h1>
-          <p className="ld-sub">What happened, how much money it might move, what the agents are doing about it, and what needs a person. The racing telemetry below is where the intelligence comes from.</p>
+          <p className="ld-sub">This happened → here is what is at stake → here are the alternatives, priced → here is what the agents did → here is what needs a person.</p>
         </div>
         <HealthStrip feed={live.feed} feedAt={live.feedAt} now={now} running={running} />
       </header>
-      <CommandBar live={live} />
-      <CaseList cases={cases} selected={active?.id ?? null} select={setPicked} />
-      <div className="ld-top">
-        <CasePanel c={active} live={live} />
-        <div className="ld-top-side">
-          <MoneyCard live={live} advice={advice} />
-          <JevCard live={scoped} feed={live.feed} />
-        </div>
-      </div>
+      <CommandBar live={live} team={team} setTeam={setTeam} speed={speed} setSpeed={setSpeed} />
+      <StatusStrip live={scoped} advice={advice} feedAgeS={feedAgeS} />
       {!isSpa ? (
         <>
-          <h2 className="ld-section">Race intelligence</h2>
-          <div className="ld-hero">
-            <ClockCard race={live.race} rp={live.replay} />
-            {cars.slice(0, 2).map((c) => (
-              <CarCard key={c} car={c} race={live.race} advice={advice} />
-            ))}
+          <FinancialTimeline live={scoped} onReplayFrom={replayFrom} canSeek={live.replay?.mode !== 'live' && !!live.online} />
+          <div className="lc-cockpit">
+            <StrategyComparator advice={advice} />
+            <AgentsPanel live={scoped} onOpenCase={openCase} />
           </div>
-          <ConditionsCard live={live} advice={advice} />
         </>
       ) : (
-        <ResultsPanel live={scoped} />
+        <div className="ld-top">
+          <ResultsPanel live={scoped} />
+          <div className="ld-top-side">
+            <MoneyCard live={live} advice={advice} />
+            <JevCard live={scoped} feed={live.feed} />
+          </div>
+        </div>
       )}
-      <div className="ld-main">
-        <Story items={story} />
-        <IncidentsPanel live={scoped} />
+      <div id="ld-case">
+        {active ? (
+          <>
+            <CaseList cases={cases} selected={active?.id ?? null} select={setPicked} />
+            <CasePanel c={active} live={live} />
+          </>
+        ) : !isSpa ? (
+          <>
+            <Opportunities advice={advice} />
+            {cases.length ? (
+              <div className="lc-closed">
+                <span className="ld-small ld-muted">Closed this replay:</span>
+                <CaseList cases={cases} selected={null} select={setPicked} always />
+              </div>
+            ) : null}
+          </>
+        ) : (
+          <CasePanel c={null} live={live} />
+        )}
       </div>
-      <ScorecardPanel live={live} />
+      <details className="lc-evidence">
+        <summary>
+          <span className="ld-h">Evidence and diagnostics</span>
+          <span className="ld-small ld-muted">the race log, conditions, clause-by-clause payout, incidents, raw Jev decisions and the measured scorecard</span>
+        </summary>
+        <div className="lc-evidence-body">
+          {!isSpa ? (
+            <>
+              <ConditionsCard live={live} advice={advice} />
+              <div className="ld-top-side lc-evidence-pair">
+                <MoneyCard live={live} advice={advice} />
+                <JevCard live={scoped} feed={live.feed} />
+              </div>
+            </>
+          ) : null}
+          <div className="ld-main">
+            <Story items={story} />
+            <IncidentsPanel live={scoped} />
+          </div>
+          <ScorecardPanel live={live} />
+        </div>
+      </details>
       <p className="ld-foot ld-small ld-muted">
-        Real: OpenF1 positions, laps, stints, pit stops, weather, race control and car 43's car data; the FIA documents; the race report. Synthetic: Meridian Racing, its sponsor contracts, the garage figures. Calculated: every dollar on this page, labelled indicative. Booked: nothing here; the revenue desk books from the final classification.
+        Real: OpenF1 positions, laps, stints, pit stops, weather, race control and car 43's car data; the FIA documents; the race report; the 2024 constructors' standings. Synthetic: Meridian Racing, its sponsor contracts, the prize table, the garage figures. Calculated: every dollar on this page, labelled provisional. Booked: nothing here; the revenue desk books from the final classification. Not modelled: the expected race-end payout (no calibrated finishing model yet).
       </p>
     </div>
   );

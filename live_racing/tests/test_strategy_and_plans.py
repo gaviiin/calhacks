@@ -7,6 +7,7 @@ from live_racing.race_state import RaceState
 from live_racing.schemas import IncidentSignal, JevDecision
 from live_racing.strategy import (cars_behind_within, effective_pit_loss, pit_loss, place_values, pit_scenarios, positions_after_losing, positions_without,
                                   strategy_advice)
+from live_racing.pit_model import loss_estimate, measured_stops
 from live_racing.tests.test_race_state_no_lookahead import build_to
 
 
@@ -21,16 +22,31 @@ def test_place_values_price_one_place_each_way(world, brazil, slice_meta, slice_
     assert pv2[44].position == 10 and pv2[44].down_one_cents < 0 and "P10 -> P11" in pv2[44].down_one_text  # the last point is worth Volta's clause
 
 
-def test_pit_loss_uses_this_race_and_the_flag(slice_meta, slice_events):
-    st = build_to(slice_meta, slice_events, "2024-11-03T16:29:00.000Z")  # the Virtual Safety Car is out (16:28:21)
+def test_pit_loss_is_measured_by_condition_never_a_fixed_factor(slice_meta, slice_events):
+    st = build_to(slice_meta, slice_events, "2024-11-03T16:29:00.000Z")  # the Virtual Safety Car is out (16:28:21); two green stops measured so far
     base, basis = pit_loss(st)
     loss, ebasis, under = effective_pit_loss(st)
-    assert 20 < base < 30 and "median pit-lane time" in basis
-    assert under == "VSC" and loss == base * 0.6 and "Virtual Safety Car" in ebasis
+    assert 20 < base < 30 and "measured under the green flag" in basis
+    assert under == "VSC" and "derived" not in basis and "no stop measured under the Virtual Safety Car yet" in ebasis and loss != base * 0.6
+    later = build_to(slice_meta, slice_events, "2024-11-03T16:33:00.000Z")  # seven stops were made under the VSC on lap 27
+    vsc = loss_estimate(later, "vsc")
+    assert vsc.method == "measured" and vsc.samples == 7 and vsc.low_s <= vsc.seconds <= vsc.high_s < 40
+    green = loss_estimate(later, "green")
+    assert green.method == "measured" and vsc.seconds < green.seconds  # the VSC saved a few seconds, nowhere near half
     red = build_to(slice_meta, slice_events, "2024-11-03T16:37:30.000Z")
-    assert effective_pit_loss(red)[0] == 0.0 and effective_pit_loss(red)[2] == "RED_FLAG"
+    assert effective_pit_loss(red)[0] == 0.0 and effective_pit_loss(red)[2] == "RED_FLAG" and "suspended" in effective_pit_loss(red)[1]
     fresh = RaceState("r", 1, [{"driver_number": 1}], [1])
-    assert effective_pit_loss(fresh) == (23.0, "default (no normal stop seen yet in this race)", None)
+    loss, basis, under = effective_pit_loss(fresh)
+    assert loss == 23.0 and "a prior, not a measurement" in basis and under is None
+
+
+def test_measured_stops_compare_against_the_cars_that_stayed_out(slice_meta, slice_events):
+    st = build_to(slice_meta, slice_events, "2024-11-03T16:33:00.000Z")
+    stops = {(m.car, m.lap): m for m in measured_stops(st)}
+    rus = stops[(63, 28)]  # Russell pitted just after the VSC ended: a green stop, as the real race report says
+    assert rus.condition == "green" and 20 < rus.loss_s < 35 and rus.lane_s == 25.6
+    assert stops[(44, 27)].condition == "vsc"
+    assert all(m.lane_s is None or m.lane_s <= 45 for m in stops.values())  # red-flag standstills are never counted as stops
 
 
 def test_pit_scenario_counts_the_cars_that_would_get_past(world, brazil, slice_meta, slice_events):

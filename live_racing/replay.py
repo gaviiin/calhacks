@@ -28,10 +28,11 @@ from .normalize import NormalizedEvent
 from .publisher import Publisher
 from .race_state import RaceState, lap_start_times
 from .races import Race
-from .schemas import (AdvisorNote, FeedHealth, FinanceCase, FinanceImpactUpdate, FinancialImpact, Forecast, ForecastChange, Handoff, IncidentPlan,
+from .schemas import (AdvisorNote, AgentWorkflow, FeedHealth, FinanceCase, FinanceImpactUpdate, FinancialImpact, Forecast, ForecastChange, Handoff, IncidentPlan,
                       IncidentSignal, JevDecision, RaceStateUpdate, ReplayStatus, Timestamps)
-from .strategy import strategy_advice
-from .team import scope_of
+from .strategy import driver_name, strategy_advice
+from .team import scope_of, team_cars
+from .timeline import TimelineBuilder, apply_case, finish_without_case, new_workflow
 
 
 def _now() -> str:
@@ -73,8 +74,9 @@ class Replay:
         self.now, self.log = now, log
         self.replay_id = replay_id or f"{race.race_id}:{uuid.uuid4().hex[:8]}"
         self.pause_handler, self.step_handler = pause_handler, step_handler
-        self.team_cars = [n for n, i in world.car_map(race.season).items() if i["constructor_id"] == world.team]
-        self.state = RaceState(race.race_id, int(meta["session"]["session_key"]), meta["drivers"], self.team_cars)
+        withdrawn = {w.driver_number for w in race.pre_race_withdrawals}
+        self.team_cars = sorted(team_cars(world, race.season, meta["drivers"]), key=lambda n: n in withdrawn)  # starters first
+        self.state = RaceState(race.race_id, int(meta["session"]["session_key"]), meta["drivers"], self.team_cars, withdrawals=race.pre_race_withdrawals)
         self.triggers = TriggerEngine(self.state, race)
         self.drivers_meta = {int(d["driver_number"]): d for d in meta["drivers"]}
         self.lap_starts = lap_start_times(events)
@@ -103,8 +105,14 @@ class Replay:
         self._paused_once = False
         self.status = ReplayStatus(replay_id=self.replay_id, race_id=race.race_id, mode=self.o.mode, speed=self.o.speed, events_total=len(events),
                                    events_done=0, jev_mode=jev.describe(), sinks=publisher.names())
-        self.cases = CaseBook(self.replay_id, race.race_id, world.team, lambda kind, obj, id, version, status: self.publisher.publish(kind, obj, id=id, version=version, status=status),
-                              jsonl_path=cases_jsonl, now=now, log=log)
+        self.timeline = TimelineBuilder(race, self.replay_id, self.team_cars, self.o.mode)
+        self.workflows: dict[str, AgentWorkflow] = {}
+        self._wf_incident: dict[str, str | None] = {}
+        self._wf_pending: list[str] = []
+        self._last_tl_t: str | None = None
+        self._strategy_ms: int | None = None
+        self.cap_headroom: tuple[int | None, str | None] = (None, "not asked yet")
+        self.cases = CaseBook(self.replay_id, race.race_id, world.team, self._publish_case, jsonl_path=cases_jsonl, now=now, log=log)
         self.retired: set[str] = set()  # incident ids whose car the timing feed has shown to be out
         self.cleared: set[str] = set()  # incident ids closed as no damage
 
@@ -150,7 +158,23 @@ class Replay:
             raise
         return self.status
 
+    def _name(self, n: int) -> str:
+        return driver_name(self.world, self.state, n)
+
+    def _fetch_headroom(self) -> None:
+        """Remaining headroom under the cap, from the cost cap desk, once per replay (off the ticker thread)."""
+        try:
+            self.cap_headroom = self.cases.headroom_fn()
+        except Exception as exc:  # noqa: BLE001
+            self.cap_headroom = (None, f"cost cap desk not asked ({exc.__class__.__name__})")
+
+    def _publish_timeline(self, observed: str) -> None:
+        tl = self.timeline.snapshot()
+        self._last_tl_t = tl.now_utc
+        self.publisher.publish("race_timeline", tl, id=self.race.race_id, version=tl.version, status=f"lap {tl.lap}", adapter_received_utc=observed)
+
     def _run(self) -> None:
+        threading.Thread(target=self._fetch_headroom, name=f"headroom-{self.replay_id}", daemon=True).start()
         from_t, to_t = self.window()
         live = from_t is None
         self.status.state = "running" if live else "fast_forward"
@@ -169,17 +193,21 @@ class Replay:
                 self._recompute_forecast(ev)
                 self.exposure_at_join = self.last_forecast.amount_cents if self.last_forecast else None
                 self.exposure_peak = self.exposure_at_join
+                self.timeline.on_join(ev.event_time_utc, self.o.from_lap)
                 self._publish_state(ev, self.now(), note=f"replay joined at lap {self.o.from_lap}; earlier state built silently")
                 self._publish_strategy(ev, self.now())
+                self._publish_timeline(self.now())
                 self._publish_status()
             if live and prev_t:
                 self._sleep(_seconds(prev_t, ev.event_time_utc) / self.o.speed)
             observed = self.now()
             changes = self.state.apply(ev)
+            self.timeline.on_event(self.state, ev.event_time_utc, changes, self._name)
             candidates = self.triggers.on_event(ev, changes)
             team_moved = any(c.startswith("position:") and int(c.split(":")[1]) in self.team_cars for c in changes)
             flag_changed = any(c.startswith("flag:") for c in changes)
-            if team_moved or "flag:FINISHED" in changes:
+            out_changed = any(c.startswith(("retired:", "dns:", "started:")) for c in changes)  # the classified order moved
+            if team_moved or out_changed or "flag:FINISHED" in changes:
                 change = self._recompute_forecast(ev)
                 cand = self.triggers.financial_threshold(change, ev.event_time_utc, self.state.lap, ev) if change else None
                 if cand:
@@ -194,8 +222,12 @@ class Replay:
                 due = self.last_state_pub_t is None or _seconds(self.last_state_pub_t, ev.event_time_utc) >= self.o.state_every_s
                 if material or due or self.pending_change is not None:
                     self._publish_state(ev, observed)
-                if team_moved or flag_changed or ev.endpoint == "pit":
+                if team_moved or flag_changed or out_changed or material or ev.endpoint == "pit":
                     self._publish_strategy(ev, observed)
+                self._finish_workflows(observed)
+                if self.timeline.dirty and (material or "lap" in changes or flag_changed or self._last_tl_t is None
+                                            or _seconds(self._last_tl_t, ev.event_time_utc) >= 10):
+                    self._publish_timeline(observed)
                 if time.monotonic() - self._last_health_wall >= 5.0:
                     self._publish_health()
                 self.status.clock_utc, self.status.lap = ev.event_time_utc, self.state.lap
@@ -211,6 +243,7 @@ class Replay:
             self.status.state = "finished"
         if self.state.last_event is not None:
             self._publish_state(self.state.last_event, self.now(), note=f"replay {self.status.state}")
+            self._publish_timeline(self.now())
         self._publish_status()
         self._publish_health()
         self.log(f"-- replay {self.status.state}: {self.status.events_done} events, {len(self.incidents)} incidents, Jev {self.jev.stats.summary()}")
@@ -240,10 +273,11 @@ class Replay:
     # ------------------------------------------------------------------ forecasts and state
 
     def _recompute_forecast(self, ev: NormalizedEvent) -> ForecastChange | None:
-        fc = if_finished_now(self.world, self.race, self.state.positions(), as_of_utc=ev.event_time_utc, drivers_meta=self.meta["drivers"])
+        fc = if_finished_now(self.world, self.race, self.state.classified_positions(), as_of_utc=ev.event_time_utc, drivers_meta=self.meta["drivers"])
         self.finance_recomputed_at = self.now()
         change = diff(self.last_forecast, fc) if self.last_forecast is not None else None
         self.last_forecast = fc
+        self.timeline.on_forecast(self.state, ev.event_time_utc, fc, change)
         if fc.amount_cents is not None and self.status.state == "running":
             self.exposure_peak = fc.amount_cents if self.exposure_peak is None else max(self.exposure_peak, fc.amount_cents)
         if change and change.delta_cents:
@@ -266,9 +300,11 @@ class Replay:
 
     def _publish_strategy(self, ev: NormalizedEvent, observed: str) -> None:
         self.strategy_version += 1
+        t0 = time.perf_counter()
         adv = strategy_advice(self.world, self.race, self.state, self.team_cars, version=self.strategy_version, observed_at=observed,
                               drivers_meta=self.meta["drivers"], exposure_at_join=self.exposure_at_join, exposure_peak=self.exposure_peak,
-                              finance_recomputed=self.finance_recomputed_at)
+                              finance_recomputed=self.finance_recomputed_at, cap_headroom=self.cap_headroom)
+        self._strategy_ms = round((time.perf_counter() - t0) * 1000)
         self.latest_strategy = adv
         self.publisher.publish("strategy_advice", adv, id=self.race.race_id, version=self.strategy_version, status=self.state.flag_status or "", adapter_received_utc=observed)
 
@@ -356,6 +392,13 @@ class Replay:
         self.decisions.append(rec)
         if c.material:
             self.publisher.publish("jev_decision", rec, id=f"{c.kind}:{c.event_time_utc}", status=decision.status, adapter_received_utc=observed)
+            car = c.drivers[0] if c.drivers else None
+            wf = new_workflow(self.replay_id, self.race.race_id, c.kind, c.event_time_utc, c.lap, car,
+                              scope_of(car, self.team_cars) if car is not None and c.incident_id else "race", c.message, decision, ts.jev_started, ts.jev_finished, observed)
+            self.workflows[wf.workflow_id] = wf
+            self._wf_incident[wf.workflow_id] = c.incident_id
+            self._wf_pending.append(wf.workflow_id)
+            self.timeline.on_jev(c.event_time_utc, c.lap, c.kind, decision, wf.workflow_id, car)
             said = f", said {decision.route} {decision.route_confidence:.2f}" if decision.route and decision.route_confidence is not None else ""
             self.log(f"{c.event_time_utc[11:19]}Z lap {c.lap!s:>2} {c.kind:<28} -> {decision.chosen_route:<14} "
                      f"[jev {decision.status}{', ' + str(decision.latency_ms) + 'ms' if decision.latency_ms is not None else ''}{said}] {c.message[:90]}")
@@ -390,6 +433,9 @@ class Replay:
             self.incidents[c.incident_id] = sig
         self.publisher.publish("incident_signal", sig, id=c.incident_id, version=version, status=sig.sporting_confirmation, adapter_received_utc=observed)
         self.status.incidents = len(self.incidents)
+        if kind != "incident_noted" or driver in self.team_cars:
+            self.timeline.on_incident(c.event_time_utc, c.lap, driver, f"{self._name(driver)}: {kind.replace('_', ' ')}" if driver is not None else "Red flag, no car named",
+                                      c.message[:200], scope == "own_team", c.incident_id)
         if c.material and driver is not None:
             d = self.state.drivers.get(driver)
             case = self.cases.open(sig, scope, d.status if d else "unknown", self.state.now_utc)
@@ -414,8 +460,9 @@ class Replay:
             d = self.state.drivers.get(n)
             if d is None or d.lap is None:
                 continue
-            if d.status == "stopped_candidate" and self.state.lap - d.lap >= 2 and iid not in self.retired:
+            if (d.status == "stopped_candidate" or (d.status == "retired" and d.stopped_at)) and self.state.lap - d.lap >= 2 and iid not in self.retired:
                 self.retired.add(iid)
+                self.state.mark_retired(n, self.state.now_utc, f"out per timing: stationary since {d.stopped_at[11:19] if d.stopped_at else '?'}Z, did not take the restart")
                 self._retired_per_timing(iid, ev, observed, f"car {n} last started lap {d.lap} at {d.lap_started_at}; the leader is on lap {self.state.lap}; "
                                          f"speed 0 since {d.stopped_at}: the car did not take the restart")
             elif sig.type == "incident_noted" and d.status == "running" and sig.lap is not None and d.lap >= sig.lap + 2 and iid not in self.cleared:
@@ -438,6 +485,12 @@ class Replay:
                    "message": evidence, "decision": decision.model_dump(mode="json"), "incident_id": incident_id}
             self.decisions.append(rec)
             self.publisher.publish("jev_decision", rec, id=f"incident_corroborated:{incident_id}", status=decision.status, adapter_received_utc=observed)
+            wf = new_workflow(self.replay_id, self.race.race_id, "incident_corroborated", self.state.now_utc or prev.event_time_utc, self.state.lap, prev.driver_number,
+                              prev.scope, evidence, decision, None, self.now(), observed)
+            self.workflows[wf.workflow_id] = wf
+            self._wf_incident[wf.workflow_id] = incident_id
+            self._wf_pending.append(wf.workflow_id)
+            self.timeline.on_jev(self.state.now_utc or prev.event_time_utc, self.state.lap, "incident_corroborated", decision, wf.workflow_id, prev.driver_number)
         ref = None
         if self.race.corroboration:
             src = self.race.corroboration[0]
@@ -471,6 +524,42 @@ class Replay:
             self.cases.demo_garage_report(case_id, self.state.now_utc)
         except (KeyError, Refused) as exc:
             self.log(f"         demo garage report not applied: {exc}")
+
+    # ------------------------------------------------------------------ the agents' workflow per event
+
+    def _analyst_detail(self, incident_id: str | None) -> str:
+        plan = self.plans.get(incident_id) if incident_id else None
+        if plan is not None:
+            worst = min(plan.scenarios, key=lambda x: x.delta_cents)
+            ok = sum(1 for x in plan.scenarios if x.feasible is not False)
+            return f"{len(plan.scenarios)} outcomes priced for car {plan.car} ({ok} feasible); worst {worst.label.lower()} {usd(worst.delta_cents)} on the sponsor exposure"
+        adv = self.latest_strategy
+        if adv is None:
+            return "no strategy computed yet"
+        best = [f"{c.driver_name}: {next((o.label.lower() for o in c.options if o.key == c.lowest_risk), 'nothing to decide')}" for c in adv.comparisons if c.options]
+        return (f"decision comparator v{adv.version} recomputed: provisional payout {usd(adv.exposure_now_cents)}"
+                + (f"; lowest immediate risk: {'; '.join(best)}" if best else ""))
+
+    def _finish_workflows(self, observed: str) -> None:
+        for wid in self._wf_pending:
+            wf, iid = self.workflows[wid], self._wf_incident.get(wid)
+            case = self.cases._for(iid) if iid else None
+            if case is not None:
+                apply_case(wf, case, self._analyst_detail(iid), self.now())
+            else:
+                finish_without_case(wf, analyst_detail=self._analyst_detail(iid), analyst_at=self.now(), analyst_ms=self._strategy_ms,
+                                    race_clock=self.state.now_utc, published_to=self.publisher.names())
+            self.publisher.publish("agent_workflow", wf, id=wid, version=wf.version, status=wf.outcome, adapter_received_utc=observed)
+        self._wf_pending = []
+
+    def _publish_case(self, kind: str, obj, id: str, version: int, status: str | None):
+        rec = self.publisher.publish(kind, obj, id=id, version=version, status=status)
+        if kind == "finance_case":
+            for wid, iid in list(self._wf_incident.items()):
+                if iid == obj.incident_id and wid not in self._wf_pending:
+                    wf = apply_case(self.workflows[wid], obj)
+                    self.publisher.publish("agent_workflow", wf, id=wid, version=wf.version, status=wf.outcome)
+        return rec
 
     # ------------------------------------------------------------------ approvals from the page
 

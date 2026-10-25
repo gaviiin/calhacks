@@ -1399,3 +1399,714 @@
     font-size: 22px;
   }
 }
+
+/* ================================================================ the decision cockpit (views/LiveCockpit.tsx)
+   Status strip → the race's money on one time axis → the decisions, priced → the agents → the case or
+   the opportunities. Same tokens: lime = earning / lowest risk, hold = neutralised / waiting, alert = lost. */
+
+.lc-k {
+  display: block;
+  color: var(--muted);
+  font: 600 10.5px/1.3 var(--body);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.lc-big {
+  font-size: 26px;
+  line-height: 1.05;
+}
+
+.lc-big small {
+  font-size: 13px;
+  color: var(--muted);
+}
+
+.lc-status {
+  display: grid;
+  grid-template-columns: 1.2fr 0.7fr 1.3fr 1.3fr 1fr 1.4fr;
+  gap: 1px;
+  background: var(--line-soft);
+  border: 1px solid var(--line-soft);
+}
+
+.lc-status-cell {
+  display: grid;
+  align-content: start;
+  gap: 4px;
+  min-width: 0;
+  padding: 10px 14px;
+  background: var(--panel);
+}
+
+.lc-status-money .lc-big {
+  color: var(--lime);
+}
+
+/* ---------------------------------------------------------------- timeline */
+
+.lc-timeline .ld-card-head {
+  align-items: flex-start;
+}
+
+.lc-tl-sub {
+  margin: 4px 0 0;
+  max-width: 80ch;
+}
+
+.lc-tl-wrap {
+  position: relative;
+  width: 100%;
+}
+
+.lc-tl {
+  display: block;
+  max-width: 100%;
+  height: auto;
+  touch-action: none;
+}
+
+.lc-grid {
+  stroke: var(--line-soft);
+  stroke-width: 1;
+}
+
+.lc-tick,
+.lc-lane {
+  stroke: var(--line-soft);
+}
+
+.lc-axis {
+  fill: var(--muted);
+  font: 500 10.5px var(--mono);
+}
+
+.lc-band--hold {
+  fill: var(--hold);
+  opacity: 0.13;
+}
+
+.lc-band--red {
+  fill: var(--alert);
+  opacity: 0.2;
+}
+
+.lc-band-label {
+  fill: var(--hold);
+  font: 700 10px var(--mono);
+  letter-spacing: 0.06em;
+}
+
+.lc-area {
+  fill: var(--lime);
+  opacity: 0.08;
+}
+
+.lc-line {
+  fill: none;
+  stroke: var(--lime);
+  stroke-width: 2;
+  stroke-linejoin: round;
+}
+
+.lc-now {
+  fill: var(--lime);
+  stroke: var(--panel);
+  stroke-width: 2;
+}
+
+.lc-join {
+  stroke: var(--steel);
+  stroke-dasharray: 3 4;
+  opacity: 0.6;
+}
+
+.lc-cross,
+.lc-sel {
+  stroke: var(--steel);
+  stroke-width: 1;
+}
+
+.lc-sel {
+  stroke: var(--ink);
+  stroke-dasharray: 2 3;
+}
+
+.lc-rain-track {
+  fill: var(--raise);
+}
+
+.lc-rain {
+  fill: #6fa8dc;
+  opacity: 0.85;
+}
+
+.lc-mark {
+  cursor: pointer;
+  outline: none;
+}
+
+.lc-hit {
+  fill: transparent;
+}
+
+.lc-pip {
+  fill: var(--steel);
+  stroke: var(--panel);
+  stroke-width: 1.5;
+}
+
+.lc-mark--ok .lc-pip,
+.lc-mark--ok .lc-money-dot {
+  fill: var(--lime);
+}
+
+.lc-mark--hold .lc-pip {
+  fill: var(--hold);
+}
+
+.lc-mark--alert .lc-pip,
+.lc-mark--alert .lc-money-dot {
+  fill: var(--alert);
+}
+
+.lc-money-dot {
+  stroke: var(--panel);
+  stroke-width: 2;
+}
+
+.lc-mark:hover .lc-pip,
+.lc-mark:focus-visible .lc-pip,
+.lc-mark--on .lc-pip {
+  stroke: var(--ink);
+  stroke-width: 2;
+}
+
+.lc-tip {
+  position: absolute;
+  top: 8px;
+  transform: translateX(-50%);
+  display: grid;
+  gap: 2px;
+  min-width: 170px;
+  padding: 8px 10px;
+  background: var(--raise);
+  border: 1px solid var(--line);
+  font-size: 12px;
+  pointer-events: none;
+}
+
+.lc-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 16px;
+  margin-top: 6px;
+}
+
+.lc-legend span {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.lc-key {
+  display: inline-block;
+  width: 14px;
+  height: 8px;
+}
+
+.lc-key--line {
+  height: 2px;
+  background: var(--lime);
+}
+
+.lc-key--hold {
+  background: var(--hold);
+  opacity: 0.4;
+}
+
+.lc-key--red {
+  background: var(--alert);
+  opacity: 0.5;
+}
+
+.lc-key--rain {
+  background: #6fa8dc;
+}
+
+.lc-inspect {
+  margin-top: 12px;
+  padding: 12px 14px;
+  border-left: 3px solid var(--steel);
+  background: var(--panel-2);
+}
+
+.lc-inspect--ok {
+  border-left-color: var(--lime);
+}
+
+.lc-inspect--hold {
+  border-left-color: var(--hold);
+}
+
+.lc-inspect--alert {
+  border-left-color: var(--alert);
+}
+
+.lc-inspect-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 8px 16px;
+}
+
+.lc-inspect h3,
+.lc-agent-event h3 {
+  margin: 2px 0 4px;
+  font: 600 15px/1.3 var(--body);
+}
+
+/* ---------------------------------------------------------------- cockpit row */
+
+.lc-cockpit {
+  display: grid;
+  grid-template-columns: minmax(0, 1.8fr) minmax(320px, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.lc-cartabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-bottom: 10px;
+}
+
+.lc-cartab {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 10px;
+  min-width: 220px;
+  padding: 8px 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-soft);
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.lc-cartab b {
+  display: block;
+  font-size: 13.5px;
+}
+
+.lc-cartab small {
+  color: var(--muted);
+  font-size: 11.5px;
+}
+
+.lc-cartab--on {
+  border-color: var(--lime);
+  box-shadow: inset 0 -2px 0 var(--lime);
+}
+
+.lc-cartab--out {
+  opacity: 0.62;
+}
+
+.lc-cartab-num {
+  font: 700 22px/1 var(--display);
+}
+
+.lc-cartab-pay {
+  color: var(--steel);
+}
+
+.lc-cmp-summary {
+  margin: 0 0 12px;
+  font-size: 15px;
+  line-height: 1.45;
+}
+
+.lc-opts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(185px, 1fr));
+  gap: 10px;
+}
+
+.lc-opt {
+  display: grid;
+  align-content: start;
+  gap: 8px;
+  padding: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-soft);
+  min-width: 0;
+}
+
+.lc-opt--best {
+  border-color: rgba(201, 255, 75, 0.55);
+}
+
+.lc-opt--cf {
+  border-style: dashed;
+  background: transparent;
+}
+
+.lc-opt--out {
+  opacity: 0.6;
+}
+
+.lc-opt-head {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  align-items: flex-start;
+  gap: 6px;
+}
+
+.lc-opt-head h4 {
+  margin: 0;
+  font: 600 14px/1.3 var(--body);
+}
+
+.lc-opt-pos {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 15px;
+}
+
+.lc-opt-pos b {
+  font-size: 22px;
+}
+
+.lc-opt-nums {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 8px 12px;
+  margin: 0;
+}
+
+.lc-opt-nums dt {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.lc-opt-nums dd {
+  margin: 2px 0 0;
+}
+
+.lc-opt-loss {
+  margin: 0;
+}
+
+.lc-lost {
+  color: var(--alert);
+  margin: 0;
+}
+
+.lc-gained {
+  color: var(--lime);
+  margin: 0;
+}
+
+.lc-opt p {
+  margin: 0;
+}
+
+.lc-more {
+  justify-self: start;
+  padding: 0;
+  background: none;
+  border: 0;
+  color: var(--steel);
+  font-size: 12px;
+  text-decoration: underline;
+  text-underline-offset: 3px;
+  cursor: pointer;
+}
+
+.lc-arith ul {
+  margin: 4px 0 8px;
+  padding-left: 18px;
+}
+
+.lc-stopcosts {
+  margin-top: 14px;
+}
+
+.lc-stopcosts h4,
+.lc-queue h3 {
+  margin: 0 0 6px;
+}
+
+/* ---------------------------------------------------------------- agents */
+
+.lc-agents {
+  display: grid;
+  gap: 12px;
+}
+
+.lc-agents .ld-card-head {
+  margin-bottom: 0;
+}
+
+.lc-queue ul {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lc-queue li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+}
+
+.lc-queue p {
+  margin: 0;
+}
+
+.lc-agent-event {
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.lc-jevline {
+  margin: 0;
+}
+
+.lc-inspect-jev {
+  margin-top: 6px;
+}
+
+.lc-flow {
+  display: grid;
+  gap: 0;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.lc-flow-step {
+  position: relative;
+  display: grid;
+  grid-template-columns: 22px 1fr;
+  gap: 10px;
+  padding: 6px 0;
+}
+
+.lc-flow-step:not(:last-child)::before {
+  content: '';
+  position: absolute;
+  left: 10px;
+  top: 26px;
+  bottom: -6px;
+  width: 1px;
+  background: var(--line);
+}
+
+.lc-flow-n {
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  background: var(--raise);
+  color: var(--steel);
+}
+
+.lc-flow-n svg {
+  width: 13px;
+  height: 13px;
+}
+
+.lc-flow-step--done .lc-flow-n {
+  color: var(--bg);
+  background: var(--lime);
+}
+
+.lc-flow-step--escalated .lc-flow-n,
+.lc-flow-step--waiting .lc-flow-n {
+  color: var(--bg);
+  background: var(--hold);
+}
+
+.lc-flow-step--refused .lc-flow-n {
+  color: var(--bg);
+  background: var(--alert);
+}
+
+.lc-flow-body {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.lc-flow-title {
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.lc-flow-detail {
+  color: var(--steel);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.lc-flow-status {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+  font: 500 10.5px/1.5 var(--mono);
+  white-space: nowrap;
+}
+
+.lc-flow-status--done {
+  color: var(--lime);
+  border-color: rgba(201, 255, 75, 0.35);
+}
+
+.lc-flow-status--escalated,
+.lc-flow-status--waiting {
+  color: var(--hold);
+  border-color: rgba(255, 181, 71, 0.4);
+}
+
+.lc-flow-status--refused {
+  color: var(--alert);
+  border-color: rgba(255, 114, 95, 0.4);
+}
+
+.lc-flow--compact .lc-flow-step {
+  padding: 3px 0;
+}
+
+.lc-dash {
+  font-weight: 700;
+}
+
+.lc-wflist {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 10px 0 0;
+  border-top: 1px solid var(--line-soft);
+  list-style: none;
+}
+
+.lc-wfrow {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  gap: 8px;
+  width: 100%;
+  padding: 4px 6px;
+  background: none;
+  border: 0;
+  color: var(--ink);
+  font-size: 12.5px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.lc-wfrow:hover,
+.lc-wfrow--on {
+  background: var(--panel-2);
+}
+
+/* ---------------------------------------------------------------- opportunities and the evidence drawer */
+
+.lc-opp-grid {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.lc-opp {
+  display: grid;
+  align-content: start;
+  gap: 6px;
+  padding: 12px;
+  background: var(--panel-2);
+  border: 1px solid var(--line-soft);
+}
+
+.lc-opp h3 {
+  margin: 0;
+  font: 600 14px/1.3 var(--body);
+}
+
+.lc-opp p {
+  margin: 0;
+}
+
+.lc-opp-big {
+  font-size: 24px;
+}
+
+.lc-evidence {
+  background: var(--panel);
+  border: 1px solid var(--line-soft);
+}
+
+.lc-evidence > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 14px;
+  padding: 14px 18px;
+  cursor: pointer;
+}
+
+.lc-evidence-body {
+  display: grid;
+  gap: 16px;
+  padding: 0 16px 16px;
+}
+
+.lc-evidence-pair {
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+}
+
+@media (max-width: 1180px) {
+  .lc-status {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+  }
+
+  .lc-cockpit,
+  .lc-opp-grid,
+  .lc-evidence-pair {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 760px) {
+  .lc-status {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .lc-cartab {
+    min-width: 0;
+    flex: 1 1 100%;
+  }
+}
+
+.lc-range {
+  display: block;
+  margin-top: 2px;
+}
+
+.lc-closed {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px;
+  margin-top: 8px;
+}

@@ -104,7 +104,7 @@ def test_the_replay_as_williams_opens_our_case_and_as_mercedes_closes_the_compet
         return rp, mem
 
     rp, mem = run("williams")
-    assert rp.team_cars == [43, 23, 2] or sorted(rp.team_cars) == [2, 23, 43]
+    assert rp.team_cars == [43, 23]  # Williams' São Paulo entries, the starter first; car 2 raced for Williams earlier in 2024, not here
     c43 = rp.cases._for("2024_sao_paulo_gp:race:lap32:car43:crash_candidate")
     assert c43.scope == "own_team" and c43.state == "awaiting_evidence" and c43.exposure_cents is None
     assert any(s.action.startswith("Requested the signed garage damage report") and s.automatic for s in c43.steps)

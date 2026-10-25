@@ -38,7 +38,7 @@ def gate(scen: list[IncidentScenario], car_status: str, flag: str | None) -> lis
     """The feasibility gate. A stationary car cannot continue, pit or serve a penalty; a repair needs
     engineering clearance whatever the flag; a red-flag stop saves track position, not money, and
     proves nothing about whether the car can be repaired."""
-    stopped = car_status == "stopped_candidate"
+    stopped = car_status in ("stopped_candidate", "retired")  # a car the timing feed shows out cannot continue either
     for s in scen:
         if s.key in ("continue", "pit_now", "penalty_5s", "penalty_10s", "drive_through") and stopped:
             s.feasible, s.why = False, "the car is stationary; it cannot continue, pit or serve a penalty"

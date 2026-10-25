@@ -19,7 +19,7 @@ from finance.config import GP_POINTS
 from finance.world import Row, World
 
 from .races import Race
-from .schemas import Forecast, ForecastChange, ForecastLine, PrizeIfFinishedNow
+from .schemas import ChampionshipContext, Forecast, ForecastChange, ForecastLine, PrizeIfFinishedNow
 
 
 def usd(cents: int | None) -> str:
@@ -95,6 +95,37 @@ def _prize(world: World, race: Race, rows: list[Row]) -> PrizeIfFinishedNow | No
     return PrizeIfFinishedNow(constructors_position=pos, points=standings[world.team], prize_table_cents=world.prize(pos),
                               note=f"P{pos} in the constructors' standings if this result stood (through R{race.round - 1} plus these positions); "
                               "synthetic prize table, indicative only")
+
+
+def championship_context(world: World, race: Race, positions: dict[int, int | None], drivers_meta: Iterable[dict] | None = None) -> ChampionshipContext | None:
+    """The constructors' table if this running order were the result: our place, the gap to the teams
+    either side, and what one place in the table is worth on the (synthetic) prize table."""
+    rows = rows_from_positions(world, race.season, positions, drivers_meta)
+    try:
+        standings = dict(world.standings(race.season, race.round - 1))
+    except KeyError:
+        return None
+    ours = 0.0
+    for r in rows:
+        standings[r.constructor_id] = standings.get(r.constructor_id, 0.0) + r.points
+        if r.constructor_id == world.team:
+            ours += r.points
+    table = sorted(standings.items(), key=lambda kv: (-kv[1], kv[0]))
+    names = [c for c, _ in table]
+    if world.team not in names:
+        return None
+    i = names.index(world.team)
+    pts = standings[world.team]
+    above = table[i - 1] if i > 0 else None
+    below = table[i + 1] if i + 1 < len(table) else None
+    prize = world.prize(i + 1)
+    return ChampionshipContext(
+        position=i + 1, points=pts, prize_cents=prize, points_this_race=ours,
+        above_team=above[0] if above else None, above_gap_points=round(above[1] - pts, 1) if above else None,
+        prize_up_one_cents=(world.prize(i) - prize) if above else None,
+        below_team=below[0] if below else None, below_gap_points=round(pts - below[1], 1) if below else None,
+        prize_down_one_cents=(world.prize(i + 2) - prize) if below else None,
+        note=f"standings through R{race.round - 1} (real) plus these positions; the prize table is synthetic and pays at the season's end")
 
 
 def if_finished_now(world: World, race: Race, positions: dict[int, int | None], *, as_of_utc: str | None,

@@ -57,7 +57,7 @@ class StartReplay(BaseModel):
     state_every_s: float = 2.0
     spacetime: bool = True
     advisor: bool | None = None  # None = on when ANTHROPIC_API_KEY is set and LIVE_ADVISOR is not off
-    team: str = "mercedes"  # mercedes (championship money) | williams (the crash as our own car)
+    team: str = "mercedes"  # mercedes (championship money) | alpine (strategy upside) | williams (the crash as our own car)
     demo: bool = True  # own-team cases receive the synthetic garage report and invoice automatically
 
 
@@ -140,6 +140,8 @@ def state():
         "team": {"id": rp.world.team, "label": TEAMS.get(rp.world.team, {}).get("label")} if rp is not None and hasattr(rp, "world") else None,
         "strategy": (BUS.latest.get(("strategy_advice", rp.race.race_id)) or {}).get("payload") if rp is not None else None,
         "incident_plans": [r["payload"] for r in BUS.of_kind("incident_plan")],
+        "timeline": (BUS.latest.get(("race_timeline", rp.race.race_id)) or {}).get("payload") if rp is not None else None,
+        "workflows": [r["payload"] for r in BUS.of_kind("agent_workflow") if rp is None or r["payload"].get("replay_id") == rp.replay_id][-40:],
         "feed": rp.feed_health().model_dump(mode="json") if rp is not None else None,
         "metrics": rp.metrics() if rp is not None else None,
         "log": _CURRENT["log"][-60:],
@@ -198,6 +200,20 @@ def strategy():
     if r is None:
         raise HTTPException(404, "no strategy advice yet")
     return r["payload"]
+
+
+@app.get("/live/timeline")
+def timeline():
+    rp = current()
+    r = BUS.latest.get(("race_timeline", rp.race.race_id)) if rp is not None else None
+    if r is None:
+        raise HTTPException(404, "no timeline yet")
+    return r["payload"]
+
+
+@app.get("/live/workflows")
+def workflows():
+    return [r["payload"] for r in BUS.of_kind("agent_workflow")]
 
 
 @app.get("/live/plans")
