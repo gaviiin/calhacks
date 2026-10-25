@@ -14,6 +14,7 @@ from __future__ import annotations
 
 import json
 import sqlite3
+import threading
 import uuid
 from dataclasses import asdict, dataclass, field
 from pathlib import Path
@@ -108,7 +109,9 @@ class Ledger:
         Path(self.path).parent.mkdir(parents=True, exist_ok=True)
         self.db = sqlite3.connect(self.path, check_same_thread=False)
         self.db.row_factory = sqlite3.Row
-        self.db.executescript(SCHEMA)
+        self._db_lock = threading.Lock()
+        with self._db_lock:
+            self.db.executescript(SCHEMA)
         self.world = world
         from .kernel import Kernel
 
@@ -120,10 +123,20 @@ class Ledger:
     # ------------------------------------------------------------------ helpers
 
     def q(self, sql: str, *args) -> list[sqlite3.Row]:
-        return self.db.execute(sql, args).fetchall()
+        with self._db_lock:
+            return self.db.execute(sql, args).fetchall()
 
     def one(self, sql: str, *args):
-        return self.db.execute(sql, args).fetchone()
+        with self._db_lock:
+            return self.db.execute(sql, args).fetchone()
+
+    def _exec(self, sql: str, args: tuple = ()) -> None:
+        with self._db_lock:
+            self.db.execute(sql, args)
+
+    def _commit(self) -> None:
+        with self._db_lock:
+            self.db.commit()
 
     def emit(self, name: str, payload: dict) -> None:
         for fn in self.listeners:
@@ -143,8 +156,8 @@ class Ledger:
         return row["status"] if row else "open"
 
     def close_period(self, period_id: str) -> None:
-        self.db.execute("INSERT OR REPLACE INTO periods VALUES (?,?,?)", (period_id, "closed", self.clock))
-        self.db.commit()
+        self._exec("INSERT OR REPLACE INTO periods VALUES (?,?,?)", (period_id, "closed", self.clock))
+        self._commit()
         self.emit("period_closed", {"period_id": period_id, "at": self.clock})
 
     def posting_date(self, effective_date: str) -> str:
@@ -156,12 +169,12 @@ class Ledger:
     def record_decision(self, d: Decision, *, preparer: str, je_id: str | None = None,
                         subject_type: str = "entry", subject_id: str = "") -> str:
         decision_id = new_id("dec")
-        self.db.execute(
+        self._exec(
             "INSERT INTO decisions VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (decision_id, je_id, subject_type, subject_id, d.question, d.answer, d.outcome,
              json.dumps(d.policy_ids), json.dumps(d.evidence), d.rule_id, preparer, d.model, d.cost_cents, self.clock),
         )
-        self.db.commit()
+        self._commit()
         return decision_id
 
     def propose_entry(self, p: Proposal) -> Result:
@@ -174,23 +187,23 @@ class Ledger:
         reason = failed[0]["reason"] if failed else (parks[0]["reason"] if parks else None)
         total = sum(line.debit for line in p.lines)
         decision_id = self.record_decision(p.decision, preparer=p.preparer, je_id=je_id, subject_id=je_id)
-        self.db.execute(
+        self._exec(
             "INSERT INTO journal_entries VALUES (?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?,?)",
             (je_id, p.kind, p.effective_date[:7], p.effective_date, self.clock,
              self.clock if status == "posted" else None, status, p.preparer, json.dumps(needs), p.memo, p.key,
              p.reverses_je_id, None, p.source_event_id, decision_id, p.sponsor_id, total, json.dumps(p.basis), reason),
         )
         for i, line in enumerate(p.lines):
-            self.db.execute(
+            self._exec(
                 "INSERT INTO je_lines VALUES (?,?,?,?,?,?,?,?,?,?)",
                 (je_id, i, line.account, line.debit, line.credit, line.currency, line.orig, line.rate,
                  line.sponsor_id, int(line.carrying)),
             )
         for c in checks:
-            self.db.execute("INSERT INTO checks VALUES (?,?,?,?)", (je_id, c["id"], c["result"], c.get("reason")))
+            self._exec("INSERT INTO checks VALUES (?,?,?,?)", (je_id, c["id"], c["result"], c.get("reason")))
         if status == "posted" and p.reverses_je_id:
-            self.db.execute("UPDATE journal_entries SET reversed_by=? WHERE je_id=?", (je_id, p.reverses_je_id))
-        self.db.commit()
+            self._exec("UPDATE journal_entries SET reversed_by=? WHERE je_id=?", (je_id, p.reverses_je_id))
+        self._commit()
         result = Result(status, je_id, checks, reason, needs)
         self.emit("entry", self.entry(je_id))
         return result
@@ -204,12 +217,12 @@ class Ledger:
             return Result("refused", je_id, [check], check["reason"], json.loads(je["needs"]))
         if je["status"] != "parked":
             return Result(je["status"], je_id, [], f"entry is {je['status']}, not parked")
-        self.db.execute("INSERT INTO approvals VALUES (?,?,?,?,?,?,?)",
+        self._exec("INSERT INTO approvals VALUES (?,?,?,?,?,?,?)",
                         (new_id("apr"), je_id, approver, role, decision, reason, self.clock))
         if decision == "reject":
-            self.db.execute("UPDATE journal_entries SET status='rejected', reason=? WHERE je_id=?",
+            self._exec("UPDATE journal_entries SET status='rejected', reason=? WHERE je_id=?",
                             (f"rejected by {approver} ({role}): {reason}", je_id))
-            self.db.commit()
+            self._commit()
             self.emit("entry", self.entry(je_id))
             return Result("rejected", je_id, [check], reason)
         needs = json.loads(je["needs"])
@@ -218,24 +231,24 @@ class Ledger:
             # Re-check at the post gate: the world may have moved since the entry parked.
             recheck = self.kernel.check_at_post(je, self)
             if recheck:
-                self.db.execute("UPDATE journal_entries SET status='refused', reason=? WHERE je_id=?", (recheck, je_id))
-                self.db.commit()
+                self._exec("UPDATE journal_entries SET status='refused', reason=? WHERE je_id=?", (recheck, je_id))
+                self._commit()
                 self.emit("entry", self.entry(je_id))
                 return Result("refused", je_id, [], recheck)
-            self.db.execute("UPDATE journal_entries SET status='posted', posted_at=? WHERE je_id=?", (self.clock, je_id))
+            self._exec("UPDATE journal_entries SET status='posted', posted_at=? WHERE je_id=?", (self.clock, je_id))
             if je["reverses_je_id"]:
-                self.db.execute("UPDATE journal_entries SET reversed_by=? WHERE je_id=?", (je_id, je["reverses_je_id"]))
-            self.db.commit()
+                self._exec("UPDATE journal_entries SET reversed_by=? WHERE je_id=?", (je_id, je["reverses_je_id"]))
+            self._commit()
             self.emit("entry", self.entry(je_id))
             return Result("posted", je_id, [check])
-        self.db.commit()
+        self._commit()
         return Result("parked", je_id, [check], None, [n for n in needs if n not in approved_roles])
 
     # ------------------------------------------------------------------ world state kept by the ledger
 
     def mark_final(self, season: int, rnd: int, session: str, source: str) -> None:
-        self.db.execute("INSERT OR REPLACE INTO finals VALUES (?,?,?,?,?)", (season, rnd, session, self.clock, source))
-        self.db.commit()
+        self._exec("INSERT OR REPLACE INTO finals VALUES (?,?,?,?,?)", (season, rnd, session, self.clock, source))
+        self._commit()
 
     def is_final(self, season: int, rnd: int, session: str) -> bool:
         return self.one("SELECT 1 FROM finals WHERE season=? AND round=? AND session=?", season, rnd, session) is not None
@@ -249,16 +262,16 @@ class Ledger:
 
     def add_overlay(self, payload: dict) -> str:
         overlay_id = payload.get("overlay_id") or new_id("ovl")
-        self.db.execute("INSERT INTO overlays VALUES (?,?,?)", (overlay_id, json.dumps({**payload, "overlay_id": overlay_id}), self.clock))
-        self.db.commit()
+        self._exec("INSERT INTO overlays VALUES (?,?,?)", (overlay_id, json.dumps({**payload, "overlay_id": overlay_id}), self.clock))
+        self._commit()
         return overlay_id
 
     def overlays(self) -> list[dict]:
         return [json.loads(r["payload"]) for r in self.q("SELECT payload FROM overlays ORDER BY applied_at")]
 
     def record_prize_estimate(self, season: int, through_round: int, position: int, est: int, why: str) -> None:
-        self.db.execute("INSERT INTO prize_estimates VALUES (?,?,?,?,?,?)", (season, through_round, position, est, why, self.clock))
-        self.db.commit()
+        self._exec("INSERT INTO prize_estimates VALUES (?,?,?,?,?,?)", (season, through_round, position, est, why, self.clock))
+        self._commit()
 
     def last_prize_estimate(self, season: int) -> dict | None:
         row = self.one("SELECT * FROM prize_estimates WHERE season=? ORDER BY rowid DESC LIMIT 1", season)
@@ -269,14 +282,14 @@ class Ledger:
     def memo(self, kind: str, key: str, season: int, rnd: int, session: str, payload: dict, status: str = "open") -> str:
         existing = self.one("SELECT memo_id FROM memos WHERE kind=? AND key=?", kind, key)
         if existing:
-            self.db.execute("UPDATE memos SET payload=?, status=?, updated_at=? WHERE memo_id=?",
+            self._exec("UPDATE memos SET payload=?, status=?, updated_at=? WHERE memo_id=?",
                             (json.dumps(payload), status, self.clock, existing["memo_id"]))
             memo_id = existing["memo_id"]
         else:
             memo_id = new_id("memo")
-            self.db.execute("INSERT INTO memos VALUES (?,?,?,?,?,?,?,?,?,?)",
+            self._exec("INSERT INTO memos VALUES (?,?,?,?,?,?,?,?,?,?)",
                             (memo_id, kind, key, season, rnd, session, json.dumps(payload), status, self.clock, self.clock))
-        self.db.commit()
+        self._commit()
         self.emit("memo", {"memo_id": memo_id, "kind": kind, "key": key, "status": status, **payload})
         return memo_id
 
@@ -290,15 +303,15 @@ class Ledger:
 
     def ask(self, to_role: str, subject: str, text: str, asked_by: str, payload: dict) -> str:
         q_id = new_id("q")
-        self.db.execute("INSERT INTO questions VALUES (?,?,?,?,?,?,?,?,?,?)",
+        self._exec("INSERT INTO questions VALUES (?,?,?,?,?,?,?,?,?,?)",
                         (q_id, to_role, subject, text, "open", None, self.clock, None, asked_by, json.dumps(payload)))
-        self.db.commit()
+        self._commit()
         self.emit("question", {"q_id": q_id, "to_role": to_role, "subject": subject, "text": text, "status": "open"})
         return q_id
 
     def answer(self, q_id: str, answer: str) -> None:
-        self.db.execute("UPDATE questions SET status='answered', answer=?, answered_at=? WHERE q_id=?", (answer, self.clock, q_id))
-        self.db.commit()
+        self._exec("UPDATE questions SET status='answered', answer=?, answered_at=? WHERE q_id=?", (answer, self.clock, q_id))
+        self._commit()
         self.emit("question", {"q_id": q_id, "status": "answered", "answer": answer})
 
     def open_question(self, subject: str) -> dict | None:
@@ -316,12 +329,12 @@ class Ledger:
     def set_billing(self, request: dict, status: str, reason_code: str, je_id: str | None = None) -> None:
         current = self.billing(request["request_id"])
         history = (current["history"] if current else []) + [{"at": self.clock, "status": status, "reason": reason_code}]
-        self.db.execute(
+        self._exec(
             "INSERT OR REPLACE INTO billing VALUES (?,?,?,?,?,?,?)",
             (request["request_id"], json.dumps(request), status, reason_code, json.dumps(history),
              je_id or (current["je_id"] if current else None), self.clock),
         )
-        self.db.commit()
+        self._commit()
         self.emit("billing", {"request_id": request["request_id"], "status": status, "reason": reason_code})
 
     def billings(self, status: str | None = None) -> list[dict]:
@@ -410,10 +423,10 @@ class Ledger:
         return row["n"]
 
     def log_event(self, event: dict, results: list) -> None:
-        self.db.execute("INSERT INTO events (event_id,type,at,payload,results) VALUES (?,?,?,?,?)",
+        self._exec("INSERT INTO events (event_id,type,at,payload,results) VALUES (?,?,?,?,?)",
                         (event["id"], event["type"], event["at"], json.dumps(event.get("payload", {})),
                          json.dumps([asdict(r) if hasattr(r, "__dataclass_fields__") else r for r in results], default=str)))
-        self.db.commit()
+        self._commit()
         acted = any(getattr(r, "status", None) in ("posted", "parked") or (isinstance(r, dict) and r.get("type") in ("alert", "question"))
                     for r in results)
         self.emit("event", {"id": event["id"], "type": event["type"], "at": event["at"], "payload": event.get("payload", {}), "acted": acted})

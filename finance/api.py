@@ -13,8 +13,10 @@ from __future__ import annotations
 
 import json
 import os
+import threading
 from collections import defaultdict
 
+from anyio import to_thread
 from fastapi import FastAPI, HTTPException
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
@@ -31,6 +33,22 @@ from .world import World
 
 app = FastAPI(title="Pit Wall", version="0.1")
 app.add_middleware(CORSMiddleware, allow_origins=os.environ.get("PITWALL_CORS", "*").split(","), allow_methods=["*"], allow_headers=["*"])
+
+# Every request shares the runs' ledgers, one SQLite connection each, and the sync endpoints run on a
+# thread pool. sqlite3 connections are not safe to use from two threads at once (a dashboard that
+# loads six panels in parallel got "bad parameter or other API misuse" and phantom KeyErrors), so
+# requests are served one at a time. A thread lock, taken off the event loop, so it also holds when
+# requests arrive on different event loops (the test client runs one per thread).
+_ONE_AT_A_TIME = threading.Lock()
+
+
+@app.middleware("http")
+async def one_request_at_a_time(request, call_next):
+    await to_thread.run_sync(_ONE_AT_A_TIME.acquire)
+    try:
+        return await call_next(request)
+    finally:
+        _ONE_AT_A_TIME.release()
 
 WORLD = World()
 STORE = AgentStore(DATA_DIR / "agents.db")
@@ -154,7 +172,10 @@ def why(run_id: str, je_id: str):
 def queue(run_id: str):
     led = get_run(run_id).ledger
     return {
-        "parked": [{k: e[k] for k in ("je_id", "kind", "memo", "total_cents", "needs", "reason", "recorded_at")} for e in led.entries(status="parked")],
+        "parked": [{
+            **{k: e[k] for k in ("je_id", "kind", "memo", "total_cents", "needs", "reason", "recorded_at")},
+            "approved_roles": [a["role"] for a in e["approvals"] if a["decision"] == "approve"],
+        } for e in led.entries(status="parked")],
         "questions": [dict(q) for q in led.q("SELECT q_id, to_role, subject, text, status, asked_at FROM questions WHERE status='open'")],
         "held_billing": [{"request_id": b["request_id"], "reason": b["reason_code"], **{k: b["payload"][k] for k in ("sponsor_id", "round", "session", "car", "amount_orig", "currency", "note")}}
                          for b in led.billings("hold")],
@@ -492,3 +513,13 @@ app.include_router(build_microsoft_router(get_run, STORE))
 from .agent_api import build_router as build_agent_router  # noqa: E402
 
 app.include_router(build_agent_router(get_run))
+
+# --------------------------------------------------------------------------- cost cap strategy simulator
+from capsim.api import router as capsim_router  # noqa: E402
+
+app.include_router(capsim_router)
+
+# --------------------------------------------------------------------------- Race Desk: race-day money telemetry
+from racedesk.api import router as racedesk_router  # noqa: E402
+
+app.include_router(racedesk_router)

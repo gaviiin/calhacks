@@ -6,17 +6,31 @@
 import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
+import CorrectRaceEffectReducer from "../correct_race_effect_reducer";
+import IngestDecisionReducer from "../ingest_decision_reducer";
 import IngestDocumentReducer from "../ingest_document_reducer";
 import MirrorEntryReducer from "../mirror_entry_reducer";
 import MirrorItemReducer from "../mirror_item_reducer";
+import ProposeRacePolicyReducer from "../propose_race_policy_reducer";
+import RecordForecastReducer from "../record_forecast_reducer";
+import RecordRaceEffectsReducer from "../record_race_effects_reducer";
+import RecordRaceEventReducer from "../record_race_event_reducer";
 import SetIngestorReducer from "../set_ingestor_reducer";
+import SetRacePolicyAutonomyReducer from "../set_race_policy_autonomy_reducer";
 import SetReviewStatusReducer from "../set_review_status_reducer";
 import SetWriterReducer from "../set_writer_reducer";
 
+export type CorrectRaceEffectParams = __Infer<typeof CorrectRaceEffectReducer>;
+export type IngestDecisionParams = __Infer<typeof IngestDecisionReducer>;
 export type IngestDocumentParams = __Infer<typeof IngestDocumentReducer>;
 export type MirrorEntryParams = __Infer<typeof MirrorEntryReducer>;
 export type MirrorItemParams = __Infer<typeof MirrorItemReducer>;
+export type ProposeRacePolicyParams = __Infer<typeof ProposeRacePolicyReducer>;
+export type RecordForecastParams = __Infer<typeof RecordForecastReducer>;
+export type RecordRaceEffectsParams = __Infer<typeof RecordRaceEffectsReducer>;
+export type RecordRaceEventParams = __Infer<typeof RecordRaceEventReducer>;
 export type SetIngestorParams = __Infer<typeof SetIngestorReducer>;
+export type SetRacePolicyAutonomyParams = __Infer<typeof SetRacePolicyAutonomyReducer>;
 export type SetReviewStatusParams = __Infer<typeof SetReviewStatusReducer>;
 export type SetWriterParams = __Infer<typeof SetWriterReducer>;
 

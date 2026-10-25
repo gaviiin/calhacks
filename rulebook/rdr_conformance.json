@@ -1,0 +1,813 @@
+{
+  "_doc": "Shared Ripple-Down Rule resolution cases (SCHEMA.md \u00a711.2). policies carry pattern as an object (the module stores it as a JSON string). context.bill_line_id, when present, resolves for that one bill line (allocation context), where description_regex matches that bill line's description; otherwise description_regex must match every bill line. expected.result is category | none | conflict.",
+  "cases": [
+    {
+      "name": "single top-level policy applies",
+      "policies": [
+        {
+          "id": 1,
+          "policy_key": "k1",
+          "version": 1,
+          "category_code": "CATERING",
+          "rulebook_entry_id": "CATERING@SECD-ISS07",
+          "pattern": {
+            "account_code": "6410"
+          },
+          "parent_policy_id": null,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        }
+      ],
+      "line": {
+        "id": "gl-1",
+        "vendor_id": "ven-001",
+        "account_code": "6410",
+        "department_id": "dept-FAC",
+        "memo": "Canteen January",
+        "amount_usd_minor": 1000000,
+        "entity": "RACING",
+        "erp_category_code": "MARKETING",
+        "bill_lines": []
+      },
+      "period": "2026-01",
+      "expected": {
+        "result": "category",
+        "category_code": "CATERING",
+        "policy_id": 1
+      }
+    },
+    {
+      "name": "no policy applies",
+      "policies": [
+        {
+          "id": 1,
+          "policy_key": "k1",
+          "version": 1,
+          "category_code": "CATERING",
+          "rulebook_entry_id": "CATERING@SECD-ISS07",
+          "pattern": {
+            "account_code": "6410"
+          },
+          "parent_policy_id": null,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        }
+      ],
+      "line": {
+        "id": "gl-1",
+        "vendor_id": "ven-001",
+        "account_code": "6420",
+        "department_id": "dept-FAC",
+        "memo": "Canteen January",
+        "amount_usd_minor": 1000000,
+        "entity": "RACING",
+        "erp_category_code": "MARKETING",
+        "bill_lines": []
+      },
+      "period": "2026-01",
+      "expected": {
+        "result": "none"
+      }
+    },
+    {
+      "name": "exception child overrides parent",
+      "policies": [
+        {
+          "id": 1,
+          "policy_key": "k1",
+          "version": 1,
+          "category_code": "CATERING",
+          "rulebook_entry_id": "CATERING@SECD-ISS07",
+          "pattern": {
+            "account_code": "6410"
+          },
+          "parent_policy_id": null,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        },
+        {
+          "id": 2,
+          "policy_key": "k2",
+          "version": 1,
+          "category_code": "RELEVANT",
+          "rulebook_entry_id": "RELEVANT@SECD-ISS07",
+          "pattern": {
+            "memo_regex": "wind tunnel"
+          },
+          "parent_policy_id": 1,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        }
+      ],
+      "line": {
+        "id": "gl-1",
+        "vendor_id": "ven-001",
+        "account_code": "6410",
+        "department_id": "dept-FAC",
+        "memo": "Lunch - wind tunnel session",
+        "amount_usd_minor": 1000000,
+        "entity": "RACING",
+        "erp_category_code": "MARKETING",
+        "bill_lines": []
+      },
+      "period": "2026-01",
+      "expected": {
+        "result": "category",
+        "category_code": "RELEVANT",
+        "policy_id": 2
+      }
+    },
+    {
+      "name": "child does not apply, parent concludes",
+      "policies": [
+        {
+          "id": 1,
+          "policy_key": "k1",
+          "version": 1,
+          "category_code": "CATERING",
+          "rulebook_entry_id": "CATERING@SECD-ISS07",
+          "pattern": {
+            "account_code": "6410"
+          },
+          "parent_policy_id": null,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        },
+        {
+          "id": 2,
+          "policy_key": "k2",
+          "version": 1,
+          "category_code": "RELEVANT",
+          "rulebook_entry_id": "RELEVANT@SECD-ISS07",
+          "pattern": {
+            "memo_regex": "wind tunnel"
+          },
+          "parent_policy_id": 1,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        }
+      ],
+      "line": {
+        "id": "gl-1",
+        "vendor_id": "ven-001",
+        "account_code": "6410",
+        "department_id": "dept-FAC",
+        "memo": "Canteen January",
+        "amount_usd_minor": 1000000,
+        "entity": "RACING",
+        "erp_category_code": "MARKETING",
+        "bill_lines": []
+      },
+      "period": "2026-01",
+      "expected": {
+        "result": "category",
+        "category_code": "CATERING",
+        "policy_id": 1
+      }
+    },
+    {
+      "name": "child applies only where parent applies",
+      "policies": [
+        {
+          "id": 1,
+          "policy_key": "k1",
+          "version": 1,
+          "category_code": "CATERING",
+          "rulebook_entry_id": "CATERING@SECD-ISS07",
+          "pattern": {
+            "account_code": "6410"
+          },
+          "parent_policy_id": null,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        },
+        {
+          "id": 2,
+          "policy_key": "k2",
+          "version": 1,
+          "category_code": "RELEVANT",
+          "rulebook_entry_id": "RELEVANT@SECD-ISS07",
+          "pattern": {
+            "memo_regex": "wind tunnel"
+          },
+          "parent_policy_id": 1,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        }
+      ],
+      "line": {
+        "id": "gl-1",
+        "vendor_id": "ven-001",
+        "account_code": "6200",
+        "department_id": "dept-FAC",
+        "memo": "Lunch - wind tunnel session",
+        "amount_usd_minor": 1000000,
+        "entity": "RACING",
+        "erp_category_code": "MARKETING",
+        "bill_lines": []
+      },
+      "period": "2026-01",
+      "expected": {
+        "result": "none"
+      }
+    },
+    {
+      "name": "grandchild exception to the exception",
+      "policies": [
+        {
+          "id": 1,
+          "policy_key": "k1",
+          "version": 1,
+          "category_code": "CATERING",
+          "rulebook_entry_id": "CATERING@SECD-ISS07",
+          "pattern": {
+            "account_code": "6410"
+          },
+          "parent_policy_id": null,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        },
+        {
+          "id": 2,
+          "policy_key": "k2",
+          "version": 1,
+          "category_code": "RELEVANT",
+          "rulebook_entry_id": "RELEVANT@SECD-ISS07",
+          "pattern": {
+            "memo_regex": "wind tunnel"
+          },
+          "parent_policy_id": 1,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        },
+        {
+          "id": 3,
+          "policy_key": "k3",
+          "version": 1,
+          "category_code": "MARKETING",
+          "rulebook_entry_id": "MARKETING@SECD-ISS07",
+          "pattern": {
+            "memo_regex": "sponsor"
+          },
+          "parent_policy_id": 2,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        }
+      ],
+      "line": {
+        "id": "gl-1",
+        "vendor_id": "ven-001",
+        "account_code": "6410",
+        "department_id": "dept-FAC",
+        "memo": "Wind tunnel sponsor visit lunch",
+        "amount_usd_minor": 1000000,
+        "entity": "RACING",
+        "erp_category_code": "MARKETING",
+        "bill_lines": []
+      },
+      "period": "2026-01",
+      "expected": {
+        "result": "category",
+        "category_code": "MARKETING",
+        "policy_id": 3
+      }
+    },
+    {
+      "name": "unapproved child is ignored",
+      "policies": [
+        {
+          "id": 1,
+          "policy_key": "k1",
+          "version": 1,
+          "category_code": "CATERING",
+          "rulebook_entry_id": "CATERING@SECD-ISS07",
+          "pattern": {
+            "account_code": "6410"
+          },
+          "parent_policy_id": null,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        },
+        {
+          "id": 2,
+          "policy_key": "k2",
+          "version": 1,
+          "category_code": "RELEVANT",
+          "rulebook_entry_id": "RELEVANT@SECD-ISS07",
+          "pattern": {
+            "memo_regex": "wind tunnel"
+          },
+          "parent_policy_id": 1,
+          "state": "PROPOSED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        }
+      ],
+      "line": {
+        "id": "gl-1",
+        "vendor_id": "ven-001",
+        "account_code": "6410",
+        "department_id": "dept-FAC",
+        "memo": "Lunch - wind tunnel session",
+        "amount_usd_minor": 1000000,
+        "entity": "RACING",
+        "erp_category_code": "MARKETING",
+        "bill_lines": []
+      },
+      "period": "2026-01",
+      "expected": {
+        "result": "category",
+        "category_code": "CATERING",
+        "policy_id": 1
+      }
+    },
+    {
+      "name": "child out of force is ignored",
+      "policies": [
+        {
+          "id": 1,
+          "policy_key": "k1",
+          "version": 1,
+          "category_code": "CATERING",
+          "rulebook_entry_id": "CATERING@SECD-ISS07",
+          "pattern": {
+            "account_code": "6410"
+          },
+          "parent_policy_id": null,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        },
+        {
+          "id": 2,
+          "policy_key": "k2",
+          "version": 1,
+          "category_code": "RELEVANT",
+          "rulebook_entry_id": "RELEVANT@SECD-ISS07",
+          "pattern": {
+            "memo_regex": "wind tunnel"
+          },
+          "parent_policy_id": 1,
+          "state": "APPROVED",
+          "effective_from": "2026-03-01",
+          "effective_to": null
+        }
+      ],
+      "line": {
+        "id": "gl-1",
+        "vendor_id": "ven-001",
+        "account_code": "6410",
+        "department_id": "dept-FAC",
+        "memo": "Lunch - wind tunnel session",
+        "amount_usd_minor": 1000000,
+        "entity": "RACING",
+        "erp_category_code": "MARKETING",
+        "bill_lines": []
+      },
+      "period": "2026-01",
+      "expected": {
+        "result": "category",
+        "category_code": "CATERING",
+        "policy_id": 1
+      }
+    },
+    {
+      "name": "two top-level policies disagree, neither refines: conflict",
+      "policies": [
+        {
+          "id": 1,
+          "policy_key": "k1",
+          "version": 1,
+          "category_code": "CATERING",
+          "rulebook_entry_id": "CATERING@SECD-ISS07",
+          "pattern": {
+            "account_code": "6410"
+          },
+          "parent_policy_id": null,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        },
+        {
+          "id": 2,
+          "policy_key": "k2",
+          "version": 1,
+          "category_code": "MARKETING",
+          "rulebook_entry_id": "MARKETING@SECD-ISS07",
+          "pattern": {
+            "vendor_id": "ven-001"
+          },
+          "parent_policy_id": null,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        }
+      ],
+      "line": {
+        "id": "gl-1",
+        "vendor_id": "ven-001",
+        "account_code": "6410",
+        "department_id": "dept-FAC",
+        "memo": "Canteen January",
+        "amount_usd_minor": 1000000,
+        "entity": "RACING",
+        "erp_category_code": "MARKETING",
+        "bill_lines": []
+      },
+      "period": "2026-01",
+      "expected": {
+        "result": "conflict"
+      }
+    },
+    {
+      "name": "two top-level policies disagree, one strictly refines: refinement wins",
+      "policies": [
+        {
+          "id": 1,
+          "policy_key": "k1",
+          "version": 1,
+          "category_code": "CATERING",
+          "rulebook_entry_id": "CATERING@SECD-ISS07",
+          "pattern": {
+            "account_code": "6410"
+          },
+          "parent_policy_id": null,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        },
+        {
+          "id": 2,
+          "policy_key": "k2",
+          "version": 1,
+          "category_code": "RELEVANT",
+          "rulebook_entry_id": "RELEVANT@SECD-ISS07",
+          "pattern": {
+            "account_code": "6410",
+            "department_id": "dept-AERO"
+          },
+          "parent_policy_id": null,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        }
+      ],
+      "line": {
+        "id": "gl-1",
+        "vendor_id": "ven-001",
+        "account_code": "6410",
+        "department_id": "dept-AERO",
+        "memo": "Canteen January",
+        "amount_usd_minor": 1000000,
+        "entity": "RACING",
+        "erp_category_code": "MARKETING",
+        "bill_lines": []
+      },
+      "period": "2026-01",
+      "expected": {
+        "result": "category",
+        "category_code": "RELEVANT",
+        "policy_id": 2
+      }
+    },
+    {
+      "name": "two policies agree: cite the deepest, ties lowest id",
+      "policies": [
+        {
+          "id": 1,
+          "policy_key": "k1",
+          "version": 1,
+          "category_code": "CATERING",
+          "rulebook_entry_id": "CATERING@SECD-ISS07",
+          "pattern": {
+            "account_code": "6410"
+          },
+          "parent_policy_id": null,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        },
+        {
+          "id": 5,
+          "policy_key": "k5",
+          "version": 1,
+          "category_code": "CATERING",
+          "rulebook_entry_id": "CATERING@SECD-ISS07",
+          "pattern": {
+            "vendor_id": "ven-001"
+          },
+          "parent_policy_id": null,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        },
+        {
+          "id": 7,
+          "policy_key": "k7",
+          "version": 1,
+          "category_code": "CATERING",
+          "rulebook_entry_id": "CATERING@SECD-ISS07",
+          "pattern": {
+            "memo_regex": "canteen"
+          },
+          "parent_policy_id": 5,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        }
+      ],
+      "line": {
+        "id": "gl-1",
+        "vendor_id": "ven-001",
+        "account_code": "6410",
+        "department_id": "dept-FAC",
+        "memo": "Canteen January",
+        "amount_usd_minor": 1000000,
+        "entity": "RACING",
+        "erp_category_code": "MARKETING",
+        "bill_lines": []
+      },
+      "period": "2026-01",
+      "expected": {
+        "result": "category",
+        "category_code": "CATERING",
+        "policy_id": 7
+      }
+    },
+    {
+      "name": "refinement counts inherited keys",
+      "policies": [
+        {
+          "id": 1,
+          "policy_key": "k1",
+          "version": 1,
+          "category_code": "MARKETING",
+          "rulebook_entry_id": "MARKETING@SECD-ISS07",
+          "pattern": {
+            "account_code": "6420"
+          },
+          "parent_policy_id": null,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        },
+        {
+          "id": 2,
+          "policy_key": "k2",
+          "version": 1,
+          "category_code": "CATERING",
+          "rulebook_entry_id": "CATERING@SECD-ISS07",
+          "pattern": {
+            "vendor_id": "ven-001"
+          },
+          "parent_policy_id": null,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        },
+        {
+          "id": 3,
+          "policy_key": "k3",
+          "version": 1,
+          "category_code": "RELEVANT",
+          "rulebook_entry_id": "RELEVANT@SECD-ISS07",
+          "pattern": {
+            "memo_regex": "wind tunnel"
+          },
+          "parent_policy_id": 2,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        }
+      ],
+      "line": {
+        "id": "gl-1",
+        "vendor_id": "ven-001",
+        "account_code": "6420",
+        "department_id": "dept-FAC",
+        "memo": "Lunch - wind tunnel session",
+        "amount_usd_minor": 1000000,
+        "entity": "RACING",
+        "erp_category_code": "MARKETING",
+        "bill_lines": []
+      },
+      "period": "2026-01",
+      "expected": {
+        "result": "conflict"
+      }
+    },
+    {
+      "name": "description_regex must match every bill line for a whole-line resolution",
+      "policies": [
+        {
+          "id": 1,
+          "policy_key": "k1",
+          "version": 1,
+          "category_code": "MARKETING",
+          "rulebook_entry_id": "MARKETING@SECD-ISS07",
+          "pattern": {
+            "account_code": "6420"
+          },
+          "parent_policy_id": null,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        },
+        {
+          "id": 2,
+          "policy_key": "k2",
+          "version": 1,
+          "category_code": "CATERING",
+          "rulebook_entry_id": "CATERING@SECD-ISS07",
+          "pattern": {
+            "description_regex": "canteen"
+          },
+          "parent_policy_id": 1,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        }
+      ],
+      "line": {
+        "id": "gl-1",
+        "vendor_id": "ven-001",
+        "account_code": "6420",
+        "department_id": "dept-FAC",
+        "memo": "Canteen January",
+        "amount_usd_minor": 1000000,
+        "entity": "RACING",
+        "erp_category_code": "MARKETING",
+        "bill_lines": [
+          {
+            "id": "bl-1",
+            "description": "Factory canteen"
+          },
+          {
+            "id": "bl-2",
+            "description": "Sponsor dinner"
+          }
+        ]
+      },
+      "period": "2026-01",
+      "expected": {
+        "result": "category",
+        "category_code": "MARKETING",
+        "policy_id": 1
+      }
+    },
+    {
+      "name": "description_regex on a single bill line (allocation context)",
+      "policies": [
+        {
+          "id": 1,
+          "policy_key": "k1",
+          "version": 1,
+          "category_code": "MARKETING",
+          "rulebook_entry_id": "MARKETING@SECD-ISS07",
+          "pattern": {
+            "account_code": "6420"
+          },
+          "parent_policy_id": null,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        },
+        {
+          "id": 2,
+          "policy_key": "k2",
+          "version": 1,
+          "category_code": "CATERING",
+          "rulebook_entry_id": "CATERING@SECD-ISS07",
+          "pattern": {
+            "description_regex": "canteen"
+          },
+          "parent_policy_id": 1,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        }
+      ],
+      "line": {
+        "id": "gl-1",
+        "vendor_id": "ven-001",
+        "account_code": "6420",
+        "department_id": "dept-FAC",
+        "memo": "Canteen January",
+        "amount_usd_minor": 1000000,
+        "entity": "RACING",
+        "erp_category_code": "MARKETING",
+        "bill_lines": [
+          {
+            "id": "bl-1",
+            "description": "Factory canteen"
+          }
+        ]
+      },
+      "period": "2026-01",
+      "context": {
+        "bill_line_id": "bl-1"
+      },
+      "expected": {
+        "result": "category",
+        "category_code": "CATERING",
+        "policy_id": 2
+      }
+    },
+    {
+      "name": "description_regex never matches a line with no bill lines",
+      "policies": [
+        {
+          "id": 1,
+          "policy_key": "k1",
+          "version": 1,
+          "category_code": "CATERING",
+          "rulebook_entry_id": "CATERING@SECD-ISS07",
+          "pattern": {
+            "description_regex": "canteen"
+          },
+          "parent_policy_id": null,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        }
+      ],
+      "line": {
+        "id": "gl-1",
+        "vendor_id": "ven-001",
+        "account_code": "6410",
+        "department_id": "dept-FAC",
+        "memo": "Canteen January",
+        "amount_usd_minor": 1000000,
+        "entity": "RACING",
+        "erp_category_code": "MARKETING",
+        "bill_lines": []
+      },
+      "period": "2026-01",
+      "expected": {
+        "result": "none"
+      }
+    },
+    {
+      "name": "superseded version is ignored",
+      "policies": [
+        {
+          "id": 1,
+          "policy_key": "canteen",
+          "version": 1,
+          "category_code": "CATERING",
+          "rulebook_entry_id": "CATERING@SECD-ISS07",
+          "pattern": {
+            "account_code": "6410"
+          },
+          "parent_policy_id": null,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        },
+        {
+          "id": 4,
+          "policy_key": "canteen",
+          "version": 2,
+          "category_code": "RELEVANT",
+          "rulebook_entry_id": "RELEVANT@SECD-ISS07",
+          "pattern": {
+            "account_code": "6410"
+          },
+          "parent_policy_id": null,
+          "state": "APPROVED",
+          "effective_from": "2026-01-01",
+          "effective_to": null
+        }
+      ],
+      "line": {
+        "id": "gl-1",
+        "vendor_id": "ven-001",
+        "account_code": "6410",
+        "department_id": "dept-FAC",
+        "memo": "Canteen January",
+        "amount_usd_minor": 1000000,
+        "entity": "RACING",
+        "erp_category_code": "MARKETING",
+        "bill_lines": []
+      },
+      "period": "2026-01",
+      "expected": {
+        "result": "category",
+        "category_code": "RELEVANT",
+        "policy_id": 4
+      }
+    }
+  ]
+}

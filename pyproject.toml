@@ -1,0 +1,29 @@
+[project]
+name = "pit-wall"
+version = "0.2.0"
+description = "Pit Wall: the finance desk for a Formula 1 constructor, with an AI revenue accountant and an AI cost cap analyst under human approval (Cal Hacks 13.0)"
+requires-python = ">=3.13"
+dependencies = [
+  "fastapi>=0.115",
+  "uvicorn[standard]>=0.30",
+  "httpx>=0.27",
+  "pydantic>=2.8",
+  "anthropic>=0.60",
+  "python-dateutil>=2.9",
+  "python-multipart>=0.0.9",
+  "python-dotenv>=1.0",
+  "apify-client>=3.3",
+  "beautifulsoup4>=4.12",
+  "pypdf>=5",
+  "paho-mqtt>=2.1.0",
+  "typesafe-sdk>=0.7.5",
+]
+
+[dependency-groups]
+dev = ["pytest>=8", "pytest-asyncio>=0.24"]
+
+[tool.uv]
+package = false
+
+[tool.pytest.ini_options]
+testpaths = ["world/tests", "agents/tests", "rulebook/tests", "finance/tests", "ingestion/tests", "race/tests"]

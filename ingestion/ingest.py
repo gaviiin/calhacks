@@ -4,6 +4,8 @@
     python ingestion/ingest.py run-id <APIFY_RUN_ID>
     python ingestion/ingest.py replay ingestion/captures/<capture>.json
     python ingestion/ingest.py fixture ingestion/sample_item.json
+    python ingestion/ingest.py extract ingestion/captures/<capture>.json   (writes ingestion/captures/decisions/)
+    python ingestion/ingest.py replay-decisions ingestion/captures/decisions/<capture>.json
 
 `run` starts the Actor and saves its dataset under ingestion/captures/ so the
 same evidence can be replayed if the FIA site or Apify is unreachable.
@@ -16,6 +18,7 @@ This script only records evidence. It never creates journal entries.
 from __future__ import annotations
 
 import argparse
+import base64
 import hashlib
 import json
 import os
@@ -34,10 +37,16 @@ from dotenv import load_dotenv
 
 REPO_ROOT = Path(__file__).resolve().parent.parent
 CAPTURES_DIR = REPO_ROOT / "ingestion" / "captures"
+# Decision-reader output lives apart from listing captures, which finance/fia_bridge.py reads as listings.
+DECISION_CAPTURES_DIR = CAPTURES_DIR / "decisions"
 FIA_ORIGIN = "https://www.fia.com"
 OFFICIAL_HOSTS = {"www.fia.com"}
 EVENT_SLUG = re.compile(r"^[a-z0-9]+(?:-[a-z0-9]+)*$")
 DOC_KEY = re.compile(r"^[0-9a-f]{64}$")
+PDF_SHA256 = re.compile(r"^[0-9a-f]{64}$")
+CARS = re.compile(r"^(?:\d{1,2}(?:,\d{1,2})*)?$")
+DECISION_OUTCOMES = {"", "no_further_action", "disqualification", "time_penalty", "fine", "reprimand", "warning"}
+EXCERPT_MAX = 500
 # SpacetimeDB answers 530 when a reducer throws SenderError.
 REDUCER_REJECTED = 530
 
@@ -113,6 +122,40 @@ def normalize(item: dict, *, actor_run_id: str, ingest_mode: str, ingested_at: s
     }
 
 
+def normalize_fact(item: dict, *, actor_run_id: str, ingest_mode: str, extracted_at: str) -> dict:
+    """Map one decision-reader item to ingest_decision arguments, or raise ValueError."""
+    listing = normalize(item, actor_run_id=actor_run_id, ingest_mode=ingest_mode, ingested_at=extracted_at)
+    cars = "".join(str(item.get("cars", "") or "").split())
+    offence = " ".join(str(item.get("offence", "") or "").split())
+    outcome = str(item.get("outcome", "") or "").strip()
+    excerpt = " ".join(str(item.get("excerpt", "") or "").split())
+    pdf_sha256 = str(item.get("pdf_sha256", "") or "").strip().lower()
+    if not CARS.match(cars):
+        raise ValueError(f"cars malformed: {cars!r}")
+    if not offence:
+        raise ValueError("offence is blank")
+    if len(offence) > 512:
+        raise ValueError("offence exceeds 512 chars")
+    if outcome not in DECISION_OUTCOMES:
+        raise ValueError(f"unknown outcome: {outcome!r}")
+    if len(excerpt) > EXCERPT_MAX:
+        raise ValueError("excerpt exceeds 500 chars")
+    if not PDF_SHA256.match(pdf_sha256):
+        raise ValueError("pdf_sha256 must be 64 hex chars")
+    return {
+        "doc_key": listing["doc_key"],
+        "document_url": listing["document_url"],
+        "cars": cars,
+        "offence": offence,
+        "outcome": outcome,
+        "excerpt": excerpt,
+        "pdf_hash": pdf_sha256,
+        "actor_run_id": actor_run_id,
+        "ingest_mode": ingest_mode,
+        "extracted_at": extracted_at,
+    }
+
+
 def envelope(record: dict) -> dict:
     """Application-level event for later agent/finance routing (not persisted here)."""
     return {
@@ -182,7 +225,22 @@ class SpacetimeClient:
 
     def ingest(self, record: dict) -> tuple[bool, str]:
         """Call ingest_document. Returns (ok, reducer message)."""
-        response = self._post("/call/ingest_document", json=[record])
+        return self._reducer("ingest_document", record)
+
+    def count_facts(self) -> int:
+        return int(self.sql("SELECT COUNT(*) AS n FROM fia_decision_facts")[0][0])
+
+    def fact_exists(self, key: str) -> bool:
+        if not DOC_KEY.match(key):
+            raise ValueError("bad doc_key")
+        return bool(self.sql(f"SELECT doc_key FROM fia_decision_facts WHERE doc_key = '{key}'"))
+
+    def ingest_decision(self, record: dict) -> tuple[bool, str]:
+        """Call ingest_decision. Returns (ok, reducer message)."""
+        return self._reducer("ingest_decision", record)
+
+    def _reducer(self, name: str, record: dict) -> tuple[bool, str]:
+        response = self._post(f"/call/{name}", json=[record])
         if response.status_code == 200:
             return True, ""
         message = response.text.strip()
@@ -228,6 +286,51 @@ def _batch_from_run(client, run) -> Batch:
         "run_summary": summary["value"] if summary else None,
     }
     return Batch(items=items, actor_run_id=run.id, ingest_mode="live_actor_run", provenance=provenance)
+
+
+def attach_official_pdfs(items: list[dict]) -> list[dict]:
+    """Fetch each official PDF here. FIA returns 404 to the Apify network."""
+    from impit import Client
+
+    attached = []
+    with Client(browser="chrome", timeout=60) as client:
+        for item in items:
+            copy = dict(item)
+            url = str(item.get("document_url", "") or "")
+            try:
+                response = client.get(url)
+                response.raise_for_status()
+                body = response.content
+                if not body.startswith(b"%PDF"):
+                    raise IngestError(f"response is not a PDF ({len(body)} bytes)")
+                copy["pdf_base64"] = base64.b64encode(body).decode("ascii")
+                print(f"  fetched {item.get('document_number') or '-'} ({len(body)} bytes)")
+            except Exception as exc:
+                print(f"  fetch failed for {url}: {exc}")
+            attached.append(copy)
+    return attached
+
+
+def start_decision_actor(items: list[dict], max_items: int, document_number: str = "") -> Batch:
+    client = _apify_client()
+    actor_id = os.environ.get("APIFY_DECISION_ACTOR_ID", "").strip()
+    if not actor_id:
+        raise IngestError("APIFY_DECISION_ACTOR_ID is not set (e.g. <username>/fia-decision-reader)")
+    run_input = {"items": items, "max_items": max_items, "document_number": document_number}
+    print(f"Starting Apify Actor {actor_id} for {len(items)} listing items ...")
+    run = client.actor(actor_id).call(run_input=run_input, wait_duration=timedelta(minutes=10))
+    return _batch_from_run(client, run)
+
+
+def save_decision_capture(batch: Batch) -> Path:
+    first = batch.items[0] if batch.items else {}
+    name = f"decision-{first.get('season', 'unknown')}-{first.get('event_slug', 'unknown')}-{batch.actor_run_id}.json"
+    DECISION_CAPTURES_DIR.mkdir(parents=True, exist_ok=True)
+    path = DECISION_CAPTURES_DIR / name
+    path.write_text(
+        json.dumps({"captured_at": utc_now(), **batch.provenance, "items": batch.items}, indent=2) + "\n"
+    )
+    return path
 
 
 def start_actor(season: int, event_slug: str, max_items: int) -> Batch:
@@ -315,6 +418,40 @@ def ingest_batch(batch: Batch, db: SpacetimeClient, events_out: Path | None = No
     return {**counts, "before": before, "after": after}
 
 
+def extract_batch(batch: Batch, db: SpacetimeClient) -> dict:
+    extracted_at = utc_now()
+    counts = {"added": 0, "duplicate": 0, "invalid": 0, "rejected": 0}
+    before = db.count_facts()
+    for index, item in enumerate(batch.items):
+        try:
+            record = normalize_fact(
+                item, actor_run_id=batch.actor_run_id, ingest_mode=batch.ingest_mode, extracted_at=extracted_at
+            )
+        except ValueError as exc:
+            counts["invalid"] += 1
+            print(f"  INVALID   item {index}: {exc}")
+            continue
+        label = f"{item.get('document_number') or '-':>3} {record['offence'][:70]}"
+        if db.fact_exists(record["doc_key"]):
+            counts["duplicate"] += 1
+            print(f"  DUPLICATE {label}")
+            continue
+        ok, message = db.ingest_decision(record)
+        if ok:
+            counts["added"] += 1
+            print(f"  ADDED     {label}")
+        else:
+            counts["rejected"] += 1
+            print(f"  REJECTED  {label}\n            reducer said {message}")
+    after = db.count_facts()
+    print(
+        f"\n{db.database}: {counts['added']} added, {counts['duplicate']} duplicate, "
+        f"{counts['invalid']} invalid, {counts['rejected']} rejected by reducer | "
+        f"fia_decision_facts {before} -> {after}"
+    )
+    return {**counts, "before": before, "after": after}
+
+
 def main(argv: list[str] | None = None) -> int:
     load_dotenv(REPO_ROOT / ".env")
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -328,6 +465,12 @@ def main(argv: list[str] | None = None) -> int:
     sub.add_parser("run-id", help="ingest an already-finished Apify run").add_argument("run_id")
     sub.add_parser("replay", help="re-ingest a capture saved by `run`").add_argument("capture", type=Path)
     sub.add_parser("fixture", help="ingest a hand-written test fixture into the test DB").add_argument("path", type=Path)
+    extract_p = sub.add_parser("extract", help="read PDFs for a saved listing capture and store decision extracts")
+    extract_p.add_argument("capture", type=Path)
+    extract_p.add_argument("--max-items", type=int, default=10)
+    extract_p.add_argument("--document-number", default="", help="only this FIA document number")
+    sub.add_parser("replay-decisions", help="re-store decision extracts from a capture saved by `extract`") \
+        .add_argument("capture", type=Path)
     args = parser.parse_args(argv)
 
     main_db = os.environ.get("SPACETIME_DB", "pit-wall")
@@ -349,6 +492,32 @@ def main(argv: list[str] | None = None) -> int:
         elif args.command == "replay":
             batch = load_capture(args.capture)
             print(f"REPLAY of captured Apify run {batch.actor_run_id} (captured {batch.provenance.get('captured_at')})")
+        elif args.command == "extract":
+            listing = load_capture(args.capture)
+            chosen = []
+            for item in listing.items:
+                if args.document_number and str(item.get("document_number", "") or "") != args.document_number:
+                    continue
+                chosen.append(item)
+                if len(chosen) >= args.max_items:
+                    break
+            if not chosen:
+                raise IngestError("no listing items matched")
+            print(f"Fetching {len(chosen)} official PDF(s) ...")
+            chosen = attach_official_pdfs(chosen)
+            batch = start_decision_actor(chosen, args.max_items, args.document_number)
+            print(f"Apify run {batch.actor_run_id} SUCCEEDED; capture saved to {save_decision_capture(batch).relative_to(REPO_ROOT)}")
+            summary = batch.provenance.get("run_summary") or {}
+            for skip in summary.get("skipped") or []:
+                print(f"  SKIPPED   {skip.get('reason')}")
+            print(f"{len(batch.items)} decision items -> SpacetimeDB '{database}'")
+            result = extract_batch(batch, db)
+            return 1 if result["rejected"] else 0
+        elif args.command == "replay-decisions":
+            batch = load_capture(args.capture)
+            print(f"REPLAY of decision reader run {batch.actor_run_id}: {len(batch.items)} items -> SpacetimeDB '{database}'")
+            result = extract_batch(batch, db)
+            return 1 if result["rejected"] else 0
         else:
             batch = load_fixture(args.path)
             print(f"TEST FIXTURE {args.path} -> {database} (no Apify run)")

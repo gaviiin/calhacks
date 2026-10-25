@@ -98,15 +98,21 @@ class RevenueAgent:
         return out
 
     def _maybe_propose_rule(self, rule_hint: str, ledger) -> list:
+        """One ruling teaches the rule: the person who ruled approves it, and every later case of the clause
+        is booked by it without asking. A later ruling the other way starts a new version."""
         rulings = self.store.rulings(rule_hint)
-        if len(rulings) < 2 or len({r["ruling"] for r in rulings}) != 1:
+        if not rulings:
             return []
-        ruling = rulings[0]["ruling"]
+        latest = rulings[-1]
+        ruling = latest["ruling"]
         sponsor = rule_hint.split("-")[0].lower()
         text = (f"{self.world.sponsor(sponsor)['name']}: sprint results {'count' if ruling == 'include' else 'do not count'} "
-                f"toward the points-finish bonus (from {len(rulings)} controller rulings).")
-        version = self.store.propose_rule(rule_hint, text, ruling, [r["subject"] for r in rulings], AGENT, ledger.clock)
-        return [{"type": "rule_draft", "rule_id": rule_hint, "version": version, "text": text}]
+                f"toward the points-finish bonus (taught by the {latest['by']}'s ruling on {latest['subject']}).")
+        version = self.store.propose_rule(rule_hint, text, ruling, [r["subject"] for r in rulings if r["ruling"] == ruling],
+                                          AGENT, ledger.clock)
+        self.store.approve_rule(rule_hint, version, latest["by"], ledger.clock)
+        ledger.rules = self.store.approved()
+        return [{"type": "rule_learned", "rule_id": rule_hint, "version": version, "text": text}]
 
     # ------------------------------------------------------------------ alerts
 

@@ -1,0 +1,14 @@
+{
+  "actorSpecification": 1,
+  "name": "fia-decision-reader",
+  "title": "FIA Decision Reader",
+  "description": "Downloads official FIA decision PDFs discovered by fia-document-monitor and extracts cars, offence, outcome, and a short quote. Evidence only: it does not create a journal entry.",
+  "version": "0.1",
+  "buildTag": "latest",
+  "input": "./input_schema.json",
+  "dockerfile": "../Dockerfile",
+  "readme": "../README.md",
+  "storages": {
+    "dataset": "./dataset_schema.json"
+  }
+}

@@ -4,6 +4,7 @@
   "description": "Repo-level tooling only (Apify CLI). App code lives in ingestion/, spacetimedb/, frontend/.",
   "scripts": {
     "actor:push": "set -a && . ./.env && set +a && cd ingestion/actor && apify push",
+    "actor:push:reader": "set -a && . ./.env && set +a && cd ingestion/decision_actor && apify push",
     "stdb:publish:local": "spacetime publish --server local --module-path spacetimedb -y pit-wall",
     "stdb:generate": "spacetime generate --lang typescript --out-dir frontend/src/module_bindings --module-path spacetimedb"
   },

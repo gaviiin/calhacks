@@ -1,0 +1,32 @@
+{
+  "title": "FIA Decision Reader input",
+  "type": "object",
+  "schemaVersion": 1,
+  "properties": {
+    "items": {
+      "title": "Listing items",
+      "type": "array",
+      "description": "Documents already discovered by fia-document-monitor. Each item needs title and document_url.",
+      "editor": "json",
+      "prefill": []
+    },
+    "max_items": {
+      "title": "Max PDFs",
+      "type": "integer",
+      "description": "Upper bound on PDFs downloaded this run.",
+      "editor": "number",
+      "minimum": 1,
+      "maximum": 100,
+      "default": 10,
+      "prefill": 10
+    },
+    "document_number": {
+      "title": "Document number",
+      "type": "string",
+      "description": "If set, only the listing item with this document number is read.",
+      "editor": "textfield",
+      "default": ""
+    }
+  },
+  "required": ["items"]
+}

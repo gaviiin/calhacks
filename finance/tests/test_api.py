@@ -44,3 +44,17 @@ def test_demo_flow_over_http(world, store, tmp_path, monkeypatch):
     assert c.get(f"/api/runs/{rid}/trial-balance").json()["ties"]
     assert len(c.get(f"/api/runs/{rid}/timeline").json()) == 14
     assert c.get(f"/api/runs/{rid}/sponsors").json()[0]["sponsor_id"] == "halcyon"
+
+
+def test_parallel_reads_do_not_corrupt_the_shared_ledger(world, store, tmp_path, monkeypatch):
+    from concurrent.futures import ThreadPoolExecutor
+
+    monkeypatch.setattr(api, "WORLD", world)
+    monkeypatch.setattr(api, "STORE", store)
+    monkeypatch.setattr("finance.sim.DATA_DIR", tmp_path)
+    c = TestClient(api.app)
+    rid = c.post("/api/runs", json={"season": 2024, "stop_before_round": 14, "auto_people": False}).json()["run_id"]
+    paths = [f"/api/runs/{rid}/{p}" for p in ("queue", "scorecard", "sponsors", "timeline", "impact", "tape")] * 6
+    with ThreadPoolExecutor(max_workers=12) as pool:
+        codes = list(pool.map(lambda p: c.get(p).status_code, paths))
+    assert codes == [200] * len(paths)

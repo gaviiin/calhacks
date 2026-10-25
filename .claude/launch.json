@@ -2,16 +2,16 @@
   "version": "0.0.1",
   "configurations": [
     {
-      "name": "frontend",
+      "name": "dashboard",
       "runtimeExecutable": "npm",
       "runtimeArgs": ["run", "dev", "--prefix", "frontend"],
       "port": 5173
     },
     {
-      "name": "frontend-test-db",
+      "name": "landing",
       "runtimeExecutable": "npm",
-      "runtimeArgs": ["run", "dev:test", "--prefix", "frontend"],
-      "port": 5174
+      "runtimeArgs": ["run", "dev", "--prefix", "landing"],
+      "port": 5175
     }
   ]
 }

@@ -1,0 +1,21 @@
+{
+  "name": "cost-cap-desk",
+  "version": "1.0.0",
+  "description": "System of work for the F1 cost cap desk (SpacetimeDB database cost-cap-desk)",
+  "type": "module",
+  "private": true,
+  "scripts": {
+    "build": "spacetime build",
+    "publish": "cd .. && spacetime publish cost-cap-desk --server local --yes",
+    "test": "vitest run",
+    "typecheck": "tsc --noEmit -p tsconfig.json && tsc --noEmit -p test/tsconfig.json"
+  },
+  "dependencies": {
+    "spacetimedb": "2.13.*"
+  },
+  "devDependencies": {
+    "@types/node": "^22.20.5",
+    "typescript": "~5.6.2",
+    "vitest": "^3.2.4"
+  }
+}

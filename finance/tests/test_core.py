@@ -26,3 +26,23 @@ def test_dsq_reported_as_numbered_last_place_is_still_a_dsq():
     row = _row({"number": 63, "driver_id": "russell", "constructor_id": "mercedes", "position": 20,
                 "position_text": "20", "status": "Disqualified", "points": 0})
     assert row.pos is None and row.pos_text == "D"
+
+
+def test_one_ruling_teaches_the_rule_and_a_contrary_ruling_replaces_it(world, store):
+    from types import SimpleNamespace
+
+    from finance.agents.revenue import RevenueAgent
+
+    agent = RevenueAgent(world, engine=None, store=store, run_id="t")
+    ledger = SimpleNamespace(clock="2023-05-07T12:00:00Z", rules={})
+    store.add_ruling("bonus|2023|R6|sprint|volta|5.1|car44", "VOLTA-SPRINT-01", "include", "controller",
+                     ledger.clock, "t", "Do sprints count?", "Yes, sprints count.")
+    out = agent._maybe_propose_rule("VOLTA-SPRINT-01", ledger)
+    assert [o["type"] for o in out] == ["rule_learned"]
+    assert store.approved() == {"VOLTA-SPRINT-01": "include"} and ledger.rules == {"VOLTA-SPRINT-01": "include"}
+    assert store.rule("VOLTA-SPRINT-01")["approved_by"] == "controller"
+
+    store.add_ruling("bonus|2023|R9|sprint|volta|5.1|car63", "VOLTA-SPRINT-01", "exclude", "controller",
+                     "2023-07-01T12:00:00Z", "t", "Do sprints count?", "No, not for Volta.")
+    agent._maybe_propose_rule("VOLTA-SPRINT-01", ledger)
+    assert store.approved() == {"VOLTA-SPRINT-01": "exclude"}

@@ -15,13 +15,33 @@ dist/
 
 # apify local storage (local actor runs)
 ingestion/actor/storage/
+ingestion/decision_actor/storage/
 
 # spacetimedb build output
 spacetimedb/dist/
+system_of_work/spacetimedb/target/
+system_of_work/spacetimedb/dist/
 
 # finance
-data/
+/data/
 keys/
+
+# cost cap desk
+world/out/*.jsonl
+world/out/answer_key.csv
+agents/identities.json
+agents/state/
+agents/out/
+.DS_Store
+spacetime.local.json
+research/review/redteam-repro/ts/node_modules/
+replay/.cache/
+
+# typescript incremental build info
+*.tsbuildinfo
 
 # Fetch.ai agent local storage
 agent1q*_data.json
+
+# OpenF1 response cache (race/)
+race/.cache/
