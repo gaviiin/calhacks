@@ -191,6 +191,11 @@ export function scopeToMeeting(race: RaceData, meeting: number | null): RaceData
   const keys = new Set(events.map((e) => e.eventKey));
   const incidents = race.incidents.filter((i) => i.meetingKey === meeting);
   const incKeys = new Set(incidents.map((i) => i.incidentKey));
+  // An entry with no incident (an FIA fine) belongs to the weekend its evidence events are from.
+  const ofWeekend = (e: { incidentKey: string; evidenceJson: string }) =>
+    incKeys.has(e.incidentKey) || (e.incidentKey === '' && [...keys].some((k) => e.evidenceJson.includes(k)));
+  const entries = race.entries.filter(ofWeekend);
+  const entryKeys = new Set(entries.map((e) => e.entryKey));
   const cars = new Set(events.map((e) => e.driverNumber));
   return {
     ...race,
@@ -201,13 +206,13 @@ export function scopeToMeeting(race: RaceData, meeting: number | null): RaceData
     incidents,
     beliefs: race.beliefs.filter((b) => incKeys.has(b.incidentKey)),
     actions: race.actions.filter((a) => incKeys.has(a.incidentKey)),
-    entries: race.entries.filter((e) => incKeys.has(e.incidentKey)),
-    entryLines: race.entryLines.filter((l) => race.entries.some((e) => e.entryKey === l.entryKey && incKeys.has(e.incidentKey))),
+    entries,
+    entryLines: race.entryLines.filter((l) => entryKeys.has(l.entryKey)),
     questions: race.questions.filter((q) => incKeys.has(q.incidentKey)),
     sims: race.sims.filter((x) => x.meetingKey === meeting),
     closes: race.closes.filter((c) => c.meetingKey === meeting),
     options: race.options.filter((o) => o.meetingKey === meeting),
-    postings: race.postings.filter((p) => incKeys.has(p.incidentKey) || race.entries.some((e) => e.entryKey === p.entryKey && incKeys.has(e.incidentKey))),
+    postings: race.postings.filter((p) => entryKeys.has(p.entryKey)),
   };
 }
 
