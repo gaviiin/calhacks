@@ -43,15 +43,15 @@ export function useTrajectory() {
   }, [cc]);
 }
 
-export function CapTrajectory({ compact = false }: { compact?: boolean }) {
+export function CapTrajectory({ compact = false, bare = false }: { compact?: boolean; bare?: boolean }) {
   const t = useTrajectory();
   if (t.last < 0) return null;
   const cap = t.cap;
   const over = t.landing - cap;
   return (
-    <section className="trajectory" aria-labelledby="traj-h">
+    <section className={bare ? 'trajectory trajectory--bare' : 'trajectory'} aria-labelledby="traj-h">
       <div className="sec-head">
-        <h2 id="traj-h">The year, at this pace</h2>
+        {bare ? <h3 id="traj-h">The year, month by month</h3> : <h2 id="traj-h">The year, at this pace</h2>}
         <p className="muted">
           Relevant Costs posted and proposed, cumulative by month, against the cap spent evenly. The dotted line carries {MONTHS[t.last]}'s pace to
           December:{' '}

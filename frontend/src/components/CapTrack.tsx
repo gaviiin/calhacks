@@ -37,7 +37,7 @@ export function useCapFigures() {
   }, [cc]);
 }
 
-export function CapTrack() {
+export function CapTrack({ children, tall = false }: { children?: React.ReactNode; tall?: boolean }) {
   const f = useCapFigures();
   const max = Math.max(f.cap * 1.2, f.runRate * 1.06, f.posted + f.proposed + f.unclassified);
   const x = (v: number) => `${(Math.max(0, v) / max) * 100}%`;
@@ -45,8 +45,11 @@ export function CapTrack() {
   const over = f.runRate - f.cap;
   const monthLabel = f.months === 1 ? 'January' : `${f.months}-month average`;
 
+  const used = f.posted + f.proposed + f.unclassified;
+  const pctUsed = f.cap ? used / f.cap : 0;
+  const seg = (v: number) => (v / max) * 100;
   return (
-    <section className="captrack" aria-labelledby="captrack-h">
+    <section className={`captrack${tall ? ' captrack--tall' : ''}`} aria-labelledby="captrack-h">
       <div className="captrack-head">
         <h2 id="captrack-h">Cost cap 2026</h2>
         <p className="captrack-statement">
@@ -59,14 +62,49 @@ export function CapTrack() {
           )}
         </p>
       </div>
+      {tall && (
+        <dl className="cap-figures">
+          <div>
+            <dt>Used so far</dt>
+            <dd>
+              <Figure value={used} format={usdShort} /> <span className="muted">{(pctUsed * 100).toFixed(1)}% of the cap</span>
+            </dd>
+          </div>
+          <div>
+            <dt>Headroom today</dt>
+            <dd className={f.cap - used > 0 ? '' : 'tone-alert'}>
+              <Figure value={f.cap - used} format={usdShort} />
+            </dd>
+          </div>
+          <div>
+            <dt>Landing at this pace</dt>
+            <dd className={over > 0 ? 'tone-alert' : 'tone-ok'}>
+              <Figure value={f.runRate} format={usdShort} />
+            </dd>
+          </div>
+          <div>
+            <dt>Material breach from</dt>
+            <dd className="tone-alert">{usdShort(f.cap * MATERIAL_BREACH)}</dd>
+          </div>
+        </dl>
+      )}
       <div className="track" role="img" aria-label={`Posted ${usdShort(f.posted)}, proposed ${usdShort(f.proposed)}, unclassified ${usdShort(f.unclassified)}, cap ${usdShort(f.cap)}, run rate ${usdShort(f.runRate)}`}>
         <div className="track-bar">
-          <span className="seg seg--posted" style={{ left: 0, width: x(f.posted) }} />
-          <span className="seg seg--proposed" style={{ left: `calc(${x(f.posted)} + 2px)`, width: `calc(${x(f.proposed)} - 2px)` }} />
+          <span className="seg seg--posted" style={{ left: 0, width: x(f.posted) }}>
+            {seg(f.posted) > 7 && <i>{usdShort(f.posted)} posted</i>}
+          </span>
+          <span className="seg seg--proposed" style={{ left: `calc(${x(f.posted)} + 2px)`, width: `calc(${x(f.proposed)} - 2px)` }}>
+            {seg(f.proposed) > 7 && <i>{usdShort(f.proposed)} proposed</i>}
+          </span>
           <span
             className="seg seg--unclassified"
             style={{ left: `calc(${x(f.posted + f.proposed)} + 2px)`, width: `calc(${x(f.unclassified)} - 2px)` }}
-          />
+          >
+            {seg(f.unclassified) > 7 && <i>{usdShort(f.unclassified)} to classify</i>}
+          </span>
+          <span className="seg seg--headroom" style={{ left: `calc(${x(used)} + 2px)`, width: `calc(${x(Math.max(0, f.cap - used))} - 2px)` }}>
+            {seg(f.cap - used) > 12 && <i>{usdShort(Math.max(0, f.cap - used))} headroom</i>}
+          </span>
         </div>
         <span className="track-line track-line--cap" style={{ left: x(f.cap) }}>
           <b>cap {usdShort(f.cap)}</b>
@@ -114,6 +152,7 @@ export function CapTrack() {
           </dd>
         </div>
       </dl>
+      {children}
     </section>
   );
 }

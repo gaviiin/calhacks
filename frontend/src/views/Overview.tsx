@@ -1,15 +1,13 @@
 import { useEffect, useState } from 'react';
-import { AgentWork } from '../components/AgentWork';
+import { AgentsAtWork } from '../components/AgentsAtWork';
+import { Attention } from '../components/Attention';
 import { CapTrack, useCapFigures } from '../components/CapTrack';
 import { CapTrajectory, useTrajectory } from '../components/CapTrajectory';
-import { Decisions } from '../components/Decisions';
 import { Figure } from '../components/Figure';
 import { IconArrow, IconChart } from '../components/icons';
-import { InboxRow } from '../components/InboxList';
 import { resolveEntry, type InboxItem } from '../components/inboxModel';
 import type { SeatStatus } from '../components/Shell';
 import { Simulations } from '../components/Simulations';
-import { Spine } from '../components/Spine';
 import { WhyPane } from '../components/Why';
 import { DEFAULTS, evaluate } from '../lib/caprisk';
 import { useCostCap } from '../lib/costcap';
@@ -110,43 +108,23 @@ function RiskLine() {
   );
 }
 
-export function Overview({ inbox, status, toAudit }: { inbox: InboxItem[]; status: SeatStatus; toAudit: (from: number, to: number) => void }) {
+export function Overview({ inbox, status }: { inbox: InboxItem[]; status: SeatStatus }) {
   const cc = useCostCap();
   const [selected, setSelected] = useState<string | null>(null);
-  const top = inbox.slice(0, 8);
-  const key = selected ?? top.find((i) => i.desk === 'cost')?.key ?? top[0]?.key ?? null;
+  const key = selected ?? inbox[0]?.key ?? null;
   return (
     <div className="overview">
       <Results />
-      <CapTrack />
-      <RiskLine />
-      <div className="two-up">
-        <CapTrajectory compact />
-        <Decisions />
-      </div>
-      <Spine onWindow={toAudit} />
       <div className="split">
-        <section className="waiting" aria-labelledby="waiting-h">
-          <div className="sec-head">
-            <h2 id="waiting-h">Waiting for a person</h2>
-            <a className="link" href="#/inbox">
-              All {inbox.length} in the inbox <IconArrow size={13} />
-            </a>
-          </div>
-          {top.length ? (
-            <ul className="inbox-list">
-              {top.map((i) => (
-                <InboxRow key={i.key} item={i} selected={i.key === key} onSelect={() => setSelected(i.key)} />
-              ))}
-            </ul>
-          ) : (
-            <p className="muted">Nothing waits for a person. Every proposal is decided.</p>
-          )}
-        </section>
+        <Attention inbox={inbox} selected={key} onSelect={setSelected} />
         <WhyPane entry={resolveEntry(key, inbox, cc)} status={status} />
       </div>
+      <CapTrack tall>
+        <CapTrajectory compact bare />
+        <RiskLine />
+      </CapTrack>
+      <AgentsAtWork />
       <Simulations />
-      <AgentWork limit={8} select={(k) => setSelected(k)} />
     </div>
   );
 }
