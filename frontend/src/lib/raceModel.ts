@@ -77,7 +77,8 @@ export function trackStatus(newestFirst: readonly RaceEvents[]): TrackStatus {
       case 'flag':
         if (flag === 'CHEQUERED' || /CHEQUERED/.test(msg)) return 'CHEQUERED';
         if (flag === 'RED') return 'RED';
-        if (flag === 'GREEN' || flag === 'CLEAR') return 'GREEN';
+        // Only a track-wide green or clear ends a red flag or a neutralisation; a sector's CLEAR is local.
+        if (flag === 'GREEN' || (flag === 'CLEAR' && (str(p.scope) ?? '').toUpperCase() === 'TRACK')) return 'GREEN';
         break;
       case 'session_status': {
         const s = (str(p.status) ?? msg).toUpperCase();

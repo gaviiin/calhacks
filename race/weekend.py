@@ -223,6 +223,10 @@ class Weekend:
         Held entries a person approved are posted to the ERP here too."""
         self.record_postings(erp.apply_reviews(self.state, self.sink))
         changed = questions.apply_answers(self.state, self.sink, self.book)
+        pend = getattr(self.state, "pending_entries", None)
+        if pend:
+            self.state.pending_entries = []
+            self.book_entries(pend)  # corrections move the books by an adjusting entry
         for inc in changed:
             self.state.incidents[inc.incident_key] = inc
             if self.sink:

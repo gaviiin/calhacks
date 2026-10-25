@@ -171,7 +171,10 @@ function takenAt(row: OptionRow, ctx: Context, opts: Opt[], events: RaceEvent[])
   // a lap point is "lap N completed"; a flag point falls mid-lap, on the car's own lap
   const carLap = row.trigger === 'lap' ? row.lap : (ctx.car_lap ?? row.lap);
   const mine = events.filter((e) => e.sessionKey === row.sessionKey && e.driverNumber === row.driverNumber);
-  const stopEv = mine.find((e) => e.kind === 'pit_stop' && Number(payload(e).lap_number ?? e.lap) === carLap + 1);
+  // the stop that follows the decision: on that lap (already in the lane) or the next, never one before it
+  const stopEv = mine.find(
+    (e) => e.kind === 'pit_stop' && [carLap, carLap + 1].includes(Number(payload(e).lap_number ?? e.lap)) && Date.parse(e.at) >= Date.parse(row.at) - 5_000
+  );
   if (stopEv) {
     const p = payload(stopEv);
     const lap = Number(p.lap_number ?? stopEv.lap);

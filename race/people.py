@@ -46,8 +46,14 @@ def _answer(state, sink, d: dict) -> bool:
         return False  # not asked yet: try again on a later event
     if q.status != "open":
         return True
-    opt = next((o for o in q.options if o.get("severity") == d["pick"]), None) or q.options[0]
-    answer = {"option": opt["id"], "replayed": True, "why": d["why"]}
+    opt = next((o for o in q.options if o.get("severity") == d["pick"]), None)
+    if opt is not None:
+        answer = {"option": opt["id"], "replayed": True, "why": d["why"]}
+    else:  # neither case on the buttons: the person's own severity, at the price book's band for it
+        from race.questions import severity_band
+
+        answer = {"option": "neither", "severity": d["pick"], "band": list(severity_band(d["pick"])), "note": f"{d['pick']} damage",
+                  "replayed": True, "why": d["why"]}
     if sink is not None and not getattr(sink, "disabled", True):
         return sink.call("answer_race_question", [q.question_key, json.dumps(answer), d["by"], d["at"]])
     q.status, q.answer, q.answered_by = "answered", answer, d["by"]

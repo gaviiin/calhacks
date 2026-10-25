@@ -254,6 +254,8 @@ def crash_effects(event: RaceEvent, jev: JevAnswers, policy: Policy | None, ctx:
     belief = {"kph": kph, "parts": {k: round(v, 3) for k, v in parts_p.items()}, "severity": {k: round(v, 3) for k, v in sev_p.items()},
               "decided_by": decided_by}
     retired = ctx.positions.get(car, 0) is None or (event.state is not None and event.state.status.startswith("retired"))
+    if prev and prev.get("assessed") and (retired or abs(event.lap - prev["lap"]) <= 10):
+        return []  # a person assessed this crash: later machine reads do not revise their band
     if prev and (retired or abs(event.lap - prev["lap"]) <= 10):
         # Same crash, later evidence (the stewards' message after our own retirement call). Post only a revision,
         # and never a smaller one for a car that is out: a late "noted" message carries no news about the damage.
