@@ -2,6 +2,7 @@ import { useEffect, useMemo, useState } from 'react';
 import { inboxItems } from './components/inboxModel';
 import { Shell, useSeatStatus, type View } from './components/Shell';
 import { useCostCap } from './lib/costcap';
+import { useRace } from './lib/race';
 import { useRevenue } from './lib/revenue';
 import { AuditView } from './views/AuditView';
 import { ConnectView } from './views/ConnectView';
@@ -47,7 +48,8 @@ export default function App() {
   const cc = useCostCap();
   const rev = useRevenue();
   const status = useSeatStatus();
-  const inbox = useMemo(() => inboxItems(cc, rev.queue), [cc, rev.queue]);
+  const race = useRace();
+  const inbox = useMemo(() => inboxItems(cc, rev.queue, race), [cc, rev.queue, race]);
 
   useEffect(() => {
     window.scrollTo({ top: 0 });

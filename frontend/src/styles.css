@@ -6039,3 +6039,8 @@ code {
   border-color: var(--lime);
   color: var(--ink);
 }
+
+.option-btn {
+  display: inline-grid;
+  gap: 2px;
+}

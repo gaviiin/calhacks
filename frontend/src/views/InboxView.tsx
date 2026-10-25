@@ -3,10 +3,11 @@ import { InboxRow } from '../components/InboxList';
 import { resolveEntry, type InboxItem } from '../components/inboxModel';
 import type { SeatStatus } from '../components/Shell';
 import { WhyPane } from '../components/Why';
+import { RaceInboxPane } from './raceday/InboxPane';
 import { useCostCap } from '../lib/costcap';
 import { useSeat } from '../lib/seat';
 
-type Filter = 'all' | 'mine' | 'cost' | 'revenue';
+type Filter = 'all' | 'mine' | 'race' | 'cost' | 'revenue';
 
 export function InboxView({ inbox, selected, select, status }: { inbox: InboxItem[]; selected: string | null; select: (k: string) => void; status: SeatStatus }) {
   const { person } = useSeat();
@@ -23,8 +24,11 @@ export function InboxView({ inbox, selected, select, status }: { inbox: InboxIte
     [inbox, filter, person]
   );
   const current = resolveEntry(selected, inbox, cc);
-  const counts = { all: inbox.length, mine: inbox.filter(mine).length, cost: inbox.filter((i) => i.desk === 'cost').length, revenue: inbox.filter((i) => i.desk === 'revenue').length };
-  const labels: Record<Filter, string> = { all: 'Everything', mine: `For ${person.id === 'observer' ? 'my seat' : person.name}`, cost: 'Cost cap', revenue: 'Revenue' };
+  const counts = {
+    all: inbox.length, mine: inbox.filter(mine).length, race: inbox.filter((i) => i.desk === 'race').length,
+    cost: inbox.filter((i) => i.desk === 'cost').length, revenue: inbox.filter((i) => i.desk === 'revenue').length,
+  };
+  const labels: Record<Filter, string> = { all: 'Everything', mine: `For ${person.id === 'observer' ? 'my seat' : person.name}`, race: 'Race day', cost: 'Cost cap', revenue: 'Revenue' };
 
   return (
     <div className="split">
@@ -49,7 +53,7 @@ export function InboxView({ inbox, selected, select, status }: { inbox: InboxIte
           <p className="muted empty">Nothing here waits for {filter === 'mine' ? person.title : 'a person'}.</p>
         )}
       </section>
-      <WhyPane entry={current} status={status} />
+      {current?.kind === 'race' ? <RaceInboxPane item={current.race} /> : <WhyPane entry={current} status={status} />}
     </div>
   );
 }

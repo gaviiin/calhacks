@@ -42,6 +42,7 @@ export function WhyPane({ entry, status }: { entry: InboxItem | null; status: Se
   if (entry.kind === 'item') return <WorkItemWhy item={entry.item} status={status} />;
   if (entry.kind === 'policy') return <PolicyWhy policy={entry.policy} status={status} />;
   if (entry.kind === 'question') return <QuestionWhy question={entry.question} />;
+  if (entry.kind === 'race') return null; // the inbox renders race-day items with RaceInboxPane
   return <EntryWhy entry={entry.entry} />;
 }
 

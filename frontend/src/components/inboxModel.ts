@@ -2,6 +2,8 @@ import type { Policy, WorkItem } from '../cost_cap_bindings/types';
 import { abs, needsHead, type CostCapData } from '../lib/costcap';
 import { tidyMemo } from '../lib/format';
 import type { Parked, Queue, Question } from '../lib/revenue';
+import type { RaceData } from '../lib/race';
+import type { RaceActions, RaceCloses, RaceEffects, RaceQuestions } from '../module_bindings/types';
 
 // Everything that waits for a person, from both desks, in one list.
 
@@ -9,10 +11,49 @@ export type InboxItem =
   | { kind: 'item'; key: string; desk: 'cost'; item: WorkItem; needs: string; amount: number; title: string; sub: string }
   | { kind: 'policy'; key: string; desk: 'cost'; policy: Policy; needs: string; amount: number; title: string; sub: string }
   | { kind: 'entry'; key: string; desk: 'revenue'; entry: Parked; needs: string; amount: number; title: string; sub: string }
-  | { kind: 'question'; key: string; desk: 'revenue'; question: Question; needs: string; amount: number; title: string; sub: string };
+  | { kind: 'question'; key: string; desk: 'revenue'; question: Question; needs: string; amount: number; title: string; sub: string }
+  | { kind: 'race'; key: string; desk: 'race'; race: RaceInbox; needs: string; amount: number; title: string; sub: string };
 
-export function inboxItems(cc: CostCapData, queue: Queue | null): InboxItem[] {
+/** What race day leaves for a person: a damage question, an action that waits, a line Jev was unsure of, the close. */
+export type RaceInbox =
+  | { type: 'question'; question: RaceQuestions }
+  | { type: 'action'; action: RaceActions }
+  | { type: 'effect'; effect: RaceEffects }
+  | { type: 'close'; close: RaceCloses };
+
+const ROLE: Record<string, string> = {
+  team_principal: 'Team Principal', chief_mechanic: 'Chief Mechanic', sporting_director: 'Sporting Director', logistics: 'Head of Logistics',
+  technical_director: 'Technical Director', head_of_cost_cap: 'Head of Cost Cap', cfo: 'CFO', controller: 'Controller',
+};
+const role = (r: string) => ROLE[r] ?? r.replace(/_/g, ' ');
+
+export function raceInboxItems(race: Pick<RaceData, 'questions' | 'actions' | 'effects' | 'closes'>): InboxItem[] {
   const out: InboxItem[] = [];
+  for (const q of race.questions) {
+    if (q.status !== 'open') continue;
+    out.push({ kind: 'race', key: `race-q:${q.questionKey}`, desk: 'race', race: { type: 'question', question: q }, needs: role(q.routeRole),
+      amount: Number(q.expectedLossCents), title: q.prompt, sub: q.incidentKey });
+  }
+  for (const a of race.actions) {
+    if (a.status !== 'awaiting_approval') continue;
+    out.push({ kind: 'race', key: `race-a:${a.actionKey}`, desk: 'race', race: { type: 'action', action: a }, needs: role(a.ownerRole),
+      amount: 0, title: a.title, sub: a.kind.replace(/_/g, ' ') });
+  }
+  for (const e of race.effects) {
+    if (e.status !== 'needs_person') continue;
+    out.push({ kind: 'race', key: `race-e:${e.effectKey}`, desk: 'race', race: { type: 'effect', effect: e }, needs: 'Head of Racing Finance',
+      amount: Number(e.midCents), title: e.memo, sub: `account ${e.bucket} · Jev unsure` });
+  }
+  for (const c of race.closes) {
+    if (c.status !== 'draft') continue;
+    out.push({ kind: 'race', key: `race-c:${c.closeKey}`, desk: 'race', race: { type: 'close', close: c }, needs: 'CFO', amount: 0,
+      title: 'Approve the sealed weekend and send the briefs', sub: `root ${c.rootHash.slice(0, 10)}…` });
+  }
+  return out;
+}
+
+export function inboxItems(cc: CostCapData, queue: Queue | null, race?: Pick<RaceData, 'questions' | 'actions' | 'effects' | 'closes'>): InboxItem[] {
+  const out: InboxItem[] = race ? raceInboxItems(race) : [];
   for (const w of cc.workItems) {
     if (w.state !== 'PROPOSED' && w.state !== 'NEEDS_INFO') continue;
     const gl = cc.glLines.get(w.subjectRef);
@@ -66,7 +107,7 @@ export function inboxItems(cc: CostCapData, queue: Queue | null): InboxItem[] {
     });
   }
   const rank = (i: InboxItem) =>
-    i.kind === 'entry' ? 0 : i.kind === 'question' || (i.kind === 'item' && i.item.state === 'NEEDS_INFO') ? 2 : i.kind === 'policy' ? 3 : 1;
+    i.kind === 'race' ? -1 : i.kind === 'entry' ? 0 : i.kind === 'question' || (i.kind === 'item' && i.item.state === 'NEEDS_INFO') ? 2 : i.kind === 'policy' ? 3 : 1;
   return out.sort((a, b) => rank(a) - rank(b) || b.amount - a.amount);
 }
 

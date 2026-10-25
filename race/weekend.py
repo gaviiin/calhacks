@@ -58,6 +58,7 @@ class WeekendState:
     effects: list[tuple[RaceEvent, list[Effect]]] = field(default_factory=list)  # every money effect this weekend
     results: dict[int, list[dict]] = field(default_factory=dict)  # session_key -> session_result rows, when known
     spares: dict = field(default_factory=dict)  # part -> {"at_track": n, "factory": n}, from logistics.load_manifest
+    applied_answers: set = field(default_factory=set)  # question keys whose answer the desk has applied
     close: Close | None = None
     replay: Replay | None = None  # the live session's replay (its EffectsContext, policies, precedents)
 
@@ -76,7 +77,7 @@ class WeekendState:
 class Weekend:
     def __init__(self, meeting_key: int, *, pace: float, sink: RaceSink | None, offline: bool, forecast: bool,
                  fixtures_only: bool = True, max_sleep: float = 5.0, quiet: bool = False, from_at: dict[int, str] | None = None,
-                 sessions: list[int] | None = None):
+                 sessions: list[int] | None = None, linger: float = 0.0):
         self.info = weekend_info(meeting_key)
         self.state = WeekendState(meeting_key=meeting_key, info=self.info, team=self.info.get("team", "Williams"), offline=offline)
         self.state.spares = logistics.load_manifest(self.state)
@@ -84,6 +85,7 @@ class Weekend:
         self.pace, self.sink, self.offline, self.forecast = pace, sink, offline, forecast
         self.fixtures_only, self.max_sleep, self.quiet = fixtures_only, max_sleep, quiet
         self.from_at = from_at or {}
+        self.linger = linger  # seconds to wait after the last session for people to answer open questions
         self.book = incidents.IncidentBook(self.state)
         self.timings: dict[str, list[float]] = {}
 
@@ -182,7 +184,13 @@ class Weekend:
             self.state.incidents[inc.incident_key] = inc
             if self.sink:
                 self.sink.incident(inc)
-            self.say(f"[ask] answered: {inc.incident_key} re-decided ({inc.cause})")
+            self.say(f"[ask] {inc.incident_key} re-decided: {inc.cause}")
+            acts = logistics.plan(inc, self.state)  # the answer can change what the garage needs and what waits for a person
+            fresh = [a for a in acts if self.state.actions.get(a.action_key) != a]
+            for a in acts:
+                self.state.actions[a.action_key] = a
+            if fresh and self.sink:
+                self.sink.actions(fresh)
             self.replan(f"answer:{inc.incident_key}@v{inc.version}")
 
     # ------------------------------------------------------------------ run
@@ -191,13 +199,18 @@ class Weekend:
         for key in self.sessions:
             r = Replay(key, self.state.team, pace=self.pace, from_lap=0, sink=self.sink, offline=self.offline, forecast=self.forecast,
                        fixtures_only=self.fixtures_only, max_sleep=self.max_sleep, quiet=self.quiet, hooks=self,
-                       from_at=self.from_at.get(key, ""))
+                       from_at=self.from_at.get(key, ""), era=self.info.get("era", "2025-26"))
             self.state.replay = r
             self.state.session = r.session
             self.state.session_type = r.session_type
             if key == self.sessions[0]:
                 self.replan("baseline")
             stats[key] = r.run()
+        waited = 0.0
+        while self.linger and waited < self.linger and any(q.status == "open" for q in self.state.questions.values()):
+            time.sleep(1.0)
+            waited += 1.0
+            self.apply_answers()
         t0 = time.perf_counter()
         c = close_mod.close_weekend(self.state, offline=self.offline)
         self._time("close", t0)
@@ -225,11 +238,13 @@ def main() -> None:
     ap.add_argument("--offline", action="store_true", default=os.environ.get("RACE_OFFLINE", "") in ("1", "true"))
     ap.add_argument("--no-forecast", action="store_true")
     ap.add_argument("--quiet", action="store_true")
+    ap.add_argument("--linger", type=float, default=0.0, help="seconds to wait for answers to open questions before the close")
     args = ap.parse_args()
     from_at = {int(k): v for k, v in (x.split("=", 1) for x in args.from_at)}
     sink = None if args.no_sink else RaceSink()
     Weekend(args.meeting, pace=args.pace, sink=sink, offline=args.offline, forecast=not args.no_forecast, max_sleep=args.max_sleep,
-            quiet=args.quiet, from_at=from_at, sessions=[int(s) for s in args.sessions.split(",")] if args.sessions else None).run()
+            quiet=args.quiet, from_at=from_at, sessions=[int(s) for s in args.sessions.split(",")] if args.sessions else None,
+            linger=args.linger).run()
 
 
 if __name__ == "__main__":

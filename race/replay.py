@@ -60,7 +60,8 @@ def next_race(session: dict) -> tuple[int | None, bool]:
 
 class Replay:
     def __init__(self, session_key: int, team: str, *, pace: float, from_lap: int, sink: RaceSink | None, offline: bool,
-                 forecast: bool, fixtures_only: bool, max_sleep: float = 5.0, quiet: bool = False, hooks=None, from_at: str = ""):
+                 forecast: bool, fixtures_only: bool, max_sleep: float = 5.0, quiet: bool = False, hooks=None, from_at: str = "",
+                 era: str = "2025-26"):
         self.rows = load_rows(session_key, fixtures_only)
         self.session = (self.rows.get("session") or [{"session_key": session_key}])[0]
         self.session_type = self.session.get("session_type") or "Race"  # Race | Qualifying | Practice
@@ -80,8 +81,15 @@ class Replay:
         self.ctx.set_standings(self.rows.get("championship_teams", []))
         self.ctx.next_race_days, self.ctx.next_race_flyaway = next_race(self.session) if not fixtures_only else (7, True)
         self.ctx.sprint = "Sprint" in (self.session.get("session_name") or "")
-        self.book = PolicyBook.from_rows(sink.sql("SELECT * FROM race_policies") if sink else [])
-        self.precedents = PrecedentStore.load()
+        # Learn only from the past: the era's own policies and precedent store (race/policy_learner.py ERAS).
+        from race.policy_learner import ERAS, era_precedents
+
+        prefixes = [e["prefix"] for k, e in ERAS.items() if k != era and e["prefix"] != "race-"]
+        mine = ERAS[era]["prefix"]
+        rows = sink.sql("SELECT * FROM race_policies") if sink else []
+        self.book = PolicyBook.from_rows([r for r in rows if r["policy_id"].startswith(mine) and not any(r["policy_id"].startswith(p) for p in prefixes if p != mine)])
+        self.era = era
+        self.precedents = era_precedents(era)
         self.track_status = "green"
         self.recent: dict[int, list[str]] = {}
         self.incident_lap: dict[int, int] = {}

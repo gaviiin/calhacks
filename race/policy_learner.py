@@ -33,7 +33,8 @@ from race.normalize import normalize
 from race.precedents import Case as PCase, PrecedentStore
 from race.sink import RaceSink
 
-CACHE_SESSIONS_FILE = Path(__file__).resolve().parent / "data" / "onboarding_sessions.json"
+STORE_DIR = Path(__file__).resolve().parent / "data"
+CACHE_SESSIONS_FILE = STORE_DIR / "onboarding_sessions.json"
 MIN_CASES = 3
 MIN_CONSISTENCY = 0.75
 MIN_ALIKE_CORRECTIONS = 3
@@ -85,7 +86,33 @@ class Draft:
 
 # ---------------------------------------------------------------------- history -> cases
 
-def sessions_to_learn() -> list[int]:
+# An era is the history a weekend may learn from, and nothing after it: the São Paulo 2024 replay learns from the
+# 2024 races before it, the 2026 replays from 2025-26. Each era has its own precedent store and policy-id prefix,
+# so a replay never matches a case from its own future.
+ERAS = {
+    "2025-26": {"store": "precedents.jsonl", "prefix": "race-", "before": "2099-01-01"},
+    "2024": {"store": "precedents_2024.jsonl", "prefix": "race-y2024-", "before": "2024-11-03", "year": 2024,
+             "curated": "williams_2024_cases.jsonl"},  # practice crashes with press sources (the race tape cannot see them)
+}
+
+
+def era_store(era: str) -> Path:
+    return STORE_DIR / ERAS[era]["store"]
+
+
+def era_precedents(era: str) -> PrecedentStore:
+    """The era's store plus its curated cases: everything a replay of that era may know, and nothing later."""
+    store = PrecedentStore.load(era_store(era))
+    if ERAS[era].get("curated"):
+        for c in PrecedentStore.load(STORE_DIR / ERAS[era]["curated"]).cases:
+            store.add(c)
+    return store
+
+
+def sessions_to_learn(era: str = "2025-26") -> list[int]:
+    e = ERAS[era]
+    if "year" in e:
+        return [int(s["session_key"]) for s in openf1.sessions(e["year"], "Race") if s["date_start"] < e["before"]]
     if CACHE_SESSIONS_FILE.exists():
         return json.loads(CACHE_SESSIONS_FILE.read_text())["sessions"]
     return [9693, 10014, 9971, 9963, 9955, 9888, 9877, 9858, 9869, 11291, 11299, 11315, 11326, 11353, 11369, 11377, 11731, 11383, 11388]
@@ -122,7 +149,7 @@ def cases_from_session(rows: dict, team: str) -> list[Case]:
         if e.kind == "incident" and e.payload.get("team_involved") and e.payload.get("stage") == "NOTED":
             for car in [c for c in e.payload["car_numbers"] if c in cars]:
                 rw = (retired[car] - e.lap) if car in retired else None
-                if rw is not None and rw < -3:  # the message lags; a retirement up to 3 laps before the message is the same crash
+                if rw is not None and rw < -6:  # the message lags: Albon in Canada 2026 retired on lap 12, the stewards noted it on lap 16
                     rw = None
                 pw = next((lap - e.lap for lap, _ in pits[car] if 0 <= lap - e.lap <= 3), None)
                 reason = (e.payload.get("reason") or "").upper()
@@ -239,12 +266,25 @@ def learn(sink: RaceSink) -> list[Draft]:
         eff = effects.get(p["effect_key"], {})
         key = (p.get("policy_id") or "jev", re.sub(r"\W+", "-", (p.get("reason") or "").lower())[:40])
         by_policy_reason[key].append((p, eff))
+    events = {e["event_key"]: e for e in sink.sql("SELECT * FROM race_events")}
     store = PrecedentStore.load()
     for pr, eff in ((x[0], x[1]) for items in by_policy_reason.values() for x in items):
         mid = int(pr["corrected_mid_cents"])
         outcome = "none" if mid == 0 else "light" if mid < 25_000_000 else "moderate" if mid < 90_000_000 else "heavy"
-        store.add(PCase(case_id=f"corr-{pr['precedent_key'][:24]}", kind="incident", outcome=outcome, reason=pr.get("reason", ""),
-                        source="correction", summary=f"correction by {pr.get('by', '')}: {pr.get('reason', '')[:70]}",
+        # The case carries the event's own features (what happened on track), not the person's words, so it can
+        # match the next event like it; the person's reason stays in the summary.
+        ev = events.get(pr.get("event_key") or "", {})
+        try:
+            payload = json.loads(ev.get("payload_json") or "{}")
+        except ValueError:
+            payload = {}
+        kind = ev.get("kind") or "incident"
+        store.add(PCase(case_id=f"corr-{pr['precedent_key'][:24]}", kind=kind, outcome=outcome, reason=(payload.get("reason") or "").upper(),
+                        retired_within_laps=0 if kind.startswith("retirement") or kind == "car_stopped" else None,
+                        under=payload.get("track_status") or payload.get("under") or "green",
+                        damage_likely=bool(payload.get("damage_likely", kind in ("car_stopped", "retirement_suspected"))),
+                        source="correction", session_key=int(ev.get("session_key") or 0), car=int(ev.get("driver_number") or 0),
+                        lap=int(ev.get("lap") or 0), summary=f"correction by {pr.get('by', '')}: {pr.get('reason', '')[:70]}",
                         cost_cents=[int(pr["corrected_low_cents"]), mid, int(pr["corrected_high_cents"])]))
     store.save()
     for (pid, reason_slug), items in by_policy_reason.items():
@@ -255,7 +295,9 @@ def learn(sink: RaceSink) -> list[Draft]:
         highs = sorted(int(x[0]["corrected_high_cents"]) for x in items)
         parent = policies.get(pid, {})
         pattern = json.loads(parent.get("pattern") or "{}") if parent else {"kind": "incident", "team_involved": True}
-        pattern = {**pattern, "corrected_reason": reason_slug} if False else pattern  # keep the parent's shape; the head narrows it if needed
+        words = [w for w in re.findall(r"[A-Z]{4,}", (items[0][0].get("reason") or "").upper())][:1]
+        if words and "reason" not in pattern:
+            pattern = {**pattern, "reason": {"contains": words[0]}}  # the child narrows its parent by the people's own words
         drafts.append(Draft(f"{pid}-corr-{reason_slug}"[:120], f"Correction x{len(items)}: {items[0][0].get('reason', '')[:60]}", pattern,
                             {"cost_cents": [lows[len(lows) // 2], mids[len(mids) // 2], highs[len(highs) // 2]], "bucket": "6050"},
                             [Case(0, 0, "correction", reason_slug, None, None, "", "corrected", items[0][0].get("reason", "")) for _ in items],
@@ -270,10 +312,10 @@ def learn(sink: RaceSink) -> list[Draft]:
 
 # ---------------------------------------------------------------------- CLI
 
-def onboard(team: str, offline: bool, sink: RaceSink | None, limit: int | None = None) -> list[Draft]:
+def onboard(team: str, offline: bool, sink: RaceSink | None, limit: int | None = None, era: str = "2025-26") -> list[Draft]:
     cases: list[Case] = []
     used = 0
-    for sk in sessions_to_learn()[: limit or None]:
+    for sk in sessions_to_learn(era)[: limit or None]:
         rows = load_history_rows(sk)
         if rows is None:
             print(f"  session {sk}: not cached, skipped (run the fetch in the README)")
@@ -282,12 +324,18 @@ def onboard(team: str, offline: bool, sink: RaceSink | None, limit: int | None =
         used += 1
         cases.extend(got)
     print(f"{used} sessions, {len(cases)} cases: " + ", ".join(f"{k}={v}" for k, v in sorted(_count(cases).items())))
-    store = PrecedentStore.load()
+    path = era_store(era)
+    store = PrecedentStore.load(path)
     for c in cases:
         store.add(c.precedent())
-    store.save()
-    print(f"precedent store: {len(store)} cases in race/data/precedents.jsonl")
+    store.save(path)
+    print(f"precedent store: {len(store)} cases in {path.relative_to(STORE_DIR.parent.parent)}")
     drafts = draft_policies(cases)
+    prefix = ERAS[era]["prefix"]
+    for d in drafts:
+        d.policy_id = prefix + d.policy_id.removeprefix("race-")
+        if d.parent_policy_id:
+            d.parent_policy_id = prefix + d.parent_policy_id.removeprefix("race-")
     drafts.sort(key=lambda d: bool(d.parent_policy_id))  # parents first: the module refuses a child without its parent
     for d in drafts:
         if not offline:
@@ -325,10 +373,11 @@ def main() -> None:
     ap.add_argument("--no-sink", action="store_true")
     ap.add_argument("--limit", type=int)
     ap.add_argument("--by", default="head_of_racing_finance")
+    ap.add_argument("--era", default=os.environ.get("RACE_ERA", "2025-26"), choices=sorted(ERAS), help="the history to learn from")
     args = ap.parse_args()
     sink = None if args.no_sink else RaceSink()
     if args.onboard:
-        onboard(args.team, args.offline or not os.environ.get("ANTHROPIC_API_KEY"), sink, args.limit)
+        onboard(args.team, args.offline or not os.environ.get("ANTHROPIC_API_KEY"), sink, args.limit, args.era)
     if args.learn:
         if not sink:
             raise SystemExit("--learn reads the database; drop --no-sink")

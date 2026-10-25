@@ -124,5 +124,10 @@ class PolicyBook:
         hits = [p for p in self.by_id.values() if p.active and p.pattern and matches(p.pattern, view)]
         if not hits:
             return None
-        hits.sort(key=lambda p: (p.depth(self.by_id), len(p.pattern), p.autonomy == "GRANTED"), reverse=True)
-        return hits[0]
+        # A SHADOW child only watches: it never takes a case from a GRANTED ancestor (that would suspend the
+        # parent's autonomy without anyone deciding to). The most specific granted policy decides; with none
+        # granted, the most specific shadow is returned so the row can say which draft would have matched.
+        granted = [p for p in hits if p.autonomy == "GRANTED"]
+        pool = granted or hits
+        pool.sort(key=lambda p: (p.depth(self.by_id), len(p.pattern)), reverse=True)
+        return pool[0]

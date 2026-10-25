@@ -15,7 +15,8 @@ AGENT_MODE := $(if $(OFFLINE),--offline,)
         rulebook world api stdb-publish stdb-test bootstrap advance sync learner review-policies \
         analyst standing review-items gateway redteam score cost-cap-run \
         revenue-api revenue-sim revenue-demo evidence-publish evidence-replay \
-        race-publish race-grant race-fixtures race-replay race-tape race-live race-onboard race-learn race-review-policies race-test
+        race-publish race-grant race-fixtures race-replay race-tape race-live race-onboard race-learn race-review-policies race-test \
+        race-weekend race-demo race-onboard-2024
 
 # ---------------------------------------------------------------- shared
 
@@ -149,6 +150,18 @@ race-learn:       ## turn corrections and Jev contradictions since the last run 
 
 race-review-policies: ## the Head of Racing Finance grants autonomy to every shadow policy (REJECT="id=reason" to refuse one)
 	uv run python -m race.policy_learner --approve-all $(if $(REJECT),--reject "$(REJECT)",)
+
+RACE_MEETING ?= 1249
+
+race-weekend:     ## replay a whole weekend through the race-day flow (RACE_MEETING=1249 São Paulo 2024; OFFLINE=1 for no Jev/Claude)
+	$(ENV) uv run python -m race.weekend --meeting $(RACE_MEETING) --pace $(RACE_PACE) $(if $(OFFLINE),--offline,) --linger 120
+
+race-demo:        ## the demo: São Paulo 2024 from just before Colapinto's qualifying crash, Jev asks below 0.65, then the close
+	RACE_ASK_FLOOR=0.65 $(ENV) uv run python -m race.weekend --meeting 1249 --pace $(or $(RACE_PACE),40) --max-sleep 3 \
+		--from 9627=2024-11-03T10:37:30Z --from 9636=2024-11-03T16:33:00Z $(if $(OFFLINE),--offline,) --linger 180
+
+race-onboard-2024: ## learn Williams' 2024 races before São Paulo (its own precedent store and race-y2024- policies; no hindsight)
+	$(ENV) uv run python -m race.policy_learner --onboard --era 2024 $(if $(OFFLINE),--offline,)
 
 race-test:        ## race desk tests: pytest race/tests + the module's vitest
 	uv run pytest -q race/tests

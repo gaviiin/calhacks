@@ -6,13 +6,40 @@
     "year": 2024,
     "round": 21,
     "has_sprint": true,
-    "sessions": [9627, 9636],
-    "session_names": {"9627": "Qualifying", "9636": "Race"},
+    "sessions": [
+      9627,
+      9636
+    ],
+    "session_names": {
+      "9627": "Qualifying",
+      "9636": "Race"
+    },
     "team": "Williams",
-    "cars": {"23": "Albon", "43": "Colapinto"},
-    "next": {"name": "Las Vegas Grand Prix", "round": 22, "date": "2024-11-23", "flyaway": true},
-    "after_next": [{"name": "Qatar Grand Prix", "round": 23, "date": "2024-12-01", "sprint": true}, {"name": "Abu Dhabi Grand Prix", "round": 24, "date": "2024-12-08"}],
-    "regulations": "2021-25 Financial Regulations, Issue 22 (minor overspend under 5%)"
+    "cars": {
+      "23": "Albon",
+      "43": "Colapinto"
+    },
+    "next": {
+      "name": "Las Vegas Grand Prix",
+      "round": 22,
+      "date": "2024-11-23",
+      "flyaway": true
+    },
+    "after_next": [
+      {
+        "name": "Qatar Grand Prix",
+        "round": 23,
+        "date": "2024-12-01",
+        "sprint": true
+      },
+      {
+        "name": "Abu Dhabi Grand Prix",
+        "round": 24,
+        "date": "2024-12-08"
+      }
+    ],
+    "regulations": "2021-25 Financial Regulations, Issue 22 (minor overspend under 5%)",
+    "era": "2024"
   },
   "1285": {
     "name": "Canadian Grand Prix 2026",
@@ -20,11 +47,24 @@
     "year": 2026,
     "round": 7,
     "has_sprint": true,
-    "sessions": [11291],
-    "session_names": {"11291": "Race"},
+    "sessions": [
+      11291
+    ],
+    "session_names": {
+      "11291": "Race"
+    },
     "team": "Williams",
-    "cars": {"23": "Albon", "55": "Sainz"},
-    "next": {"name": "Monaco Grand Prix", "round": 8, "date": "2026-06-07", "flyaway": false},
-    "regulations": "2026 Financial Regulations, Section D (minor overspend under 2%)"
+    "cars": {
+      "23": "Albon",
+      "55": "Sainz"
+    },
+    "next": {
+      "name": "Monaco Grand Prix",
+      "round": 8,
+      "date": "2026-06-07",
+      "flyaway": false
+    },
+    "regulations": "2026 Financial Regulations, Section D (minor overspend under 2%)",
+    "era": "2025-26"
   }
 }
