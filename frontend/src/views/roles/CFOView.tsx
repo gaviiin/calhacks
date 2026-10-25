@@ -144,7 +144,9 @@ export function CFOView() {
           const e = entryOf.get(h.entryKey);
           return t + (e ? n(signedCents(e, lines.get(h.entryKey))) : n(h.amountCents));
         }, 0);
-        const label = inc ? `${carLabel(inc.driverNumber)} · ${inc.sessionKey === 9627 ? 'qualifying' : 'race'} crash books` : 'FIA fines';
+        const lap = inc ? parse<{ lap?: number }>(inc.beliefJson, {}).lap : undefined;
+        const what = inc?.evidenceJson.includes('car_stopped') ? 'crash' : 'contact';
+        const label = inc ? `${carLabel(inc.driverNumber)} · ${inc.sessionKey === 9627 ? 'qualifying' : `race L${lap ?? '?'}`} ${what} books` : 'FIA fines';
         return { key, rows, net, label, at: inc?.firstSeenAt ?? '' };
       })
       .sort((a, b) => sortTime(b.at || '1970-01-01T00:00:00Z') - sortTime(a.at || '1970-01-01T00:00:00Z'));

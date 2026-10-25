@@ -380,6 +380,8 @@ class Weekend:
             self._done["forecasts"] += done.get("forecasts", 0)
             self.report_health()
         waited = 0.0
+        if self.until and self.linger:
+            print("[desk] lap 32 ready: listening for decisions in the dashboard", flush=True)
         while self.linger and waited < self.linger and (any(q.status == "open" for q in self.state.questions.values())
                                                          or any(p.status == "held" for p in self.state.postings.values())):
             time.sleep(1.0)

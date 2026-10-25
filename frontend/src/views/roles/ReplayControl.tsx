@@ -10,6 +10,7 @@ interface Job {
   endedAt: number | null;
   code: number | null;
   lines: string[];
+  ready?: boolean;
 }
 
 export function ReplayControl() {
@@ -28,7 +29,9 @@ export function ReplayControl() {
       setAvailable(false);
     }
   }, []);
-  const running = jobs.find((j) => j.endedAt === null);
+  // A built snapshot keeps listening for decisions (it posts what the dashboard approves): ready, not busy.
+  const listening = jobs.find((j) => j.endedAt === null && j.target === 'race-snapshot' && (j.ready || j.lines.some((l) => l.includes('lap 32 ready'))));
+  const running = jobs.find((j) => j.endedAt === null && j !== listening);
   useEffect(() => {
     void poll();
     const t = setInterval(poll, running ? 1500 : 6000);
@@ -54,6 +57,12 @@ export function ReplayControl() {
         </span>
       ) : (
         <>
+          {listening ? (
+            <span className="replay-live" role="status" title="The desk is running at lap 32: what you approve here is posted to the ERP">
+              <span className="replay-dot" aria-hidden />
+              Lap 32 · listening
+            </span>
+          ) : null}
           <button type="button" className="btn btn--small btn--primary" onClick={() => start('race-demo')}>
             <IconPlay size={13} /> Replay São Paulo
           </button>

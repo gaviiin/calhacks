@@ -108,6 +108,7 @@ export function HardwarePanel() {
       due,
       dueCents: due.reduce((t, r) => t + Number(r.costCents), 0),
       forward: rows.reduce((t, r) => t + Number(r.broughtForwardCents), 0),
+      stress: new Set(rows.flatMap((r) => parse<Stress[]>(r.stressJson, []).filter((x) => x.kind !== 'replaced').map((x) => `${r.driverNumber}|${x.at}|${x.kind}`))).size,
       pens: rows.filter(penalty),
     };
   }, [race.partLife]);
@@ -117,7 +118,11 @@ export function HardwarePanel() {
       <div className="pl-figs">
         <Figure label="Parts replaced" value={String(h.replaced.length)} sub="booked · count when fitted" />
         <Figure label="Due this season by wear" value={usdShort(h.dueCents)} sub={`${h.due.length} parts before Abu Dhabi`} />
-        <Figure label="Brought into 2024" value={usdShort(h.forward)} sub="by this weekend's running" />
+        {h.forward > 0 ? (
+          <Figure label="Brought into 2024" value={usdShort(h.forward)} sub="by this weekend's running" />
+        ) : (
+          <Figure label="Stress events" value={String(h.stress)} sub="classified by Jev, part by part" />
+        )}
         <Figure label="Grid penalty risk" value={String(h.pens.length)} deltaTone={h.pens.length ? 'bad' : 'neutral'} delta={h.pens.length ? 'past allocation' : undefined} />
       </div>
       {h.pens.length ? (

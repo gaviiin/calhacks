@@ -10,7 +10,7 @@ Every team has this job, and crashes are its biggest swing in the season. Willia
 
 | | On São Paulo 2024 |
 |---|---|
-| **The car is the ledger** | Each part on each car has a life. Laps use it; stress events use it (Jev classifies a contact or a trip off the track and the parts it hit); crashes destroy it. Wear is never booked (the cap excludes depreciation, Art. 3.1(o)): it sets when each replacement is fitted, which is when its cost counts. After Albon's crash, 9 parts are replaced and his power unit now runs out by Las Vegas, past its allocation: a grid penalty |
+| **The car is the ledger** | Each part on each car has a life. Laps use it; stress events use it (Jev classifies a contact or a trip off the track and the parts it hit); crashes destroy it. Wear is never booked (the cap excludes depreciation, Art. 3.1(o)): it sets when each replacement is fitted, which is when its cost counts. After Albon's crash, 9 parts are replaced, and his power unit, which was not hit, now runs out before the season ends, past its allocation: a grid penalty |
 | **The books keep themselves** | Balanced entries saying when the cap counts each line, inventory moves, accruals, adjustments once the garage confirms, ERP postings, the evidence pack, the Sunday-night seal and the true-up. People answer one damage question, make the Team Principal's call, and approve each crash's books in one click ($250k and up for the Head of Cost Cap, $1m and up for the CFO) |
 | **Milliseconds** | 2,549 events, each committed in about 1 ms (11 ms at worst); 10,000 seasons re-run in about 80 ms; crashes seen in telemetry 9–26 s before the red flag. Not speed for its own sake: the numbers are never stale when someone decides |
 
@@ -21,7 +21,7 @@ Albon's qualifying crash at 315 km/h, the way the dashboard follows it. A strip 
 | Step | Who | On Albon's crash |
 |---|---|---|
 | Seen | the agent | Telemetry sees car 23 go from 315 to 0 km/h at 11:57:19, 9 s before the red flag |
-| Hardware | the agent, Jev | Jev reads the impact and the parts it hit; the likely ones are marked damaged at once and replaced once the garage confirms. His power unit, not replaced, now runs out by Las Vegas: a grid penalty |
+| Hardware | the agent, Jev | Jev reads the impact and the parts it hit; the likely ones are marked damaged at once and replaced once the garage confirms. His power unit, not replaced, now runs out before the season ends, past its allocation: a grid penalty |
 | Engineering call | Chief Mechanic, Team Principal | The garage confirms heavy damage in one click. The Team Principal sees repair, the spare tub (about 13 h against 3.5 h to the start) or withdraw, priced side by side with no recommendation, and withdraws |
 | Race call | Head of Strategy | None: the car does not start. On Colapinto's race the strategist gets stay out, pit now and other compounds, each priced in positions, points, prize and cap |
 | Next steps | owners by role | Execution follows the choice: the notice to the Stewards waits for the Sporting Director, the parc fermé list is no longer needed, spares are reserved, the factory's work orders and air freight are raised against the Las Vegas cut-off |

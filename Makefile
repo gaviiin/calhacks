@@ -163,9 +163,9 @@ race-demo:        ## the demo: São Paulo 2024 from just before Colapinto's qual
 race-onboard-2024: ## learn Williams' 2024 races before São Paulo (its own precedent store and race-y2024- policies; no hindsight)
 	$(ENV) uv run python -m race.policy_learner --onboard --era 2024 $(if $(OFFLINE),--offline,)
 
-race-snapshot:    ## the demo's frozen moment: a clean pit-wall, then São Paulo up to a few minutes after Colapinto's lap-32 crash, the team's earlier decisions replayed
+race-snapshot:    ## the demo's frozen moment: a clean pit-wall, then São Paulo up to a few minutes after Colapinto's lap-32 crash, the team's earlier decisions replayed; then listens (LINGER=3600 s) and posts what the dashboard approves
 	$(MAKE) race-reset
-	$(ENV) uv run python -m race.weekend --meeting 1249 --pace 0 --snapshot $(if $(OFFLINE),--offline,)
+	$(ENV) uv run python -m race.weekend --meeting 1249 --pace 0 --snapshot --linger $(or $(LINGER),3600) $(if $(OFFLINE),--offline,)
 
 race-reset:       ## a clean pit-wall for the demo: wipe it, reload the FIA evidence, grant roles, relearn 2024 (BROWSER_ID=<hex> seats the dashboard)
 	$(MAKE) evidence-publish evidence-replay

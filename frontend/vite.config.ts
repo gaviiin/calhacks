@@ -43,18 +43,32 @@ interface Job {
   endedAt: number | null;
   code: number | null;
   lines: string[];
+  pid?: number;
+  ready?: boolean; // a snapshot built and listening for decisions
 }
 
 const jobs = new Map<string, Job>();
 
 function startJob(target: string, env: NodeJS.ProcessEnv): Job {
+  // One run at a time: a snapshot that is still listening for decisions is stopped before the next run starts.
+  for (const j of jobs.values()) {
+    if (j.endedAt === null && j.pid) {
+      try {
+        process.kill(-j.pid, 'SIGTERM');
+      } catch {
+        /* already gone */
+      }
+    }
+  }
   const job: Job = { target, startedAt: Date.now(), endedAt: null, code: null, lines: [] };
   jobs.set(target, job);
-  const child = spawn('make', [target], { cwd: REPO, env, shell: false });
+  const child = spawn('make', [target], { cwd: REPO, env, shell: false, detached: true });
+  job.pid = child.pid;
   const push = (chunk: Buffer) => {
     for (const line of chunk.toString().split('\n')) {
       const t = line.replace(/\x1b\[[0-9;]*m/g, '').trimEnd();
       if (t) job.lines.push(t);
+      if (t.includes('lap 32 ready')) job.ready = true;
     }
     if (job.lines.length > 400) job.lines.splice(0, job.lines.length - 400);
   };
