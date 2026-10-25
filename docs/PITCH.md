@@ -2,6 +2,12 @@
 
 Said "uh-NEEL". Annealing takes stress out of metal; Anneal reads stress events off a team's hardware and takes the stress out of three departments asking one question.
 
+## The framing (25 Oct 2026)
+
+Hyphenate builds the modules a finance team runs on, one per process: cash flows, accruals, prepayments, reporting. **We built the module for hardware assets.** It is shaped by the asset, not the process: it owns each part of the car and follows what happens to it into every process it touches. Its agents understand the hardware's repairs (parts accrued, spares out of inventory, work orders), the labour that goes into it (crew overtime), what it does to performance (a grid penalty, the championship odds, prize money) and when it hits the cost cap (the day each part is fitted). One crash touches all of them, and the books for all of them come out of one approval.
+
+Say "the labour that goes into the hardware", not "the hardware's payroll"; and "accrued", not "paid": cash timing (invoices settling, prepayments) stays with the finance modules that receive Anneal's entries.
+
 ## The vision
 
 Hyphenate agents learn how an enterprise runs its books, then improve at, execute and record those financial processes. **Anneal agents learn how a team runs its car**, the whole mechanic lifecycle: how parts are swapped, built, developed and upgraded, how they move between the factory and the track, how long each of those takes and who does it. With that knowledge the agent keeps the record of every hardware operation and turns it into what finance and the pit wall both need: financial expectations (this year's cap, next year's cap, the prize money) and performance expectations (what the car can do at the next race, what the factory has to build to get it there).

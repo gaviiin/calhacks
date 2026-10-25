@@ -5,7 +5,7 @@ import { createContext, useCallback, useContext, useMemo, useState, type ReactNo
 // a one-time invite code), so the module's roles matrix judges every click. On the revenue desk the
 // seat names the approver the ledger's K11 check sees.
 
-export type SeatId = 'observer' | 'head' | 'controller' | 'cfo' | 'cos';
+export type SeatId = 'operator' | 'observer' | 'head' | 'controller' | 'cfo' | 'cos';
 
 export interface Person {
   id: SeatId;
@@ -18,6 +18,15 @@ export interface Person {
 }
 
 export const PEOPLE: Record<SeatId, Person> = {
+  // The dashboard runs as one operator with full control: the Head of Cost Cap's seat on the cost cap desk, the CFO's
+  // approvals on the revenue desk, the CFO seat on pit-wall. The named people below stay for scripts and old links.
+  operator: {
+    id: 'operator',
+    name: 'Operator',
+    title: 'Full control',
+    costCapRole: 'human_head_of_cost_cap',
+    revenue: { approver: 'priya', role: 'cfo' },
+  },
   observer: { id: 'observer', name: 'Observer', title: 'Read only', costCapRole: null, revenue: null },
   head: {
     id: 'head',
@@ -82,12 +91,7 @@ export function forgetToken(db: string, who: string): void {
 const SEAT_KEY = 'pitwall:seat';
 
 function initialSeat(): SeatId {
-  try {
-    const s = localStorage.getItem(SEAT_KEY) as SeatId | null;
-    return s && s in PEOPLE ? s : 'observer';
-  } catch {
-    return 'observer';
-  }
+  return 'operator';
 }
 
 interface SeatState {

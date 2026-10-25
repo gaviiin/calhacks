@@ -1,6 +1,6 @@
 # Pit Wall
 
-An autonomous race accountant for a Formula 1 team. Built for the Hyphenate track at Cal Hacks 13.0.
+The hardware asset module for a Formula 1 team (the product is Anneal). Hyphenate builds the modules for cash, accruals, prepayments and reporting; this is the module for hardware assets: repairs, books, labour, performance and the cost cap, kept in step with the car. Built for the Hyphenate track at Cal Hacks 13.0.
 
 **It keeps the books in step with the car.** Every lap, every trip off the track and every crash changes what each part of the car has left. The agent turns that into entries, cost cap timing, spares and a cap forecast within milliseconds of the data, and people approve only what is material.
 

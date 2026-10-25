@@ -3153,3 +3153,108 @@ input[type='range']::-moz-range-thumb {
     animation: none;
   }
 }
+
+/* ------------------------------------------------------------------ the module: an asset class across the processes */
+
+.mod {
+  margin-top: 56px;
+  border: 1px solid var(--g200);
+  border-radius: 16px;
+  background: var(--white);
+  box-shadow: var(--shadow-1);
+  overflow: hidden;
+}
+.mod-row {
+  display: grid;
+  grid-template-columns: 170px repeat(5, 1fr);
+  align-items: stretch;
+}
+.mod-label {
+  display: flex;
+  align-items: center;
+  padding: 0 20px;
+  font: 700 11px/1.2 var(--display);
+  font-variation-settings: 'wdth' 85;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--g600);
+}
+.mod-procs {
+  border-bottom: 1px solid var(--g200);
+}
+.mod-procs > span:not(.mod-label) {
+  padding: 18px 16px;
+  border-left: 1px solid var(--g100);
+  font-weight: 600;
+  font-size: 15px;
+  color: var(--g700);
+}
+.mod-procs .mod-new {
+  color: var(--blue-d) !important;
+}
+.mod-procs .mod-new::after {
+  content: 'not a finance module';
+  display: block;
+  margin-top: 2px;
+  font: 500 11px/1.2 var(--mono);
+  color: var(--g500);
+}
+.mod-hw {
+  background-color: var(--blue-d);
+  background-image: linear-gradient(rgba(255, 255, 255, 0.06) 1px, transparent 1px), linear-gradient(90deg, rgba(255, 255, 255, 0.06) 1px, transparent 1px);
+  background-size: 24px 24px;
+}
+.mod-hw .mod-label {
+  color: #fff;
+  font-size: 13px;
+}
+.mod-hw > div {
+  padding: 20px 16px 22px;
+  border-left: 1px solid rgba(255, 255, 255, 0.2);
+}
+.mod-hw b {
+  display: block;
+  color: #fff;
+  font-size: 16px;
+}
+.mod-hw em {
+  display: block;
+  margin-top: 6px;
+  font-style: normal;
+  font-size: 13.5px;
+  line-height: 1.4;
+  color: rgba(255, 255, 255, 0.82);
+}
+.mod-proc {
+  display: none;
+}
+.mod-foot {
+  padding: 16px 20px;
+  font-size: 14px;
+  color: var(--g700);
+  border-top: 1px solid var(--g200);
+}
+@media (max-width: 900px) {
+  .mod-procs {
+    display: none;
+  }
+  .mod-row {
+    grid-template-columns: 1fr;
+  }
+  .mod-hw .mod-label {
+    padding: 16px 16px 4px;
+  }
+  .mod-proc {
+    display: block;
+    font: 500 11px/1.2 var(--mono);
+    font-style: normal;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--wash-2);
+    margin-bottom: 4px;
+  }
+  .mod-hw > div {
+    border-left: 0;
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+  }
+}

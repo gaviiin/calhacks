@@ -3,8 +3,8 @@
   <head>
     <meta charset="UTF-8" />
     <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover" />
-    <title>Anneal: the autonomous race accountant</title>
-    <meta name="description" content="Anneal keeps a Formula 1 team's books in step with the car. Every part has a life, a spare count and a cap status; a crash becomes balanced entries, a response plan and a cap forecast in about a millisecond." />
+    <title>Anneal: the hardware asset module</title>
+    <meta name="description" content="Hyphenate builds the modules for cash, accruals, prepayments and reporting. Anneal is the module for hardware assets: a Formula 1 team's repairs, books, labour, performance and cost cap, kept in step with the car." />
     <meta name="theme-color" content="#ffffff" />
     <link rel="icon" href="/favicon.svg" type="image/svg+xml" />
     <link rel="preconnect" href="https://fonts.googleapis.com" />
@@ -30,6 +30,7 @@
       </a>
       <nav aria-label="Sections">
         <a href="#problem">Problem</a>
+        <a href="#module">Module</a>
         <a href="#method">Method</a>
         <a href="#numbers">Numbers</a>
         <a href="#demo">Demo</a>
@@ -61,7 +62,7 @@
 
           <div class="cap cap-title" data-cap="title">
             <h1 class="wordmark">ANNEAL</h1>
-            <p class="lede">The autonomous race accountant. It keeps the books in step with the car.</p>
+            <p class="lede">The hardware asset module. It keeps a Formula 1 team's books in step with the car.</p>
             <p class="cue"><span class="cue-line"></span>Scroll to run the lap</p>
           </div>
           <div class="cap cap-left" data-cap="lap">
@@ -89,7 +90,7 @@
           <div class="tags" aria-hidden="true"></div>
           <div class="cap cap-garage" data-cap="garage">
             <h2 class="display">The car is the ledger.</h2>
-            <p>Every part on every car has a condition, a life left, a spare count and a cap status. A lap uses life, a kerb strike uses more, a crash ends it. Anneal turns each change into the books in about a millisecond, and asks a person only when the call is theirs.</p>
+            <p>Hyphenate builds the modules for cash, accruals, prepayments and reporting. Anneal is the module for hardware assets: every part has a condition, a life, a spare and a cap status, and its agents follow each change into the repairs, the books, the labour, the performance and the cap.</p>
             <div class="row-actions">
               <a class="btn btn-solid" href="#method">Follow one crash</a>
               <a class="btn" href="#demo">Watch the demo</a>
@@ -134,6 +135,30 @@
             <div class="lane"><b>Logistics</b><span class="lane-bar" style="--a:.3;--b:.6"><i>spares, rebuild, freight to the next race</i></span></div>
             <div class="lane"><b>Finance</b><span class="lane-bar lane-late" style="--a:.8;--b:.98"><i>invoices, then the cap</i></span></div>
             <div class="lane lane-us"><b>Anneal</b><span class="lane-bar" style="--a:0;--b:.03"><i>all three, about 1 ms after the data</i></span></div>
+          </div>
+        </div>
+      </section>
+
+
+      <!-- ================================================================ the module -->
+      <section class="section section-grey" id="module">
+        <div class="wrap">
+          <h2 class="display">Finance runs on modules. This one is for the hardware.</h2>
+          <p class="sub">Hyphenate builds the modules a finance team runs on, one per process. Anneal is a module per asset class: it owns the hardware and follows each part into every process it touches. Its agents understand the hardware's repairs, its cost, the labour that goes into it, what it does to performance, and when it hits the cost cap.</p>
+          <div class="mod" aria-label="The hardware module across the finance processes">
+            <div class="mod-row mod-procs">
+              <span class="mod-label">Finance modules</span>
+              <span>Accruals</span><span>Inventory</span><span>Payroll</span><span>Reporting</span><span class="mod-new">Performance</span>
+            </div>
+            <div class="mod-row mod-hw">
+              <span class="mod-label">Hardware assets</span>
+              <div><i class="mod-proc">Accruals</i><b>Repairs and parts</b><em>New parts accrued the moment the garage confirms the damage</em></div>
+              <div><i class="mod-proc">Inventory</i><b>Spares</b><em>Out of the stores at the track or Grove when fitted; work orders for the rest</em></div>
+              <div><i class="mod-proc">Payroll</i><b>Labour</b><em>The crew's overtime on the rebuild, booked as it is worked</em></div>
+              <div><i class="mod-proc">Reporting</i><b>Cost cap</b><em>Each replacement counts the day it is fitted; the year re-forecast after every change</em></div>
+              <div><i class="mod-proc">Performance</i><b>Performance</b><em>A power unit past its allocation is a grid penalty; P8 odds and prize money</em></div>
+            </div>
+            <p class="mod-foot">One crash at São Paulo touches all five, and the books for all five come out of one approval.</p>
           </div>
         </div>
       </section>
@@ -314,20 +339,18 @@
         <div class="wrap demo">
           <div class="demo-copy">
             <h2 class="display">Demo time.</h2>
-            <p class="sub">This page is the pitch. The demo runs live: São Paulo 2024 replayed from OpenF1, the parts wearing lap by lap, the books moving in SpacetimeDB, seated as the CFO.</p>
+            <p class="sub">This page is the pitch. The demo runs live: São Paulo 2024 replayed from OpenF1, one crash at a time, and one operator with full control of every call.</p>
             <ol class="beats">
-              <li><time>0:00</time>Garage, the strip on Albon's crash</li>
-              <li><time>0:20</time>Seen: telemetry, nine seconds before the red flag</li>
-              <li><time>0:35</time>Hardware: nine parts, and a power unit heading for a grid penalty</li>
-              <li><time>1:00</time>Start or withdraw, priced side by side</li>
-              <li><time>1:30</time>The response plan: one click from the Chief of Staff, then every line with a precedent posts on its own</li>
-              <li><time>2:20</time>Ten thousand seasons: P8 from 72% to 0%</li>
-              <li><time>2:40</time>Sealed at $3.92m; the press said nearly $4m</li>
+              <li><time>0:00</time>The module for hardware assets, on one screen</li>
+              <li><time>0:25</time>Albon at 315 km/h: repairs, books, labour, a grid penalty, the cap</li>
+              <li><time>0:55</time>Colapinto's crash: one click approves the whole response</li>
+              <li><time>1:25</time>The car is the ledger: life, then when each part counts</li>
+              <li><time>1:45</time>Sealed at $3.92m; the press said nearly $4m</li>
             </ol>
           </div>
           <figure class="screen">
-            <div class="screen-bar"><i></i><i></i><i></i><span>anneal · Car · seated as CFO</span></div>
-            <img src="/home-1440.jpg" alt="The Anneal dashboard: the car drawn as a blueprint with life, condition and cap lenses, the parts ledger beside it, and the money, spares, season and the agent's trail below" loading="lazy" width="1440" height="900" />
+            <div class="screen-bar"><i></i><i></i><i></i><span>anneal · one crash at a time · full control</span></div>
+            <img src="/home-1440.jpg" alt="The Anneal dashboard: the crashes of the weekend along the top, the damaged car as a blueprint, five lines on what the crash did to the hardware, and the one call to approve the response" loading="lazy" width="1440" height="900" />
           </figure>
         </div>
         <div class="wrap">
@@ -503,7 +526,7 @@
           </div>
 
           <div class="track" data-track-panel="hyphenate">
-            <p class="track-lede">Hyphenate agents learn how a company closes its books.<br /><b>Anneal agents learn how a team runs its car.</b></p>
+            <p class="track-lede">Hyphenate builds the modules for cash flows, accruals, prepayments and reporting.<br /><b>We built the module for hardware assets.</b></p>
             <div class="track-grid">
               <div class="qa">
                 <h3>The four day-one questions</h3>
@@ -592,7 +615,7 @@
           <div class="unique">
             <div class="unique-lead">
               <h3>What nobody else built</h3>
-              <p>The car is the ledger: the learned object is how a team swaps, builds and ships parts, and money follows the hardware.</p>
+              <p>A module for hardware assets. Finance modules follow the money; this one follows the part, and the money follows it into every other ledger.</p>
             </div>
             <ul>
               <li><b>Wear moves the forecast, not the books</b><span>The cap excludes depreciation, so life sets when a part is fitted, and fitting is when its cost counts.</span></li>

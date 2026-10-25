@@ -4,21 +4,19 @@ import { useCostCap } from '../lib/costcap';
 import { useEvidence } from '../lib/evidence';
 import { useRace } from '../lib/race';
 import { useRevenue } from '../lib/revenue';
-import { PEOPLE, fetchSeatCodes, sha256Hex, useSeat, type SeatId } from '../lib/seat';
+import { fetchSeatCodes, sha256Hex, useSeat } from '../lib/seat';
 import { useSeatConnection } from '../lib/seatConnection';
 import { ReplayControl } from '../views/roles/ReplayControl';
 import { IconPlug } from './icons';
 import './shell.css';
 
-export type View = 'overview' | 'race' | 'replay' | 'inbox' | 'books' | 'cost-cap' | 'risk' | 'revenue' | 'evidence' | 'audit' | 'connect' | 'pitwall';
+export type View = 'overview' | 'instruments' | 'race' | 'replay' | 'inbox' | 'books' | 'cost-cap' | 'risk' | 'revenue' | 'evidence' | 'audit' | 'connect' | 'pitwall';
 
-// The bar: the car (home), the two role views, the books and the audit. Inbox is a badge on the right; the services
-// are six lamps; the seat is a small select. Everything else is still routable (#/race, #/replay, #/risk, #/pitwall,
-// #/cost-cap, #/revenue, #/evidence; Connect behind the plug).
+// The bar: the car (home), the books and the audit. One operator holds every seat, so there is no seat to pick; the
+// services are six lamps. Everything else is still routable (#/instruments, #/day/<garage|strategy|accounting|cfo>,
+// #/inbox, #/race, #/replay, #/risk, #/pitwall, #/cost-cap, #/revenue, #/evidence; Connect behind the plug).
 export const NAV: { id: string; label: string; href: string; match: (view: View, arg: string | null) => boolean }[] = [
-  { id: 'car', label: 'Car', href: '#/', match: (v, a) => (v === 'overview' && !a) || v === 'race' || v === 'replay' },
-  { id: 'garage', label: 'Garage', href: '#/day/garage', match: (v, a) => v === 'overview' && (a === 'garage' || a === 'pitwall') },
-  { id: 'strategy', label: 'Strategy', href: '#/day/strategy', match: (v, a) => v === 'overview' && a === 'strategy' },
+  { id: 'car', label: 'Car', href: '#/', match: (v, a) => (v === 'overview' && (!a || a === 'garage' || a === 'pitwall' || a === 'strategy')) || v === 'instruments' || v === 'race' || v === 'replay' },
   { id: 'books', label: 'Books', href: '#/books', match: (v, a) => v === 'books' || v === 'cost-cap' || v === 'revenue' || (v === 'overview' && (a === 'accounting' || a === 'cfo')) },
   { id: 'audit', label: 'Audit', href: '#/audit', match: (v) => v === 'audit' || v === 'evidence' || v === 'pitwall' },
 ];
@@ -65,14 +63,6 @@ export function useSeatStatus(): SeatStatus {
   return status;
 }
 
-const SEAT_NOTE: Record<SeatStatus, string> = {
-  readonly: 'read only on the cost cap desk',
-  connecting: 'connecting',
-  claiming: 'taking the seat',
-  seated: 'seat held by this browser',
-  'no-code': 'no unused seat code: run make bootstrap',
-};
-
 const SERVICE_NAME: Record<string, string> = { openf1: 'OpenF1', jev: 'Jev', claude: 'Claude', erp: 'ERP', spacetimedb: 'SpacetimeDB', notify: 'Notify' };
 const SERVICE_ORDER = ['openf1', 'spacetimedb', 'jev', 'claude', 'erp', 'notify'];
 const SERVICE_WORD: Record<string, string> = { live: 'live', degraded: 'degraded', offline: 'offline', dry_run: 'dry run', not_configured: 'not configured' };
@@ -103,12 +93,37 @@ function Lamps() {
   );
 }
 
-export function Shell({ view, arg, inboxCount, status }: { view: View; arg: string | null; inboxCount: number; status: SeatStatus }) {
-  const { seat, setSeat } = useSeat();
-  const onHome = view === 'overview';
+/** One operator, full control: this browser holds the CFO seat on pit-wall (the seat that may make every call on race
+ * day). When it has none (a fresh browser, or after a reset), the dev server grants it, once per identity. */
+function useOperatorSeat(): 'seated' | 'seating' | 'unavailable' {
+  const race = useRace();
+  const [tried, setTried] = useState<string | null>(null);
+  const [failed, setFailed] = useState(false);
+  const id = race.identityHex;
+  const seated = !!race.mySeat;
+  const attempt = id ? `${id}:${race.seats.length}` : null;
+  useEffect(() => {
+    if (!race.connected || !id || seated || !attempt || tried === attempt) return;
+    setTried(attempt);
+    fetch('/local/seat', { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ browserId: id }) })
+      .then((r) => setFailed(!r.ok))
+      .catch(() => setFailed(true));
+  }, [race.connected, id, seated, attempt, tried]);
+  return seated ? 'seated' : failed ? 'unavailable' : 'seating';
+}
+
+const OPERATOR_NOTE = {
+  seated: 'This browser holds the CFO seat on pit-wall: every call on race day is yours, and each is on the record',
+  seating: 'Taking the seat on pit-wall',
+  unavailable: 'Could not take the seat: run make race-reset BROWSER_ID=<this browser>',
+};
+
+export function Shell({ view, arg }: { view: View; arg: string | null }) {
+  const onHome = view === 'overview' && !arg;
+  const seat = useOperatorSeat();
   return (
     <header className="shell glass--bar">
-      <a className="brand" href="#/" aria-label="Anneal, the parts accountant for Williams Racing">
+      <a className="brand" href="#/" aria-label="Anneal, the hardware module for Williams Racing">
         <span className="brandmark" aria-hidden>
           <i />
           <i />
@@ -116,7 +131,7 @@ export function Shell({ view, arg, inboxCount, status }: { view: View; arg: stri
         </span>
         <span className="brandword">ANNEAL</span>
         <span className="brand-div" aria-hidden />
-        <small>Williams Racing</small>
+        <small>Hardware module · Williams Racing</small>
       </a>
       <nav className="nav" aria-label="Views">
         {NAV.map((n) => {
@@ -131,22 +146,10 @@ export function Shell({ view, arg, inboxCount, status }: { view: View; arg: stri
       <div className="shell-right">
         {onHome ? <ReplayControl /> : null}
         <Lamps />
-        <a href="#/inbox" className={`inbox-btn ${view === 'inbox' ? 'is-on' : ''}`} aria-label={`Inbox, ${inboxCount} waiting`}>
-          Inbox
-          {inboxCount > 0 && <span className="nav-count">{inboxCount}</span>}
-        </a>
-        <label className="seat" title={SEAT_NOTE[status]}>
-          <span className={`avatar avatar--${status}`} aria-hidden>
-            {seat === 'observer' ? '·' : PEOPLE[seat].name.split(' ').map((w) => w[0]).join('')}
-          </span>
-          <select value={seat} onChange={(e) => setSeat(e.target.value as SeatId)} aria-label="Seat">
-            {(Object.keys(PEOPLE) as SeatId[]).map((id) => (
-              <option key={id} value={id}>
-                {id === 'observer' ? 'Observer' : `${PEOPLE[id].name} · ${PEOPLE[id].title}`}
-              </option>
-            ))}
-          </select>
-        </label>
+        <span className={`operator operator--${seat}`} title={OPERATOR_NOTE[seat]}>
+          <span className="operator-dot" aria-hidden />
+          Full control
+        </span>
         <a className={`gear ${view === 'connect' ? 'gear--on' : ''}`} href="#/connect" aria-label="Connections and settings" title="Connections and settings">
           <IconPlug size={15} />
         </a>

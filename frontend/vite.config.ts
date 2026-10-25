@@ -157,6 +157,29 @@ function localFiles(): Plugin {
             jobs: [...jobs.values()].map((j) => ({ ...j, lines: j.lines.slice(-40) })),
           });
         }
+        // ---------------------------------------------------------------- the operator's seat on pit-wall
+        if (url === '/local/seat' && req.method === 'POST') {
+          let id = '';
+          try {
+            id = String((JSON.parse((await body(req)) || '{}') as { browserId?: string }).browserId ?? '').toLowerCase();
+          } catch {
+            /* not JSON */
+          }
+          if (!/^[0-9a-f]{64}$/.test(id)) return json(res, 400, { error: 'browserId must be a 64-character hex identity' });
+          const child = spawn('uv', ['run', 'python', 'scripts/race_grant.py', '--role', 'cfo', '--name', 'CFO', '--identity', id], { cwd: REPO, shell: false });
+          let out = '';
+          let done = false;
+          const finish = (status: number, payload: unknown) => {
+            if (done) return;
+            done = true;
+            json(res, status, payload);
+          };
+          child.stdout.on('data', (c) => (out += c));
+          child.stderr.on('data', (c) => (out += c));
+          child.on('close', (code) => finish(code === 0 ? 200 : 500, { ok: code === 0, out: out.slice(-400) }));
+          child.on('error', (e) => finish(500, { error: e.message }));
+          return;
+        }
         const m = url.match(/^\/local\/sim\/([a-z-]+)$/);
         if (m && req.method === 'POST') {
           const target = m[1];

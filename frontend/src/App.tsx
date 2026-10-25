@@ -18,8 +18,9 @@ import { AuditTabsView } from './views/AuditTabsView';
 import { BooksView } from './views/BooksView';
 import { RaceDayView } from './views/RaceDayView';
 import { HomeView } from './views/desk/HomeView';
+import { PresentView } from './views/desk/PresentView';
 
-// #/ the car (home) · #/day/<garage|strategy|accounting|cfo> the role views · #/inbox/<key> · #/books/<race|cost-cap|revenue> · #/audit[/evidence|/<from>-<to>]
+// #/ the car, one crash at a time (home) · #/instruments every instrument on one page · #/day/<garage|strategy|accounting|cfo> the role views · #/inbox/<key> · #/books/<race|cost-cap|revenue> · #/audit[/evidence|/<from>-<to>]
 // still routable, off the nav: #/race (the full live desk) · #/replay/<season>-<round> · #/risk · #/pitwall (old overview)
 // · #/cost-cap · #/revenue · #/evidence · #/connect (the gear)
 
@@ -31,7 +32,7 @@ interface Route {
 function parse(hash: string): Route {
   const [, view = '', ...rest] = hash.replace(/^#/, '').split('/');
   if (view === 'day') return { view: 'overview', arg: rest.join('/') || null };
-  const known: View[] = ['race', 'replay', 'inbox', 'books', 'cost-cap', 'risk', 'revenue', 'evidence', 'audit', 'connect', 'pitwall'];
+  const known: View[] = ['instruments', 'race', 'replay', 'inbox', 'books', 'cost-cap', 'risk', 'revenue', 'evidence', 'audit', 'connect', 'pitwall'];
   return { view: (known as string[]).includes(view) ? (view as View) : 'overview', arg: rest.join('/') || null };
 }
 
@@ -67,9 +68,11 @@ export default function App() {
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <Shell view={route.view} arg={route.arg} inboxCount={inbox.length} status={status} />
+      <Shell view={route.view} arg={route.arg} />
       <main id="main" className="page">
         {route.view === 'overview' && !route.arg ? (
+          <PresentView nav={nav} />
+        ) : route.view === 'instruments' ? (
           <HomeView nav={nav} />
         ) : route.view === 'overview' ? (
           <RaceDayView role={route.arg} nav={nav} />

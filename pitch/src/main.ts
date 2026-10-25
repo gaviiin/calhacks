@@ -194,7 +194,7 @@ function initTracks() {
 function initReveal() {
   if (reduced || !('IntersectionObserver' in window)) return;
   const targets = document.querySelectorAll<HTMLElement>(
-    '.section .display, .section .sub, .rc, .lanes, .tower, .services, .screen, .feat, .learn, .capfc, .flow, .track-grid, .compare-wrap, .unique, .stack-list, .tests, .close-inner > *',
+    '.section .display, .section .sub, .rc, .lanes, .mod, .tower, .services, .screen, .feat, .learn, .capfc, .flow, .track-grid, .compare-wrap, .unique, .stack-list, .tests, .close-inner > *',
   );
   const io = new IntersectionObserver(
     (entries) => {
