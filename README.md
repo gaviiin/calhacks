@@ -42,7 +42,7 @@ Three things make it hireable rather than a demo:
 
 | Path | What it is | Stack |
 |---|---|---|
-| `frontend/` | The dashboard: the shift on one clock, the inbox with the why pane, both desks, evidence, audit | Vite, React, SpacetimeDB SDK, port 5173 |
+| `frontend/` | The dashboard: results tiles, the cap track and trajectory, who decided, the shift on one clock, the inbox with the why pane, both desks, the cap risk model, simulations run from the page, what the agents did, evidence, audit, connections | Vite, React, SpacetimeDB SDK, port 5173 |
 | `finance/` | Revenue desk: sim, router, engine, revenue agent, ledger, kernel, independent auditor, notifications, Business Central and Outlook ([finance/README.md](finance/README.md)) | Python, FastAPI, port 8000 |
 | `ingestion/` | FIA document monitor (Apify actor), decision reader, bridge into SpacetimeDB ([ingestion/README.md](ingestion/README.md)) | Python, Apify |
 | `spacetimedb/` | `pit-wall` module: FIA documents, decision extracts, the revenue ledger mirror | SpacetimeDB 2.13 TypeScript |
@@ -93,7 +93,9 @@ The dashboard:
 make dashboard
 ```
 
-Open http://localhost:5173, pick a seat in the top bar (the browser claims it with a one-time code `make bootstrap` minted), and work the inbox. On the Revenue tab, replay 2024 to the Belgian Grand Prix and run the weekend: George Russell finishes first on the road and is disqualified for an underweight car, and the desk holds his bonuses until the FIA's final classification.
+Open http://localhost:5173. The **Pit wall** tab opens on results (lines decided without a person, decisions by people, posted, open questions, refused, accuracy against the answer key), the cap track with the year's trajectory, who decided what, the shift, the inbox, and a **Simulations** panel that runs any step of the cost cap pipeline or the 2024 season replay from the page (the dev server spawns the Makefile target; online with Claude when `ANTHROPIC_API_KEY` is in `.env`, offline otherwise). **Cap risk** prices a deliberate overspend on the team's own assumptions against the 2026 sanctions (D10.3, D12.1.1): lap time bought, places gained, prize and bonus upside, fine, aero-testing cut and points deduction, expected value across the whole range with the break-even marked. **Connect** shows what is live and lets a team enter Apify, Slack, email, Teams, SMS, Business Central, Claude and Azure OpenAI settings (saved to `.env` by the dev server, secrets masked on the way back), send a test message, and drop contracts for the Contract Reader.
+
+Pick a seat in the top bar (the browser claims it with a one-time code `make bootstrap` minted), and work the inbox. On the Revenue tab, replay 2024 to the Belgian Grand Prix and run the weekend: George Russell finishes first on the road and is disqualified for an underweight car, and the desk holds his bonuses until the FIA's final classification.
 
 The revenue desk on its own: `make revenue-sim` trains on 2023 and scores 2024; `make revenue-demo` narrates the Spa weekend.
 

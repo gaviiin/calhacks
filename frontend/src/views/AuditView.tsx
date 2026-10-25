@@ -1,5 +1,6 @@
 import { useMemo, useState } from 'react';
 import { IconApproved, IconDenied } from '../components/icons';
+import { Spine } from '../components/Spine';
 import { ROLE_LABEL } from '../components/Why';
 import { useCostCap } from '../lib/costcap';
 import { clock, refusalText } from '../lib/format';
@@ -41,6 +42,7 @@ export function AuditView({ window: win, clearWindow }: { window: [number, numbe
 
   return (
     <div className="audit">
+      <Spine onWindow={(a, b) => (window.location.hash = `/audit/${Math.floor(a)}-${Math.ceil(b)}`)} />
       <section aria-labelledby="audit-h">
         <div className="sec-head">
           <h1 id="audit-h">Audit log</h1>

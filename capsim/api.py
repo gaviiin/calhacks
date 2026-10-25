@@ -18,7 +18,7 @@ from pydantic import BaseModel, Field
 
 from . import regulations as R
 from .assumptions import SOURCES, Assumptions
-from .decide import Option, Standings, Team, evaluate, headroom, pu_allocation
+from .decide import Option, Standings, Team, default_standings, evaluate, headroom, pu_allocation
 from .plan import CALENDAR_SOURCE, EVENTS_2026, Plan
 from .sim import Scenario, forecast, histogram
 from .sources import load
@@ -101,6 +101,7 @@ class DecideIn(ScenarioIn):
     max_material_risk: float = Field(0.01, ge=0, le=1)
     teams: list[TeamIn] | None = None
     teams_ahead_fixed: int = 2
+    standings_team: str = Field("mercedes", description="whose championship position the decision is valued from (real 2026 table); Meridian mirrors mercedes")
 
 
 @router.post("/decide")
@@ -108,7 +109,10 @@ def decide(body: DecideIn):
     plan_, sc, a, meta = _build(body)
     if body.option in sc.include:
         raise HTTPException(400, "the option under test must not also be in include")
-    st = Standings()
+    try:
+        st = default_standings(body.as_of_month, body.standings_team)
+    except ValueError as exc:
+        raise HTTPException(400, str(exc))
     if body.teams:
         if not any(t.name == st.us for t in body.teams):
             raise HTTPException(400, f"teams must include {st.us}")
