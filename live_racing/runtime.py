@@ -5,7 +5,6 @@ from __future__ import annotations
 import json
 from pathlib import Path
 
-from finance.world import World
 
 from .advisor import Advisor
 from .config import Config
@@ -15,6 +14,7 @@ from .publisher import JsonlSink, MemorySink, Publisher, SpacetimeSink, WebhookS
 from .races import Race, race as get_race
 from .replay import Replay, ReplayOptions
 from .result_replay import ResultReplay, ResultReplayOptions
+from .team import LiveWorld
 
 
 def slice_dir(cfg: Config, race: Race) -> Path:
@@ -56,14 +56,15 @@ def make_replay(race_id: str, options: ReplayOptions | ResultReplayOptions | Non
     import uuid
 
     rid = replay_id or f"{race.race_id}:{uuid.uuid4().hex[:8]}"
-    world = World()
     publisher = build_publisher(cfg, rid, memory=memory, spacetime=spacetime, jsonl=jsonl)
     if slice_dir(cfg, race).joinpath("events.jsonl").exists():
         o = options if isinstance(options, ReplayOptions) else ReplayOptions(**(options.__dict__ if options else {}))
+        world = LiveWorld(o.team)
         jev = build_jev(cfg, o.jev)
         meta, events = load_slice(cfg, race)
         return Replay(race, meta, events, world, publisher, jev, o, log=log, replay_id=rid, pause_handler=pause_handler, step_handler=step_handler,
-                      advisor=Advisor(enabled=advisor))
+                      advisor=Advisor(enabled=advisor), cases_jsonl=(cfg.out_dir / "cases.jsonl") if jsonl else None)
+    world = LiveWorld("mercedes")
     o = options if isinstance(options, ResultReplayOptions) else ResultReplayOptions(**{k: v for k, v in (options.__dict__ if options else {}).items()
                                                                                         if k in ("speed", "jev", "max_sleep_s", "mode")})
     jev = build_jev(cfg, o.jev)

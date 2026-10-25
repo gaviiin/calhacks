@@ -15,6 +15,7 @@ import json
 import queue
 import threading
 import time
+from pathlib import Path
 from typing import Any
 
 from fastapi import FastAPI, HTTPException
@@ -28,7 +29,9 @@ from .races import RACES
 from .replay import ReplayOptions
 from .result_replay import ResultReplayOptions
 from .runtime import make_replay, slice_dir
-from .schemas import FinanceImpactUpdate
+from .cases import Refused
+from .schemas import FinanceImpactUpdate, GarageReport
+from .team import TEAMS
 
 app = FastAPI(title="Pit Wall live racing", version="0.1")
 app.add_middleware(CORSMiddleware, allow_origins=["*"], allow_methods=["*"], allow_headers=["*"])
@@ -54,6 +57,8 @@ class StartReplay(BaseModel):
     state_every_s: float = 2.0
     spacetime: bool = True
     advisor: bool | None = None  # None = on when ANTHROPIC_API_KEY is set and LIVE_ADVISOR is not off
+    team: str = "mercedes"  # mercedes (championship money) | williams (the crash as our own car)
+    demo: bool = True  # own-team cases receive the synthetic garage report and invoice automatically
 
 
 def current():
@@ -86,8 +91,10 @@ def start(body: StartReplay):
         if body.race_id == "2024_belgian_gp":
             options: Any = ResultReplayOptions(speed=body.speed, jev=body.jev)
         else:
+            if body.team not in TEAMS:
+                raise HTTPException(422, f"unknown team {body.team}; one of {sorted(TEAMS)}")
             options = ReplayOptions(speed=body.speed, from_lap=body.from_lap, to_lap=body.to_lap, pause_at_lap=body.pause_at_lap, jev=body.jev,
-                                    corroborate_after_s=body.corroborate_after_s, state_every_s=body.state_every_s)
+                                    corroborate_after_s=body.corroborate_after_s, state_every_s=body.state_every_s, team=body.team, demo=body.demo)
         _CURRENT["log"] = []
         try:
             rp = make_replay(body.race_id, options, memory=BUS, spacetime=body.spacetime, log=_log, advisor=body.advisor)
@@ -129,6 +136,8 @@ def state():
         "result_changes": [r["payload"] for r in BUS.of_kind("result_change")],
         "jev_decisions": [r["payload"] for r in BUS.of_kind("jev_decision")][-50:],
         "finance_impacts": [r["payload"] for r in BUS.of_kind("finance_impact")],
+        "cases": [r["payload"] for r in BUS.of_kind("finance_case")],
+        "team": {"id": rp.world.team, "label": TEAMS.get(rp.world.team, {}).get("label")} if rp is not None and hasattr(rp, "world") else None,
         "strategy": (BUS.latest.get(("strategy_advice", rp.race.race_id)) or {}).get("payload") if rp is not None else None,
         "incident_plans": [r["payload"] for r in BUS.of_kind("incident_plan")],
         "feed": rp.feed_health().model_dump(mode="json") if rp is not None else None,
@@ -194,6 +203,87 @@ def strategy():
 @app.get("/live/plans")
 def plans():
     return [r["payload"] for r in BUS.of_kind("incident_plan")]
+
+
+# ---------------------------------------------------------------- financial cases
+
+
+class ApproveBody(BaseModel):
+    role: str
+    by: str
+    decision: str
+    reason: str = ""
+
+
+class InvoiceBody(BaseModel):
+    amount_cents: int | None = None
+
+
+def _book():
+    rp = current()
+    if rp is None or not hasattr(rp, "cases"):
+        raise HTTPException(404, "no replay with cases")
+    return rp
+
+
+@app.get("/live/cases")
+def cases():
+    return [r["payload"] for r in BUS.of_kind("finance_case")]
+
+
+@app.get("/live/cases/{case_id:path}")
+def case(case_id: str):
+    r = BUS.latest.get(("finance_case", case_id))
+    if r is None:
+        raise HTTPException(404, "no such case")
+    return r["payload"]
+
+
+@app.post("/live/cases/{case_id:path}/garage-report")
+def garage_report(case_id: str, body: GarageReport | None = None):
+    """The garage's signed damage report. With no body the synthetic demo report is applied, labelled synthetic."""
+    rp = _book()
+    if case_id not in rp.cases.cases:
+        raise HTTPException(404, "no such case")
+    try:
+        c = rp.cases.demo_garage_report(case_id) if body is None else rp.cases.receive_garage_report(case_id, body)
+    except Refused as exc:
+        raise HTTPException(403, str(exc)) from None
+    return c
+
+
+@app.post("/live/cases/{case_id:path}/approve")
+def approve(case_id: str, body: ApproveBody):
+    """A person's decision: engineering clears or refuses the repair; the controller authorizes or rejects the
+    spend. Agents are refused; the same person cannot do both."""
+    rp = _book()
+    if case_id not in rp.cases.cases:
+        raise HTTPException(404, "no such case")
+    try:
+        return rp.approve(case_id, body.role, body.by, body.decision, body.reason)
+    except Refused as exc:
+        raise HTTPException(403, str(exc)) from None
+
+
+@app.post("/live/cases/{case_id:path}/invoice")
+def invoice(case_id: str, body: InvoiceBody | None = None):
+    """A supplier invoice (synthetic): matched to the authorized order within 2% or escalated."""
+    rp = _book()
+    if case_id not in rp.cases.cases:
+        raise HTTPException(404, "no such case")
+    try:
+        return rp.cases.demo_invoice(case_id, body.amount_cents if body else None)
+    except Refused as exc:
+        raise HTTPException(403, str(exc)) from None
+
+
+@app.get("/live/scorecard")
+def scorecard():
+    """Measured proof written by scripts/live_scorecard.py; 404 until it has been run."""
+    path = Path(__file__).resolve().parent / "out" / "scorecard.json"
+    if not path.exists():
+        raise HTTPException(404, "no scorecard yet: uv run python scripts/live_scorecard.py")
+    return json.loads(path.read_text())
 
 
 @app.get("/live/metrics")

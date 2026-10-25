@@ -34,6 +34,28 @@ def _scenario(world: World, race: Race, base, positions_after: dict, key: str, l
                             constructors_position_after=fc.prize.constructors_position if fc.prize else None, prize_delta_cents=prize_after - prize_before)
 
 
+def gate(scen: list[IncidentScenario], car_status: str, flag: str | None) -> list[IncidentScenario]:
+    """The feasibility gate. A stationary car cannot continue, pit or serve a penalty; a repair needs
+    engineering clearance whatever the flag; a red-flag stop saves track position, not money, and
+    proves nothing about whether the car can be repaired."""
+    stopped = car_status == "stopped_candidate"
+    for s in scen:
+        if s.key in ("continue", "pit_now", "penalty_5s", "penalty_10s", "drive_through") and stopped:
+            s.feasible, s.why = False, "the car is stationary; it cannot continue, pit or serve a penalty"
+        elif s.key == "repair_and_rejoin":
+            s.requires = ["engineering_clearance"]
+            if stopped:
+                s.feasible, s.why = False, "only if the garage reports the car repairable and engineering clears it; a red flag frees track position, not the parts cost"
+            else:
+                s.why = "a repair commits parts cost (Relevant Costs) and needs engineering clearance; the position arithmetic is not the decision"
+        elif s.key == "disqualified":
+            s.requires = ["stewards_decision"]
+            s.why = "a stewards' decision after the race, not a team choice"
+        elif s.key == "retire" and stopped:
+            s.why = "the likely outcome for a stationary car; costs nothing further on the sponsor side"
+    return scen
+
+
 def scenarios_for(world: World, race: Race, state: RaceState, car: int, as_of: str | None, drivers_meta) -> list[IncidentScenario]:
     positions = state.positions()
     base = if_finished_now(world, race, positions, as_of_utc=as_of, drivers_meta=drivers_meta)
@@ -60,7 +82,8 @@ def scenarios_for(world: World, race: Race, state: RaceState, car: int, as_of: s
                          "the car is withdrawn; everyone behind moves up one place", car, as_of, drivers_meta))
     out.append(_scenario(world, race, base, positions_without(positions, car), "disqualified", "Disqualified after the race",
                          "a stewards' decision after the race: the same money as retiring, decided later", car, as_of, drivers_meta))
-    return out
+    d = state.drivers.get(car)
+    return gate(out, d.status if d else "unknown", state.flag_status)
 
 
 def plan_for(world: World, race: Race, state: RaceState, sig: IncidentSignal, team_cars: list[int], *, version: int, observed_at: str, drivers_meta,
@@ -74,12 +97,19 @@ def plan_for(world: World, race: Race, state: RaceState, sig: IncidentSignal, te
     car_map = world.car_map(race.season)
     driver_id = car_map.get(car, {}).get("driver_id", f"car{car}")
     team_car = car in team_cars
+    d = state.drivers.get(car)
+    car_status = d.status if d else "unknown"
     scen = scenarios_for(world, race, state, car, as_of, drivers_meta)
+    feasible = [s for s in scen if s.feasible]
     worst = min(scen, key=lambda s: s.delta_cents)
-    basis = (f"car {car} ({driver_id}) at P{positions.get(car)} on lap {state.lap} under {state.flag_status}; team exposure if finished now {usd(base.amount_cents)}; "
-             + (f"worst case {worst.label.lower()}: {usd(worst.delta_cents)}" if worst.delta_cents else "no scenario changes the team's sponsor exposure")
-             + ("" if team_car else f"; car {car} is not a Meridian car, so only the running order behind it moves the team's money (the garage side is the fiction's)"))
-    return IncidentPlan(incident_id=sig.incident_id, version=version, race_id=race.race_id, car=car, driver_id=driver_id, team_car=team_car, as_of_utc=as_of or "",
+    basis = (f"car {car} ({driver_id}) at P{positions.get(car)} on lap {state.lap} under {state.flag_status}; provisional sponsor payout {usd(base.amount_cents)}; "
+             + (f"largest change {worst.label.lower()}: {usd(worst.delta_cents)}" if worst.delta_cents else "no outcome changes the team's provisional payout")
+             + ("" if team_car else f"; car {car} is a competitor's, so only the running order behind it moves our money; their garage and books are not ours to see"))
+    note = (f"{len(feasible)} of {len(scen)} outcomes feasible for a car that is {car_status.replace('_', ' ')}"
+            + ("; repair needs engineering clearance" if any(s.key == "repair_and_rejoin" and "engineering_clearance" in s.requires for s in scen) else ""))
+    return IncidentPlan(incident_id=sig.incident_id, version=version, race_id=race.race_id, car=car, driver_id=driver_id, team_car=team_car,
+                        scope="own_team" if team_car else "competitor", car_status=car_status, feasibility_note=note, as_of_utc=as_of or "",
                         observed_at_utc=observed_at, lap=state.lap, flag_status=state.flag_status, position_now=positions.get(car), exposure_now_cents=base.amount_cents or 0,
-                        scenarios=scen, damage_estimate_cents=None, cost_cap_note=COST_CAP_NOTE, advisor=advisor or AdvisorNote(), basis=basis,
+                        scenarios=scen, damage_estimate_cents=None, cost_cap_note=COST_CAP_NOTE if team_car else "Competitor car: no cost-cap question for us.",
+                        advisor=advisor or AdvisorNote(), basis=basis,
                         timestamps=Timestamps(source_event=sig.event_time_utc, adapter_received=observed_at, finance_recomputed=observed_at))

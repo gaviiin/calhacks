@@ -21,12 +21,13 @@ def test_incident_reaches_the_handoff_and_person_2_answers_by_id(quiet):
     assert c.get("/live/health").json()["jev"] == "deterministic_fallback"
     races = c.get("/live/races").json()
     assert {r["race_id"] for r in races} == {"2024_sao_paulo_gp", "2024_belgian_gp"}
-    r = c.post("/live/replay", json={"race_id": "2024_sao_paulo_gp", "speed": 1e9, "from_lap": 30, "to_lap": 33, "corroborate_after_s": 30, "spacetime": False})
+    # as the Williams-mirror, car 43 is our car: the timing feed confirms it is out and the cost cap agent is asked
+    r = c.post("/live/replay", json={"race_id": "2024_sao_paulo_gp", "speed": 1e9, "from_lap": 30, "to_lap": 33, "spacetime": False, "team": "williams", "demo": False})
     assert r.status_code == 202, r.text
     s = wait_finished(c)
-    assert s["replay"]["state"] == "finished" and s["race_state"]["lap"] >= 33
+    assert s["replay"]["state"] == "finished" and s["race_state"]["lap"] >= 33 and s["team"]["id"] == "williams"
     inc = next(i for i in s["incidents"] if i["incident_id"].endswith("car43:crash_candidate"))
-    assert inc["handoff"]["status"] == "requested" and inc["sporting_confirmation"] == "verified_historical_incident"
+    assert inc["handoff"]["status"] == "requested" and inc["sporting_confirmation"] == "retired_per_timing" and inc["scope"] == "own_team"
     iid = inc["incident_id"]
 
     bad = c.post(f"/live/incidents/{iid}/finance-impact", json={"incident_id": iid, "financial_status": "synthetic_projected_not_booked", "journal_entry": {"debit": 1}})

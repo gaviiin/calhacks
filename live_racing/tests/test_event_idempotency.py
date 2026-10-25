@@ -43,10 +43,16 @@ def test_the_incident_is_attributed_corroborated_and_handed_off_in_order(world, 
     assert [v["version"] for v in versions] == [1, 2, 3]
     assert versions[0]["sporting_confirmation"] == "incident_candidate" and versions[0]["driver_attribution"] == "provisionally_correlated"
     assert versions[1]["jev"]["chosen_route"] == "crash_finance" and versions[1]["jev"]["used"] is False and versions[1]["jev"]["status"] == "unavailable"
-    assert versions[2]["sporting_confirmation"] == "verified_historical_incident" and versions[2]["handoff"] == {
-        "target": "cost_cap_agent", "status": "requested", "requested_at_utc": versions[2]["handoff"]["requested_at_utc"], "acknowledged_at_utc": None, "finance_impact_ref": None}
-    assert versions[2]["corroborating_source_url"].startswith("https://www.formula1.com/")
+    # as Mercedes, car 43 is a competitor: the timing feed confirms it is out (no post-race source as live evidence), and nothing is handed over
+    assert versions[2]["sporting_confirmation"] == "retired_per_timing" and versions[2]["scope"] == "competitor"
+    assert versions[2]["handoff"]["status"] == "not_requested" and versions[2]["corroborating_source_url"] is None
+    assert versions[2]["post_race_reference"]["available"].startswith("after the race")
+    assert "did not take the restart" in versions[2]["corroboration_note"]
     assert all(v["financial_impact"]["status"] == "unknown" and v["financial_impact"]["amount_cents"] is None for v in versions)
+    cases = [r["payload"] for r in mem.of_kind("finance_case")]
+    c43 = next(c for c in cases if c["car"] == 43)
+    assert c43["scope"] == "competitor" and c43["state"] == "closed" and c43["permissions"]["may_call_cost_cap_agent"] is False
+    assert "competitor retired" in c43["closed_reason"] and c43["garage_report"] is None
     m = rp.metrics()
     assert m["jev"]["calls_on_telemetry_ticks"] == 0 and m["jev"]["requests"] == 0 and m["state_updates"] > 50
     states = [r["payload"] for r in mem.records if r["kind"] == "race_state"]

@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Figure } from '../components/Figure';
 import { IconAgent, IconApproved, IconBolt, IconChart, IconDenied, IconDoc, IconExternal, IconFlag, IconLive, IconPlay, IconRadio, IconShield, IconStop, IconWaiting } from '../components/icons';
-import { BRAZIL, SPA, useLive, type AdvisorNote, type DriverState, type FeedHealth, type IncidentSignal, type JevDecision, type LiveState, type RaceStateUpdate } from '../lib/live';
+import { BRAZIL, SPA, useLive, type AdvisorNote, type CaseStep, type DriverState, type FeedHealth, type FinanceCase, type IncidentSignal, type JevDecision, type LiveState, type Published, type RaceStateUpdate } from '../lib/live';
 import {
   buildStory,
   clock,
@@ -70,8 +70,14 @@ function Delta({ cents, strong = false }: { cents: number | null | undefined; st
 
 // ---------------------------------------------------------------- command bar
 
+const TEAMS = [
+  { id: 'williams', label: 'As our car crashes', note: 'Williams-mirror: car 43 is ours; the full crash case' },
+  { id: 'mercedes', label: 'As the championship money', note: 'Mercedes-mirror: cars 63 and 44; car 43 is a competitor' },
+] as const;
+
 function CommandBar({ live }: { live: LiveState }) {
   const [speed, setSpeed] = useState<number>(20);
+  const [team, setTeam] = useState<'williams' | 'mercedes'>('williams');
   const [pauseAt32, setPauseAt32] = useState(false);
   const [busy, setBusy] = useState<string | null>(null);
   const [err, setErr] = useState<string | null>(null);
@@ -81,7 +87,7 @@ function CommandBar({ live }: { live: LiveState }) {
     setBusy(preset.label);
     setErr(null);
     try {
-      const body = preset.race === SPA ? { race_id: SPA, speed: 120 } : { race_id: BRAZIL, ...preset.body, speed, pause_at_lap: pauseAt32 ? 32 : null, corroborate_after_s: 45 };
+      const body = preset.race === SPA ? { race_id: SPA, speed: 120 } : { race_id: BRAZIL, ...preset.body, speed, pause_at_lap: pauseAt32 ? 32 : null, team, demo: true };
       await post('/live/replay', body);
     } catch (e) {
       setErr(e instanceof Error ? e.message : String(e));
@@ -103,6 +109,13 @@ function CommandBar({ live }: { live: LiveState }) {
           ))}
         </div>
         <div className="ld-knobs">
+          <div className="ld-team" role="group" aria-label="Which car is ours">
+            {TEAMS.map((t) => (
+              <button key={t.id} type="button" className={`ld-filter ${team === t.id ? 'ld-filter--on' : ''}`} onClick={() => setTeam(t.id)} title={t.note}>
+                {t.label}
+              </button>
+            ))}
+          </div>
           <label className="ld-knob">
             <span>Speed</span>
             <select value={speed} onChange={(e) => setSpeed(Number(e.target.value))} aria-label="Replay speed">
@@ -139,7 +152,9 @@ function CommandBar({ live }: { live: LiveState }) {
           </span>
         ) : null}
         {rp ? <span className="ld-muted mono">{rp.events_done.toLocaleString()} / {rp.events_total.toLocaleString()} records</span> : null}
-        <span className="ld-muted">mode {rp?.mode ?? 'replay'} · real OpenF1 timing, synthetic contracts, calculated exposure, nothing booked</span>
+        <span className="ld-muted">
+          {live.team?.label ? `${live.team.label} · ` : ''}mode {rp?.mode ?? 'replay'} · real OpenF1 timing, synthetic contracts, calculated scenarios, nothing booked
+        </span>
         {busy ? <span className="ld-muted">Starting {busy}…</span> : null}
         {err ?? live.error ? <span className="ld-error">{err ?? live.error}</span> : null}
       </div>
@@ -243,10 +258,10 @@ function MoneyCard({ live, advice }: { live: LiveState; advice: Advice | null })
     <section className="ld-card ld-money" aria-labelledby="ld-money-h">
       <div className="ld-card-head">
         <h2 id="ld-money-h" className="ld-h">
-          Sponsor money if the race ended now
+          Current-position bonus scenario
         </h2>
         <Chip tone="neutral" icon={<IconChart />}>
-          indicative · unbooked
+          provisional · not a forecast · nothing booked
         </Chip>
       </div>
       <div className="ld-money-main">
@@ -258,15 +273,15 @@ function MoneyCard({ live, advice }: { live: LiveState; advice: Advice | null })
       </div>
       <dl className="ld-tally">
         <div>
-          <dt>Peak this replay</dt>
+          <dt>Highest provisional scenario</dt>
           <dd className="mono">{money(advice?.exposure_peak_cents)}</dd>
         </div>
         <div className={lost ? 'ld-tally-lost' : ''}>
-          <dt>Given up since the peak</dt>
+          <dt>Change from the highest scenario</dt>
           <dd className="mono">{lost ? `−${money(lost)}` : '$0'}</dd>
         </div>
         <div>
-          <dt>At the join</dt>
+          <dt>Scenario at the join</dt>
           <dd className="mono">{money(advice?.exposure_at_join_cents)}</dd>
         </div>
         <div>
@@ -274,6 +289,7 @@ function MoneyCard({ live, advice }: { live: LiveState; advice: Advice | null })
           <dd className="mono">{fc?.prize ? `P${fc.prize.constructors_position}` : '—'}</dd>
         </div>
       </dl>
+      <p className="ld-small ld-muted">The sponsor payout the contracts would owe if the current running order were the final classification. It is a valuation of the position, not a prediction of the finish.</p>
       <ul className="ld-lines" aria-label="Clauses paying at the current positions">
         {[...byCar.entries()].map(([car, e]) => (
           <li key={car}>
@@ -291,20 +307,27 @@ function MoneyCard({ live, advice }: { live: LiveState; advice: Advice | null })
 }
 
 function JevCard({ live, feed }: { live: LiveState; feed: FeedHealth | null }) {
+  const [inspect, setInspect] = useState(false);
   const material = live.jevDecisions.filter((d) => d.payload.material);
   const last = material[material.length - 1] ?? null;
   const d: JevDecision | null = last?.payload.decision ?? null;
-  const probs = d?.route_probabilities ? Object.entries(d.route_probabilities).sort((a, b) => b[1] - a[1]) : [];
+  const probs = inspect && d?.route_probabilities ? Object.entries(d.route_probabilities).sort((a, b) => b[1] - a[1]) : [];
   return (
     <section className="ld-card ld-jev" aria-labelledby="ld-jev-h">
       <div className="ld-card-head">
         <h2 id="ld-jev-h" className="ld-h">
-          Quick decisions · Jev
+          Jev reflex monitor
         </h2>
-        <Chip tone={feed?.jev?.mode?.startsWith('api') ? 'ok' : 'hold'} icon={<IconBolt />}>
-          {feed?.jev?.mode?.startsWith('api') ? `live · p50 ${feed.jev.p50_ms ?? '—'} ms` : 'deterministic fallback'}
-        </Chip>
+        <div className="ld-chips">
+          <Chip tone={feed?.jev?.mode?.startsWith('api') ? 'ok' : 'hold'} icon={<IconBolt />}>
+            {feed?.jev?.mode?.startsWith('api') ? `connected · p50 ${feed.jev.p50_ms ?? '—'} ms` : 'deterministic fallback'}
+          </Chip>
+          <button type="button" className="ld-filter" onClick={() => setInspect((v) => !v)} aria-expanded={inspect}>
+            {inspect ? 'Hide inspector' : 'Inspect'}
+          </button>
+        </div>
       </div>
+      <p className="ld-small ld-muted">Jev classifies each material event in milliseconds and routes it. Routing is not permission: nothing is spent or booked on a route.</p>
       {last && d ? (
         <>
           <div className="ld-jev-last">
@@ -328,9 +351,10 @@ function JevCard({ live, feed }: { live: LiveState; feed: FeedHealth | null }) {
               <p className="ld-small ld-muted">
                 Jev said <b>{ROUTE_WORDS[d.route] ?? d.route}</b> at {((d.route_confidence ?? 0) * 100).toFixed(0)}%; code kept <b>{ROUTE_WORDS[d.chosen_route]}</b>: {d.reason}
               </p>
-            ) : (
+            ) : inspect ? (
               <p className="ld-small ld-muted">{d.reason}</p>
-            )}
+            ) : null}
+            {inspect ? <p className="ld-small ld-muted mono">input {d.input_hash ?? '—'} · deterministic route {d.deterministic_route} · status {d.status}</p> : null}
             {probs.length ? (
               <ul className="ld-probs" aria-label="Route probabilities">
                 {probs.map(([k, v]) => (
@@ -346,8 +370,7 @@ function JevCard({ live, feed }: { live: LiveState; feed: FeedHealth | null }) {
             ) : null}
           </div>
           <ol className="ld-jev-list" aria-label="Earlier decisions">
-            {material
-              .slice(-6, -1)
+            {(inspect ? material.slice(-9, -1) : material.slice(-4, -1))
               .reverse()
               .map((m) => (
                 <li key={m.id + m.version}>
@@ -400,7 +423,7 @@ function CarCard({ car, race, advice }: { car: number; race: RaceStateUpdate | n
       </div>
       <dl className="ld-levers">
         <div>
-          <dt>Earning now</dt>
+          <dt>Provisional payout now</dt>
           <dd className={`mono ${earning ? 'ld-ok' : ''}`}>{money(earning)}</dd>
         </div>
         <div>
@@ -416,7 +439,7 @@ function CarCard({ car, race, advice }: { car: number; race: RaceStateUpdate | n
           </dd>
         </div>
         <div>
-          <dt>Pit now{factor ? ` (${factor})` : ''}</dt>
+          <dt>Pit now, position-related bonus change{factor ? ` (${factor})` : ''}</dt>
           <dd>
             <Delta cents={pit?.delta_cents ?? 0} />{' '}
             <span className="ld-muted ld-small">
@@ -665,10 +688,11 @@ function PlanTable({ plan }: { plan: Plan }) {
       </thead>
       <tbody>
         {p.scenarios.map((s) => (
-          <tr key={s.key} className={s.key === rec ? 'ld-plan-rec' : ''}>
+          <tr key={s.key} className={`${s.key === rec ? 'ld-plan-rec' : ''} ${s.feasible === false ? 'ld-plan-out' : ''}`}>
             <td>
               {s.label}
               {s.key === rec ? <span className="ld-rec">advisor</span> : null}
+              {s.feasible === false ? <span className="ld-out">not feasible</span> : s.requires?.length ? <span className="ld-req">needs {s.requires.join(', ').replace(/_/g, ' ')}</span> : null}
             </td>
             <td className="mono">{s.position_after ? `P${s.position_after}` : 'out'}</td>
             <td className="mono">{money(s.exposure_after_cents)}</td>
@@ -676,7 +700,7 @@ function PlanTable({ plan }: { plan: Plan }) {
               <Delta cents={s.delta_cents} />
             </td>
             <td className="ld-small ld-muted">
-              {s.assumption}
+              {s.feasible === false ? s.why : s.assumption}
               {s.lines_lost.length ? ` Loses ${s.lines_lost.join('; ')}.` : ''}
             </td>
           </tr>
@@ -849,6 +873,347 @@ function ResultsPanel({ live }: { live: LiveState }) {
   );
 }
 
+// ---------------------------------------------------------------- the active financial case
+
+const PEOPLE = {
+  engineering: { id: 'morgan', label: 'Morgan Hale · race engineering (demo seat)' },
+  controller: { id: 'dana', label: 'Dana Okafor · Controller' },
+} as const;
+
+const STATE_WORDS: Record<FinanceCase['state'], string> = {
+  detected: 'Detected',
+  investigating: 'Investigating',
+  awaiting_evidence: 'Awaiting evidence',
+  evaluated: 'Evaluated',
+  awaiting_approval: 'Human review',
+  authorized: 'Authorized',
+  reconciling: 'Reconciling',
+  closed: 'Closed',
+  rejected: 'Rejected',
+};
+const stateTone = (st: FinanceCase['state']): Tone => (st === 'awaiting_approval' ? 'hold' : st === 'closed' ? 'ok' : st === 'rejected' ? 'alert' : 'neutral');
+const ACTOR_WORDS: Record<CaseStep['actor'], string> = {
+  system: 'System',
+  jev: 'Jev',
+  financial_analyst: 'Financial analyst',
+  cost_cap_agent: 'Cost cap agent',
+  engineering: 'Engineering',
+  controller: 'Controller',
+  procurement: 'Procurement',
+  reconciliation: 'Reconciliation',
+  person: 'Person',
+};
+
+function Approvals({ c, live }: { c: FinanceCase; live: LiveState }) {
+  const [reason, setReason] = useState('');
+  const [msg, setMsg] = useState<string | null>(null);
+  const [busy, setBusy] = useState(false);
+  const engineering = c.approvals.find((a) => a.role === 'engineering');
+  const controller = c.approvals.find((a) => a.role === 'controller');
+  const act = async (fn: () => Promise<string | null>) => {
+    setBusy(true);
+    setMsg(null);
+    const err = await fn();
+    setMsg(err ? `Refused: ${err}` : 'Recorded.');
+    setBusy(false);
+  };
+  if (c.scope !== 'own_team') return null;
+  if (c.state === 'awaiting_evidence') {
+    return (
+      <div className="ld-approve">
+        <Chip tone="hold" icon={<IconWaiting />}>
+          Waiting for the garage report
+        </Chip>
+        <button type="button" className="btn" disabled={busy} onClick={() => void act(() => live.garageReport(c.case_id))}>
+          <IconDoc /> Deliver the synthetic garage report now
+        </button>
+        <span className="ld-small ld-muted">In the demo it also arrives on its own a few seconds after the request; it is labelled synthetic.</span>
+        {msg ? <span className="ld-small">{msg}</span> : null}
+      </div>
+    );
+  }
+  if (c.state === 'awaiting_approval' && c.invoice && c.invoice.matched === false) {
+    return (
+      <div className="ld-approve">
+        <Chip tone="alert" icon={<IconDenied />}>
+          Invoice outside tolerance
+        </Chip>
+        <span className="ld-small">{c.escalation_reason}. The agent does not pay outside the authorization; a controller decides.</span>
+      </div>
+    );
+  }
+  if (c.state !== 'awaiting_approval') {
+    if (c.state === 'reconciling') {
+      return (
+        <div className="ld-approve">
+          <Chip tone="hold" icon={<IconWaiting />}>
+            Waiting for the supplier's invoice
+          </Chip>
+          <button type="button" className="btn" disabled={busy} onClick={() => void act(() => live.sendInvoice(c.case_id))}>
+            <IconDoc /> Deliver the synthetic invoice now
+          </button>
+          <button type="button" className="btn" disabled={busy} onClick={() => void act(() => live.sendInvoice(c.case_id, Math.round((c.procurement?.amount_cents ?? 0) * 1.15)))}>
+            Deliver one 15% over
+          </button>
+          {msg ? <span className="ld-small">{msg}</span> : null}
+        </div>
+      );
+    }
+    return null;
+  }
+  return (
+    <div className="ld-approve ld-approve--open">
+      <div className="ld-approve-row">
+        <span className="ld-approve-who">
+          <IconShield /> {PEOPLE.engineering.label}
+        </span>
+        {engineering ? (
+          <Chip tone={engineering.decision === 'cleared' ? 'ok' : 'alert'} icon={engineering.decision === 'cleared' ? <IconApproved /> : <IconDenied />}>
+            {engineering.decision === 'cleared' ? 'Repair cleared' : 'Repair not cleared'} · {engineering.by}
+          </Chip>
+        ) : (
+          <>
+            <button type="button" className="btn btn--primary" disabled={busy} onClick={() => void act(() => live.approve(c.case_id, 'engineering', PEOPLE.engineering.id, 'cleared', reason || 'arm passed crack testing; repaired floor safe for the next event'))}>
+              <IconApproved /> Clear the repair
+            </button>
+            <button type="button" className="btn" disabled={busy} onClick={() => void act(() => live.approve(c.case_id, 'engineering', PEOPLE.engineering.id, 'not_cleared', reason || 'arm failed crack testing'))}>
+              <IconDenied /> Not repairable
+            </button>
+          </>
+        )}
+      </div>
+      <div className="ld-approve-row">
+        <span className="ld-approve-who">
+          <IconShield /> {PEOPLE.controller.label}
+        </span>
+        {controller ? (
+          <Chip tone={controller.decision === 'authorized' ? 'ok' : 'alert'} icon={controller.decision === 'authorized' ? <IconApproved /> : <IconDenied />}>
+            {controller.decision === 'authorized' ? 'Spend authorized' : 'Spend rejected'} · {controller.by}
+          </Chip>
+        ) : (
+          <>
+            <button type="button" className="btn btn--primary" disabled={busy || !engineering} title={engineering ? '' : 'engineering first'} onClick={() => void act(() => live.approve(c.case_id, 'controller', PEOPLE.controller.id, 'authorized', reason || 'within the authorized budget'))}>
+              <IconApproved /> Authorize {c.evaluation?.recommended ?? 'the spend'} {c.exposure_cents ? money(c.exposure_cents) : ''}
+            </button>
+            <button type="button" className="btn" disabled={busy || !engineering} onClick={() => void act(() => live.approve(c.case_id, 'controller', PEOPLE.controller.id, 'rejected', reason || 'not now'))}>
+              <IconDenied /> Reject
+            </button>
+            <button type="button" className="btn" disabled={busy} title="the guard refuses an agent" onClick={() => void act(() => live.approve(c.case_id, 'controller', 'agent:financial_analyst', 'authorized', 'trying to self-approve'))}>
+              Try as the agent
+            </button>
+          </>
+        )}
+      </div>
+      <input className="ld-reason" value={reason} onChange={(e) => setReason(e.target.value)} placeholder="Reason (optional)" aria-label="Reason" />
+      {msg ? <span className={`ld-small ${msg.startsWith('Refused') ? 'ld-error' : ''}`}>{msg}</span> : null}
+    </div>
+  );
+}
+
+function CaseTimeline({ steps }: { steps: CaseStep[] }) {
+  return (
+    <ol className="ld-steps" aria-label="Agent operations">
+      {[...steps].reverse().map((st, i) => (
+        <li key={`${st.at_utc}-${i}`} className={`ld-step ld-step--${st.status} ${st.automatic ? '' : 'ld-step--person'}`}>
+          <span className="ld-step-when mono">
+            {clock(st.at_utc)}
+            <small>{st.race_clock_utc ? `race ${clock(st.race_clock_utc)}` : ''}</small>
+          </span>
+          <span className="ld-step-actor">
+            {st.actor === 'jev' ? <IconBolt /> : st.actor === 'engineering' || st.actor === 'controller' ? <IconShield /> : <IconAgent />}
+            {ACTOR_WORDS[st.actor]}
+            {st.by ? <small>{st.by}</small> : null}
+          </span>
+          <span className="ld-step-body">
+            <span className="ld-step-action">
+              {st.action}
+              {st.status === 'refused' ? <span className="ld-out">refused</span> : st.status === 'escalated' ? <span className="ld-req">escalated</span> : st.automatic ? <span className="ld-auto">auto</span> : <span className="ld-req">person</span>}
+            </span>
+            {st.detail ? <span className="ld-step-detail">{st.detail}</span> : null}
+          </span>
+        </li>
+      ))}
+    </ol>
+  );
+}
+
+function CasePanel({ c, live }: { c: Published<FinanceCase> | null; live: LiveState }) {
+  const k = c?.payload ?? null;
+  if (!k) {
+    return (
+      <section className="ld-card ld-case" aria-labelledby="ld-case-h">
+        <h2 id="ld-case-h" className="ld-h">
+          Active financial case
+        </h2>
+        <p className="ld-muted">No case open. A material racing event opens one; on the São Paulo replay the lap-32 stop arrives at 16:37Z. Run it as our car to see the full crash workflow, or as the championship money to see a competitor's crash handled without touching their books.</p>
+      </section>
+    );
+  }
+  const unknown = k.exposure_cents === null || k.exposure_cents === undefined;
+  return (
+    <section className="ld-card ld-case" aria-labelledby="ld-case-h">
+      <div className="ld-card-head">
+        <h2 id="ld-case-h" className="ld-h">
+          Active financial case
+        </h2>
+        <div className="ld-chips">
+          <Chip tone={stateTone(k.state)} icon={k.state === 'awaiting_approval' ? <IconWaiting /> : k.state === 'closed' ? <IconApproved /> : <IconLive />}>
+            {STATE_WORDS[k.state]}
+          </Chip>
+          <Chip tone="neutral" icon={<IconShield />}>
+            {k.scope === 'own_team' ? 'our car' : 'competitor'} · {k.team}-mirror
+          </Chip>
+        </div>
+      </div>
+      <div className="ld-case-grid">
+        <div className="ld-case-main">
+          <h3 className="ld-case-title">{k.title}</h3>
+          <p className="ld-case-summary">{k.summary}</p>
+          <dl className="ld-case-facts">
+            <div>
+              <dt>{k.scope === 'own_team' ? 'Incident exposure' : 'Our projection'}</dt>
+              <dd className={`mono ${unknown ? 'ld-muted' : ''}`}>{k.scope === 'competitor' ? signed(k.projection_delta_cents ?? 0) : unknown ? 'Unknown' : money(k.exposure_cents)}</dd>
+              <dd className="ld-small ld-muted">{k.exposure_label}</dd>
+            </div>
+            <div>
+              <dt>Next autonomous action</dt>
+              <dd className="ld-case-next">{k.next_action || '—'}</dd>
+            </div>
+            {k.missing_evidence.length ? (
+              <div>
+                <dt>Still missing</dt>
+                <dd className="ld-small">{k.missing_evidence.join(' · ')}</dd>
+              </div>
+            ) : null}
+            {k.escalation_reason && k.state === 'awaiting_approval' ? (
+              <div>
+                <dt>Why a person</dt>
+                <dd className="ld-small">{k.escalation_reason}</dd>
+              </div>
+            ) : null}
+            {k.closed_reason ? (
+              <div>
+                <dt>Outcome</dt>
+                <dd className="ld-small">{k.closed_reason}</dd>
+              </div>
+            ) : null}
+          </dl>
+          {k.evaluation ? (
+            <div className="ld-eval">
+              <h4>Cost cap evaluation</h4>
+              <table className="ld-plan" aria-label="Garage options under the cost cap">
+                <thead>
+                  <tr>
+                    <th>Option</th>
+                    <th>Cost</th>
+                    <th>Treatment</th>
+                    <th>Headroom after</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  {k.evaluation.options.map((o) => (
+                    <tr key={o.key} className={o.key === k.evaluation?.recommended ? 'ld-plan-rec' : ''}>
+                      <td>
+                        {o.label}
+                        {o.key === k.evaluation?.recommended ? <span className="ld-rec">recommended</span> : null}
+                      </td>
+                      <td className="mono">{money(o.cost_cents)}</td>
+                      <td>{o.treatment}</td>
+                      <td className="mono">{o.headroom_after_cents === null ? 'unknown' : money(o.headroom_after_cents)}</td>
+                    </tr>
+                  ))}
+                </tbody>
+              </table>
+              <p className="ld-small ld-muted">
+                {k.evaluation.avoided_cents ? `Repair avoids ${money(k.evaluation.avoided_cents)} of incremental spend against replacement, only if ${k.evaluation.conditions[0]}. ` : ''}
+                {k.evaluation.basis}. Headroom: {k.evaluation.headroom_source}.
+              </p>
+            </div>
+          ) : null}
+          {k.procurement ? (
+            <p className="ld-small">
+              <b>Procurement</b> {k.procurement.order_id} · {k.procurement.option} · {money(k.procurement.amount_cents)} · {k.procurement.vendor} · authorized by {k.procurement.authorized_by} · {k.procurement.status}
+              {k.procurement.mock ? ' · mock order' : ''}
+            </p>
+          ) : null}
+          {k.invoice ? (
+            <p className="ld-small">
+              <b>Invoice</b> {k.invoice.invoice_id} · {money(k.invoice.amount_cents)} · variance {signed(k.invoice.variance_cents)} · {k.invoice.matched ? 'matched' : 'not matched'}
+              {k.invoice.synthetic ? ' · synthetic' : ''}
+            </p>
+          ) : null}
+          <Approvals c={k} live={live} />
+        </div>
+        <div className="ld-case-side">
+          <h4>Case progress</h4>
+          <ol className="ld-stages">
+            {k.stages.map((st) => (
+              <li key={st.key} className={`ld-stage ld-stage--${st.status}`}>
+                <span className="ld-stage-dot" aria-hidden="true" />
+                <span>{st.label}</span>
+                <small>{st.status}</small>
+              </li>
+            ))}
+          </ol>
+          <h4>Permissions</h4>
+          <ul className="ld-perms ld-small">
+            {Object.entries(k.permissions).map(([p, v]) => (
+              <li key={p} className={v ? 'ld-perm-on' : 'ld-perm-off'}>
+                {v ? <IconApproved /> : <IconDenied />} {p.replace(/^may_/, 'may ').replace(/_/g, ' ')}
+              </li>
+            ))}
+          </ul>
+        </div>
+      </div>
+      <h4 className="ld-h4">Agent operations</h4>
+      <CaseTimeline steps={k.steps} />
+    </section>
+  );
+}
+
+function CaseList({ cases, selected, select }: { cases: Published<FinanceCase>[]; selected: string | null; select: (id: string) => void }) {
+  if (cases.length < 2) return null;
+  return (
+    <div className="ld-caselist" role="tablist" aria-label="Cases">
+      {cases.map((c) => (
+        <button key={c.id} type="button" role="tab" aria-selected={c.id === selected} className={`ld-filter ${c.id === selected ? 'ld-filter--on' : ''}`} onClick={() => select(c.id)}>
+          {c.payload.scope === 'own_team' ? 'Our car' : 'Competitor'} {c.payload.car} · {STATE_WORDS[c.payload.state]}
+        </button>
+      ))}
+    </div>
+  );
+}
+
+function ScorecardPanel({ live }: { live: LiveState }) {
+  const sc = live.scorecard;
+  return (
+    <section className="ld-card" aria-labelledby="ld-score-h">
+      <div className="ld-card-head">
+        <h2 id="ld-score-h" className="ld-h">
+          Measured, not claimed
+        </h2>
+        <span className="ld-muted ld-small">{sc ? `generated ${sc.generated_at_utc} by scripts/live_scorecard.py` : 'no scorecard yet: uv run python scripts/live_scorecard.py'}</span>
+      </div>
+      {sc ? (
+        <ul className="ld-score">
+          {Object.entries(sc.headline).map(([k, v]) => (
+            <li key={k}>
+              <span className="ld-muted">{k.replace(/_/g, ' ')}</span>
+              <b>{String(v)}</b>
+            </li>
+          ))}
+          <li>
+            <span className="ld-muted">this replay</span>
+            <b>
+              {live.feed ? `${live.feed.publishes_total} publishes, Jev ${live.feed.jev.requests ?? 0} requests p95 ${live.feed.jev.p95_ms ?? '—'} ms, ${live.cases.length} cases` : '—'}
+            </b>
+          </li>
+        </ul>
+      ) : null}
+    </section>
+  );
+}
+
 // ---------------------------------------------------------------- the page
 
 export function LiveDashboard() {
@@ -863,47 +1228,61 @@ export function LiveDashboard() {
   const since = live.replayStartedAt;
   const scoped = useMemo<LiveState>(() => {
     const keep = <T,>(list: { published_at_utc: string; payload: T }[]) => (since ? list.filter((r) => r.published_at_utc >= since) : list);
-    return { ...live, incidents: keep(live.incidents), jevDecisions: keep(live.jevDecisions), plans: keep(live.plans), financeImpacts: keep(live.financeImpacts), resultChanges: keep(live.resultChanges) } as LiveState;
+    return { ...live, incidents: keep(live.incidents), jevDecisions: keep(live.jevDecisions), plans: keep(live.plans), financeImpacts: keep(live.financeImpacts), resultChanges: keep(live.resultChanges), cases: live.cases.filter((c) => !live.replay || c.payload.replay_id === live.replay.replay_id) } as LiveState;
   }, [live, since]);
   const story = useMemo(() => buildStory(scoped), [scoped]);
   const running = live.replay?.state === 'running' || live.replay?.state === 'fast_forward';
   const cars = live.race?.team_cars ?? [63, 44];
   const isSpa = live.replay?.race_id === SPA;
+  const cases = scoped.cases;
+  const [picked, setPicked] = useState<string | null>(null);
+  const active = useMemo(() => {
+    if (!cases.length) return null;
+    const byId = cases.find((c) => c.id === picked);
+    if (byId) return byId;
+    // the most recently updated own-team case that still needs someone, else the newest case
+    const open = cases.filter((c) => !['closed', 'rejected'].includes(c.payload.state));
+    const own = open.filter((c) => c.payload.scope === 'own_team');
+    return (own.length ? own : open.length ? open : cases).slice(-1)[0];
+  }, [cases, picked]);
   return (
     <div className="ld">
       <header className="ld-title">
         <div>
           <p className="crumbs">Pit wall › Live race</p>
-          <h1>{isSpa ? 'Belgian Grand Prix 2024' : 'São Paulo Grand Prix 2024'}</h1>
-          <p className="ld-sub">Meridian Racing's money, lap by lap: what the race is worth right now, what each lever costs, and what Jev decided about every event.</p>
+          <h1>Financial command · {isSpa ? 'Belgian GP 2024' : 'São Paulo GP 2024'}</h1>
+          <p className="ld-sub">What happened, how much money it might move, what the agents are doing about it, and what needs a person. The racing telemetry below is where the intelligence comes from.</p>
         </div>
         <HealthStrip feed={live.feed} feedAt={live.feedAt} now={now} running={running} />
       </header>
       <CommandBar live={live} />
+      <CaseList cases={cases} selected={active?.id ?? null} select={setPicked} />
+      <div className="ld-top">
+        <CasePanel c={active} live={live} />
+        <div className="ld-top-side">
+          <MoneyCard live={live} advice={advice} />
+          <JevCard live={scoped} feed={live.feed} />
+        </div>
+      </div>
       {!isSpa ? (
         <>
+          <h2 className="ld-section">Race intelligence</h2>
           <div className="ld-hero">
             <ClockCard race={live.race} rp={live.replay} />
-            <MoneyCard live={live} advice={advice} />
-            <JevCard live={scoped} feed={live.feed} />
-          </div>
-          <div className="ld-cars">
-            {cars.map((c) => (
+            {cars.slice(0, 2).map((c) => (
               <CarCard key={c} car={c} race={live.race} advice={advice} />
             ))}
           </div>
           <ConditionsCard live={live} advice={advice} />
         </>
       ) : (
-        <div className="ld-hero ld-hero--spa">
-          <JevCard live={scoped} feed={live.feed} />
-          <ResultsPanel live={scoped} />
-        </div>
+        <ResultsPanel live={scoped} />
       )}
       <div className="ld-main">
         <Story items={story} />
         <IncidentsPanel live={scoped} />
       </div>
+      <ScorecardPanel live={live} />
       <p className="ld-foot ld-small ld-muted">
         Real: OpenF1 positions, laps, stints, pit stops, weather, race control and car 43's car data; the FIA documents; the race report. Synthetic: Meridian Racing, its sponsor contracts, the garage figures. Calculated: every dollar on this page, labelled indicative. Booked: nothing here; the revenue desk books from the final classification.
       </p>

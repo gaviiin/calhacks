@@ -84,12 +84,23 @@ def test_incident_scenarios_for_the_leader_and_for_the_other_teams_car(world, br
     assert scen["repair_and_rejoin"].position_after is not None and "assumption" in scen["repair_and_rejoin"].assumption
     red = build_to(slice_meta, slice_events, "2024-11-03T16:37:30.000Z")
     plan = plan_for(world, brazil, red, _signal(43), [63, 44], version=1, observed_at="2026-01-01T00:00:00.000Z", drivers_meta=slice_meta["drivers"])
-    assert plan is not None and plan.team_car is False and plan.damage_estimate_cents is None and "garage report" in plan.cost_cap_note
+    assert plan is not None and plan.team_car is False and plan.scope == "competitor" and plan.damage_estimate_cents is None
+    assert plan.cost_cap_note.startswith("Competitor car")
     keys = [s.key for s in plan.scenarios]
     assert keys == ["continue", "pit_now", "repair_and_rejoin", "penalty_5s", "penalty_10s", "drive_through", "retire", "disqualified"]
     assert all(s.delta_cents == 0 for s in plan.scenarios)  # car 43 at P16 moves none of Meridian's money
-    assert "not a Meridian car" in plan.basis and plan.advisor.status == "disabled"
-    assert next(s for s in plan.scenarios if s.key == "repair_and_rejoin").assumption.startswith("repairs are allowed while the race is suspended")
+    assert "competitor's" in plan.basis and plan.advisor.status == "disabled"
+    # the feasibility gate: car 43 is stationary, so continuing, pitting and penalties are out, and a repair needs engineering
+    by = {s.key: s for s in plan.scenarios}
+    assert plan.car_status == "stopped_candidate"
+    assert all(not by[k].feasible for k in ("continue", "pit_now", "penalty_5s", "penalty_10s", "drive_through"))
+    assert not by["repair_and_rejoin"].feasible and by["repair_and_rejoin"].requires == ["engineering_clearance"]
+    assert by["retire"].feasible and by["disqualified"].requires == ["stewards_decision"]
+    assert "frees track position, not the parts cost" in by["repair_and_rejoin"].why
+    # the same incident with the car as our own (Williams-mirror)
+    from live_racing.team import LiveWorld
+    own = plan_for(LiveWorld("williams"), brazil, red, _signal(43), [43, 23, 2], version=1, observed_at="2026-01-01T00:00:00.000Z", drivers_meta=slice_meta["drivers"])
+    assert own.scope == "own_team" and "garage report" in own.cost_cap_note and own.feasibility_note.startswith("2 of 8 outcomes feasible")
 
 
 def test_advisor_is_honest_when_off_and_grounded_when_on(world, brazil, slice_meta, slice_events, monkeypatch):

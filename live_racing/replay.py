@@ -13,10 +13,12 @@ import threading
 import time
 import uuid
 from dataclasses import dataclass
+from pathlib import Path
 from datetime import UTC, datetime
 from typing import Callable
 
 from .advisor import Advisor
+from .cases import CaseBook, Refused
 from .event_triggers import Candidate, TriggerEngine
 from .finance_projections import diff, if_finished_now, usd
 from .health import feed_health
@@ -24,11 +26,12 @@ from .incident_planner import plan_for
 from .jev_router import JevRouter, deterministic_route
 from .normalize import NormalizedEvent
 from .publisher import Publisher
-from .race_state import RaceState, lap_start_times, plus_seconds
+from .race_state import RaceState, lap_start_times
 from .races import Race
-from .schemas import (AdvisorNote, FeedHealth, FinanceImpactUpdate, FinancialImpact, Forecast, ForecastChange, Handoff, IncidentPlan, IncidentSignal,
-                      JevDecision, RaceStateUpdate, ReplayStatus, Timestamps)
+from .schemas import (AdvisorNote, FeedHealth, FinanceCase, FinanceImpactUpdate, FinancialImpact, Forecast, ForecastChange, Handoff, IncidentPlan,
+                      IncidentSignal, JevDecision, RaceStateUpdate, ReplayStatus, Timestamps)
 from .strategy import strategy_advice
+from .team import scope_of
 
 
 def _now() -> str:
@@ -48,16 +51,21 @@ class ReplayOptions:
     step: bool = False
     state_every_s: float = 2.0  # replay seconds between routine state publishes
     jev: bool = True
-    corroborate_after_s: float = 60.0  # replay seconds after an attributed incident before the corroborating source is applied
+    corroborate_after_s: float = 60.0  # kept for callers; corroboration now comes from the timing feed, not a timer
     max_sleep_s: float = 30.0
     mode: str = "replay"
+    team: str = "mercedes"  # which constructor the customer mirrors for this replay (team.py)
+    demo: bool = True  # own-team cases receive the synthetic garage report and invoice automatically, labelled synthetic
+    demo_garage_after_s: float = 8.0  # wall seconds after the garage report is requested
+    demo_invoice_after_s: float = 10.0  # wall seconds after the spend is authorized
 
 
 class Replay:
     def __init__(self, race: Race, meta: dict, events: list[NormalizedEvent], world, publisher: Publisher, jev: JevRouter,
                  options: ReplayOptions | None = None, *, now: Callable[[], str] = _now, log: Callable[[str], None] = print,
                  replay_id: str | None = None, pause_handler: Callable[["Replay"], None] | None = None,
-                 step_handler: Callable[["Replay", NormalizedEvent], None] | None = None, advisor: Advisor | None = None):
+                 step_handler: Callable[["Replay", NormalizedEvent], None] | None = None, advisor: Advisor | None = None,
+                 cases_jsonl: Path | None = None):
         self.race, self.meta, self.events, self.world = race, meta, events, world
         self.publisher, self.jev = publisher, jev
         self.advisor = advisor or Advisor(enabled=False)
@@ -95,6 +103,10 @@ class Replay:
         self._paused_once = False
         self.status = ReplayStatus(replay_id=self.replay_id, race_id=race.race_id, mode=self.o.mode, speed=self.o.speed, events_total=len(events),
                                    events_done=0, jev_mode=jev.describe(), sinks=publisher.names())
+        self.cases = CaseBook(self.replay_id, race.race_id, world.team, lambda kind, obj, id, version, status: self.publisher.publish(kind, obj, id=id, version=version, status=status),
+                              jsonl_path=cases_jsonl, now=now, log=log)
+        self.retired: set[str] = set()  # incident ids whose car the timing feed has shown to be out
+        self.cleared: set[str] = set()  # incident ids closed as no damage
 
     # ------------------------------------------------------------------ control
 
@@ -174,6 +186,8 @@ class Replay:
                     candidates.append(cand)
             if live:
                 self._fire_scheduled(ev.event_time_utc)
+                if "lap" in changes:
+                    self._check_incidents_against_timing(ev, observed)
                 material = False
                 for c in candidates:
                     material = self._handle(c, ev, observed) or material
@@ -282,6 +296,7 @@ class Replay:
                 return
             self.plans[sig.incident_id] = plan
         self.publisher.publish("incident_plan", plan, id=sig.incident_id, version=version, status=plan.advisor.status, adapter_received_utc=observed)
+        self.cases.on_plan(plan, self.state.now_utc)
         worst = min(plan.scenarios, key=lambda x: x.delta_cents)
         self.log(f"{sig.event_time_utc[11:19]}Z plan v{version} for car {plan.car}: {len(plan.scenarios)} outcomes priced, worst {worst.label.lower()} {usd(worst.delta_cents)}; "
                  f"advisor {plan.advisor.status}")
@@ -352,6 +367,7 @@ class Replay:
         driver = c.drivers[0] if c.drivers else None
         attribution = c.context.get("attribution", "none")
         dm = self.drivers_meta.get(driver or -1, {})
+        scope = scope_of(driver, self.team_cars)
         with self._lock:
             prev = self.incidents.get(c.incident_id)
             version = (prev.version + 1) if prev else 1
@@ -368,72 +384,107 @@ class Replay:
                 else ("incident_candidate" if driver else "needs_confirmation"),
                 damage_confirmation=prev.damage_confirmation if prev else "none", jev=decision, urgency=urgency,
                 financial_impact=prev.financial_impact if prev else FinancialImpact(), handoff=prev.handoff if prev else Handoff(),
-                event_time_utc=c.event_time_utc, observed_at_utc=observed, mode=self.o.mode, timestamps=ts,
-                message=c.message + (" Financial impact unknown until a garage report arrives; nothing is booked." if kind != "incident_noted" else ""))
+                event_time_utc=c.event_time_utc, observed_at_utc=observed, mode=self.o.mode, timestamps=ts, scope=scope,
+                message=c.message + ((" Our car: financial impact unknown until a garage report arrives; nothing is booked." if scope == "own_team"
+                                      else " Competitor's car: only our projections can move; their garage and books are not ours.") if kind != "incident_noted" else ""))
             self.incidents[c.incident_id] = sig
         self.publisher.publish("incident_signal", sig, id=c.incident_id, version=version, status=sig.sporting_confirmation, adapter_received_utc=observed)
         self.status.incidents = len(self.incidents)
-        if c.material:
-            self._plan_incident(sig, observed, {"incident_id": sig.incident_id, "type": sig.type, "message": sig.message, "attribution": sig.driver_attribution,
-                                                "confirmation": sig.sporting_confirmation, "jev_route": decision.chosen_route, "urgency": sig.urgency})
-        focus = {f.driver_number for f in self.race.incident_focus}
-        if (driver in focus and attribution != "none" and c.incident_id not in self.corroborated and self.race.corroboration
-                and not any(iid == c.incident_id for _, iid in [(t, getattr(fn, "incident_id", None)) for t, fn in self.scheduled])):
-            when = plus_seconds(c.event_time_utc, self.o.corroborate_after_s)
+        if c.material and driver is not None:
+            d = self.state.drivers.get(driver)
+            case = self.cases.open(sig, scope, d.status if d else "unknown", self.state.now_utc)
+            self.cases.on_jev(sig.incident_id, decision, self.state.now_utc)
+            self._plan_incident(sig, observed, {"incident_id": sig.incident_id, "type": sig.type, "scope": scope, "message": sig.message,
+                                                "attribution": sig.driver_attribution, "confirmation": sig.sporting_confirmation,
+                                                "jev_route": decision.chosen_route, "urgency": sig.urgency, "case_id": case.case_id})
+        elif c.context.get("follow_up") and c.incident_id in self.incidents and "NO FURTHER" in (c.context.get("race_control_message") or "").upper():
+            d = self.state.drivers.get(driver) if driver is not None else None
+            if d is not None and d.status == "running" and c.incident_id not in self.cleared:
+                self.cleared.add(c.incident_id)
+                self.cases.on_no_damage(c.incident_id, self.state.now_utc, f"stewards: {c.context.get('race_control_message')}; car {driver} running at P{d.position}")
 
-            def fire(iid=c.incident_id):
-                self._corroborate(iid)
+    def _check_incidents_against_timing(self, ev: NormalizedEvent, observed: str) -> None:
+        """The leader started a new lap. A car that stopped and is now two laps down has not taken the
+        restart: the timing feed says it is out. A car in a noted collision that is two laps on at
+        racing speed has shown no damage. Both are live, as-of facts; no post-race source is used."""
+        for iid, sig in list(self.incidents.items()):
+            n = sig.driver_number
+            if n is None or self.state.lap is None:
+                continue
+            d = self.state.drivers.get(n)
+            if d is None or d.lap is None:
+                continue
+            if d.status == "stopped_candidate" and self.state.lap - d.lap >= 2 and iid not in self.retired:
+                self.retired.add(iid)
+                self._retired_per_timing(iid, ev, observed, f"car {n} last started lap {d.lap} at {d.lap_started_at}; the leader is on lap {self.state.lap}; "
+                                         f"speed 0 since {d.stopped_at}: the car did not take the restart")
+            elif sig.type == "incident_noted" and d.status == "running" and sig.lap is not None and d.lap >= sig.lap + 2 and iid not in self.cleared:
+                self.cleared.add(iid)
+                self.cases.on_no_damage(iid, self.state.now_utc, f"car {n} has completed two laps since the lap-{sig.lap} contact and is running at P{d.position}")
 
-            fire.incident_id = c.incident_id  # type: ignore[attr-defined]
-            self.scheduled.append((when, fire))
-
-    def _corroborate(self, incident_id: str) -> None:
-        """Apply the public race report to the incident: the crash is historical fact; damage and
-        money are not. Then request the cost cap desk's investigation."""
-        if incident_id in self.corroborated:
-            return
-        self.corroborated.add(incident_id)
-        src = self.race.corroboration[0]
-        observed = self.now()
+    def _retired_per_timing(self, incident_id: str, ev: NormalizedEvent, observed: str, evidence: str) -> None:
         prev = self.incidents[incident_id]
-        # The confirmation is a new material fact, so Jev is asked once more with the confirmed attribution.
-        # The hand-off to the cost cap desk is code's decision (a verified crash always gets one); Jev's
-        # answer sets the urgency and is recorded on the signal.
+        own = prev.scope == "own_team"
         decision = prev.jev
         if self.o.jev:
-            ctx = {"sporting_event": f"{self.race.race_id}:race:lap{prev.lap}:incident_corroborated", "event_type": "incident_corroborated",
-                   "event_time_utc": self.state.now_utc, "race": self.race.name, "lap": prev.lap, "flag_status": self.state.flag_status,
-                   "candidate_driver_number": prev.driver_number, "driver_attribution": "confirmed",
-                   "incident_note": f"{src.publisher}: {src.claim}", "damage_report_received": False,
+            ctx = {"sporting_event": f"{self.race.race_id}:race:lap{prev.lap}:retired_per_timing", "event_type": "incident_corroborated",
+                   "event_time_utc": self.state.now_utc, "race": self.race.name, "lap": self.state.lap, "flag_status": self.state.flag_status,
+                   "candidate_driver_number": prev.driver_number, "driver_attribution": "confirmed", "incident_note": evidence, "damage_report_received": False,
                    "team_car_positions": {str(n): p for n, p in self.state.team_positions().items()},
-                   "financial_impact_status": "unknown_until_garage_confirmation"}
-            decision = self.jev.decide(ctx, "crash_finance", True)
+                   "financial_impact_status": "unknown_until_garage_confirmation" if own else "competitor_projection_only"}
+            decision = self.jev.decide(ctx, "crash_finance" if own else "race_forecast", True)
             self.jev_calls_by_kind["incident_corroborated"] = self.jev_calls_by_kind.get("incident_corroborated", 0) + (1 if decision.status not in ("disabled", "cached") else 0)
             rec = {"at": self.state.now_utc, "lap": prev.lap, "kind": "incident_corroborated", "material": True, "drivers": [prev.driver_number],
-                   "message": f"corroborated: {src.claim}", "decision": decision.model_dump(mode="json"), "incident_id": incident_id}
+                   "message": evidence, "decision": decision.model_dump(mode="json"), "incident_id": incident_id}
             self.decisions.append(rec)
             self.publisher.publish("jev_decision", rec, id=f"incident_corroborated:{incident_id}", status=decision.status, adapter_received_utc=observed)
+        ref = None
+        if self.race.corroboration:
+            src = self.race.corroboration[0]
+            ref = {"url": src.url, "publisher": src.publisher, "claim": src.claim, "read_on": src.read_on,
+                   "available": "after the race; attached for the reader, not used as live evidence"}
         with self._lock:
             prev = self.incidents[incident_id]
             sig = prev.model_copy(update={
-                "version": prev.version + 1, "driver_attribution": "confirmed", "sporting_confirmation": "verified_historical_incident",
-                "jev": decision, "urgency": decision.urgency or prev.urgency,
-                "corroborating_source_url": src.url, "corroboration_note": f"{src.publisher}, read {src.read_on}: {src.claim} (inserted into the replay "
-                f"{self.o.corroborate_after_s:.0f} replay-seconds after the flag; in a live race this waits for the real report)",
-                "damage_confirmation": "awaiting_synthetic_garage_report", "observed_at_utc": observed,
-                "handoff": Handoff(target="cost_cap_agent", status="requested", requested_at_utc=observed),
-                "message": f"{prev.message} Corroborated by {src.publisher}: {src.claim} Hand-off to the cost cap agent requested; "
-                "a synthetic Meridian garage report is needed before any exposure can be projected.",
+                "version": prev.version + 1, "sporting_confirmation": "retired_per_timing", "observed_at_utc": observed, "jev": decision,
+                "urgency": decision.urgency or prev.urgency, "corroboration_note": evidence, "post_race_reference": ref,
+                "damage_confirmation": "awaiting_synthetic_garage_report" if own else prev.damage_confirmation,
+                "handoff": Handoff(target="cost_cap_agent", status="requested", requested_at_utc=observed) if own else Handoff(target="none", status="not_requested"),
+                "message": f"{prev.message} Timing feed: {evidence}." + (" Hand-off to the cost cap agent requested; a garage report is needed before any exposure can be projected."
+                                                                           if own else " Competitor retired: our projections updated; nothing of theirs is accessed."),
                 "timestamps": prev.timestamps.model_copy(update={"adapter_received": observed}),
             })
             self.incidents[incident_id] = sig
         self.publisher.publish("incident_signal", sig, id=incident_id, version=sig.version, status=sig.sporting_confirmation, adapter_received_utc=observed)
-        self._plan_incident(sig, observed, {"incident_id": sig.incident_id, "type": sig.type, "message": sig.message, "attribution": "confirmed",
-                                            "confirmation": sig.sporting_confirmation, "corroboration": sig.corroboration_note, "jev_route": decision.chosen_route,
-                                            "urgency": sig.urgency})
-        self.log(f"{self.state.now_utc[11:19] if self.state.now_utc else '--:--:--'}Z corroborated {incident_id} -> handoff requested to the cost cap agent "
-                 f"[jev {decision.status}{', ' + str(decision.latency_ms) + 'ms' if decision.latency_ms is not None else ''}"
-                 f"{', said ' + decision.route + ' ' + format(decision.route_confidence, '.2f') if decision.route else ''}; urgency {decision.urgency or 'n/a'}]")
+        self.cases.on_retired(incident_id, self.state.now_utc, evidence)
+        self._plan_incident(sig, observed, {"incident_id": sig.incident_id, "type": sig.type, "scope": sig.scope, "message": sig.message, "attribution": "confirmed",
+                                            "confirmation": sig.sporting_confirmation, "jev_route": decision.chosen_route, "urgency": sig.urgency})
+        case = self.cases._for(incident_id)
+        if own and case is not None and case.state == "awaiting_evidence" and self.o.demo:
+            cid = case.case_id
+            self.cases.schedule(self.o.demo_garage_after_s, lambda: self._demo_garage(cid))
+        self.log(f"{self.state.now_utc[11:19] if self.state.now_utc else '--:--:--'}Z retired per timing {incident_id} ({'own car' if own else 'competitor'}) "
+                 f"[jev {decision.status}{', said ' + decision.route + ' ' + format(decision.route_confidence, '.2f') if decision.route else ''}]")
+
+    def _demo_garage(self, case_id: str) -> None:
+        try:
+            self.cases.demo_garage_report(case_id, self.state.now_utc)
+        except (KeyError, Refused) as exc:
+            self.log(f"         demo garage report not applied: {exc}")
+
+    # ------------------------------------------------------------------ approvals from the page
+
+    def approve(self, case_id: str, role: str, by: str, decision: str, reason: str = "") -> FinanceCase:
+        case = self.cases.approve(case_id, role, by, decision, reason)
+        if case.state == "reconciling" and self.o.demo and case.procurement is not None:
+            self.cases.schedule(self.o.demo_invoice_after_s, lambda: self._demo_invoice(case_id))
+        return case
+
+    def _demo_invoice(self, case_id: str) -> None:
+        try:
+            self.cases.demo_invoice(case_id)
+        except (KeyError, Refused) as exc:
+            self.log(f"         demo invoice not applied: {exc}")
 
     # ------------------------------------------------------------------ hand-off back
 
@@ -478,4 +529,6 @@ class Replay:
             "advisor": {"mode": self.advisor.describe(), "calls": self.advisor.calls, "errors": self.advisor.errors,
                         "latencies_ms": list(self.advisor.latencies_ms)},
             "incident_plans": len(self.plans),
+            "cases": self.cases.summary(),
+            "team": self.world.team,
         }

@@ -1011,3 +1011,391 @@
     display: none;
   }
 }
+
+
+/* ---------------------------------------------------------------- the active case (financial command) */
+
+.ld-section {
+  margin: 8px 0 -4px;
+  font: 700 15px/1.1 var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ld-team {
+  display: inline-flex;
+  gap: 2px;
+  padding: 2px;
+  background: var(--raise);
+  border-radius: 2px;
+}
+
+.ld-top {
+  display: grid;
+  grid-template-columns: minmax(0, 1.7fr) minmax(320px, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.ld-top-side {
+  display: grid;
+  gap: 16px;
+}
+
+.ld-caselist {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.ld-case {
+  border-color: var(--line);
+}
+
+.ld-case-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 280px);
+  gap: 16px 28px;
+}
+
+.ld-case-title {
+  margin: 4px 0 6px;
+  font: 700 28px/1.05 var(--display);
+  letter-spacing: 0.03em;
+  text-transform: uppercase;
+}
+
+.ld-case-summary {
+  margin: 0 0 12px;
+  color: var(--steel);
+  font-size: 13.5px;
+  line-height: 1.5;
+  max-width: 80ch;
+}
+
+.ld-case-facts {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 10px 14px;
+  margin: 0 0 12px;
+}
+
+.ld-case-facts div {
+  display: grid;
+  gap: 3px;
+  padding: 10px 12px;
+  background: var(--panel-2);
+  border-radius: 2px;
+}
+
+.ld-case-facts dt {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.ld-case-facts dd {
+  margin: 0;
+}
+
+.ld-case-facts dd.mono {
+  font: 600 26px/1.05 var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.ld-case-next {
+  font-size: 14px;
+  font-weight: 600;
+  line-height: 1.4;
+}
+
+.ld-eval h4,
+.ld-case-side h4,
+.ld-h4 {
+  margin: 12px 0 6px;
+  font: 600 12px/1.2 var(--body);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.ld-stages {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 6px;
+}
+
+.ld-stage {
+  display: grid;
+  grid-template-columns: 14px 1fr auto;
+  gap: 8px;
+  align-items: center;
+  font-size: 13px;
+  color: var(--steel);
+}
+
+.ld-stage small {
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.ld-stage-dot {
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  border: 2px solid var(--line);
+}
+
+.ld-stage--done {
+  color: var(--ink);
+}
+
+.ld-stage--done .ld-stage-dot {
+  background: var(--lime);
+  border-color: var(--lime);
+}
+
+.ld-stage--active {
+  color: var(--hold);
+}
+
+.ld-stage--active .ld-stage-dot {
+  border-color: var(--hold);
+  background: var(--hold-wash);
+}
+
+.ld-perms {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 3px;
+}
+
+.ld-perms li {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--steel);
+}
+
+.ld-perms svg {
+  width: 12px;
+  height: 12px;
+}
+
+.ld-perm-on svg {
+  color: var(--lime);
+}
+
+.ld-perm-off {
+  color: var(--muted);
+}
+
+.ld-perm-off svg {
+  color: var(--muted);
+}
+
+.ld-approve {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+  margin-top: 12px;
+  padding: 12px;
+  background: var(--panel-2);
+  border-left: 2px solid var(--hold);
+}
+
+.ld-approve--open {
+  display: grid;
+  gap: 10px;
+}
+
+.ld-approve-row {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 12px;
+}
+
+.ld-approve-who {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-width: 260px;
+  font-size: 13px;
+  font-weight: 600;
+}
+
+.ld-approve-who svg {
+  width: 14px;
+  height: 14px;
+  color: var(--steel);
+}
+
+.ld-reason {
+  max-width: 420px;
+  background: var(--panel);
+  color: var(--ink);
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  padding: 8px 10px;
+  font: 13px var(--body);
+}
+
+.ld-steps {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  gap: 2px;
+  max-height: 420px;
+  overflow: auto;
+}
+
+.ld-step {
+  display: grid;
+  grid-template-columns: 64px 150px 1fr;
+  gap: 10px;
+  padding: 7px 8px 7px 10px;
+  border-left: 2px solid var(--line-soft);
+  font-size: 12.5px;
+}
+
+.ld-step--person {
+  border-left-color: var(--lime);
+  background: var(--lime-wash);
+}
+
+.ld-step--refused {
+  border-left-color: var(--alert);
+}
+
+.ld-step--escalated {
+  border-left-color: var(--hold);
+}
+
+.ld-step-when {
+  display: grid;
+  gap: 1px;
+  color: var(--steel);
+  font-size: 12px;
+}
+
+.ld-step-when small,
+.ld-step-actor small {
+  display: block;
+  font-size: 10.5px;
+  color: var(--muted);
+}
+
+.ld-step-actor {
+  display: grid;
+  grid-template-columns: 14px 1fr;
+  gap: 6px;
+  align-items: start;
+  font-weight: 600;
+}
+
+.ld-step-actor svg {
+  width: 13px;
+  height: 13px;
+  color: var(--steel);
+  margin-top: 2px;
+}
+
+.ld-step-actor small {
+  grid-column: 2;
+}
+
+.ld-step-body {
+  display: grid;
+  gap: 2px;
+}
+
+.ld-step-action {
+  font-weight: 600;
+}
+
+.ld-step-detail {
+  color: var(--steel);
+}
+
+.ld-auto,
+.ld-req,
+.ld-out {
+  display: inline-block;
+  margin-left: 6px;
+  padding: 1px 6px;
+  border-radius: 2px;
+  font: 700 10px/1.4 var(--body);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.ld-auto {
+  background: var(--raise);
+  color: var(--steel);
+}
+
+.ld-req {
+  background: var(--hold-wash);
+  color: var(--hold);
+}
+
+.ld-out {
+  background: var(--alert-wash);
+  color: var(--alert);
+}
+
+.ld-plan-out td {
+  color: var(--muted);
+  text-decoration: line-through;
+}
+
+.ld-plan-out td:last-child,
+.ld-plan-out td:first-child {
+  text-decoration: none;
+}
+
+.ld-score {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(260px, 1fr));
+  gap: 8px 16px;
+}
+
+.ld-score li {
+  display: grid;
+  gap: 2px;
+  padding: 8px 10px;
+  background: var(--panel-2);
+  border-radius: 2px;
+  font-size: 13px;
+}
+
+@media (max-width: 1180px) {
+  .ld-top,
+  .ld-case-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 760px) {
+  .ld-step {
+    grid-template-columns: 56px 1fr;
+  }
+
+  .ld-step-actor {
+    grid-column: 2;
+  }
+
+  .ld-case-title {
+    font-size: 22px;
+  }
+}

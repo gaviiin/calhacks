@@ -77,6 +77,7 @@ const ATTRIBUTION: Record<IncidentSignal['driver_attribution'], string> = {
 const CONFIRMATION: Record<IncidentSignal['sporting_confirmation'], string> = {
   incident_candidate: 'Incident candidate',
   needs_confirmation: 'Needs confirmation',
+  retired_per_timing: 'Retired, per the timing feed',
   verified_historical_incident: 'Verified historical incident',
 };
 const DAMAGE: Record<IncidentSignal['damage_confirmation'], string> = {

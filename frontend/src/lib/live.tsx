@@ -158,7 +158,9 @@ export interface IncidentSignal {
   source_evidence: SourceRef[];
   corroborating_source_url: string | null;
   corroboration_note: string | null;
-  sporting_confirmation: 'incident_candidate' | 'needs_confirmation' | 'verified_historical_incident';
+  sporting_confirmation: 'incident_candidate' | 'needs_confirmation' | 'retired_per_timing' | 'verified_historical_incident';
+  scope?: 'own_team' | 'competitor' | 'unknown';
+  post_race_reference?: { url: string; publisher: string; claim: string; read_on: string; available: string } | null;
   damage_confirmation: 'none' | 'awaiting_synthetic_garage_report' | 'synthetic_garage_report_received';
   jev: JevDecision;
   urgency: Urgency | null;
@@ -292,6 +294,9 @@ export interface IncidentScenario {
   key: ScenarioKey;
   label: string;
   assumption: string;
+  feasible?: boolean;
+  requires?: string[];
+  why?: string;
   position_after: number | null;
   exposure_after_cents: number;
   delta_cents: number;
@@ -325,6 +330,9 @@ export interface IncidentPlan {
   car: number;
   driver_id: string;
   team_car: boolean;
+  scope?: 'own_team' | 'competitor';
+  car_status?: string;
+  feasibility_note?: string;
   as_of_utc: string;
   observed_at_utc: string;
   lap: number | null;
@@ -374,6 +382,129 @@ export interface FeedHealth {
   lost_from_peak_cents: number | null;
   incidents: number;
   incident_plans: number;
+}
+
+export type CaseState = 'detected' | 'investigating' | 'awaiting_evidence' | 'evaluated' | 'awaiting_approval' | 'authorized' | 'reconciling' | 'closed' | 'rejected';
+export type Actor = 'system' | 'jev' | 'financial_analyst' | 'cost_cap_agent' | 'engineering' | 'controller' | 'procurement' | 'reconciliation' | 'person';
+
+export interface CaseStep {
+  at_utc: string;
+  race_clock_utc: string | null;
+  actor: Actor;
+  by: string | null;
+  action: string;
+  detail: string;
+  evidence: string[];
+  automatic: boolean;
+  status: 'done' | 'pending' | 'refused' | 'escalated';
+  state_after: CaseState | null;
+}
+
+export interface GarageOption {
+  key: 'replace' | 'repair';
+  label: string;
+  cost_cents: number;
+  lead_time: string;
+  feasible_if: string | null;
+}
+
+export interface GarageReport {
+  synthetic: boolean;
+  source: string;
+  reported_at_utc: string;
+  car: number;
+  parts: { part: string; condition: string }[];
+  options: GarageOption[];
+  engineer_note: string;
+}
+
+export interface CostCapEvaluation {
+  treatment: string;
+  basis: string;
+  headroom_before_cents: number | null;
+  headroom_source: string;
+  options: { key: string; label: string; cost_cents: number; treatment: string; cap_effect_cents: number; headroom_after_cents: number | null; feasible_if: string | null }[];
+  recommended: 'replace' | 'repair' | null;
+  avoided_cents: number | null;
+  conditions: string[];
+  evaluated_at_utc: string;
+}
+
+export interface CaseApproval {
+  role: 'engineering' | 'controller';
+  by: string;
+  decision: 'cleared' | 'not_cleared' | 'authorized' | 'rejected';
+  reason: string;
+  at_utc: string;
+}
+
+export interface ProcurementOrder {
+  order_id: string;
+  option: 'replace' | 'repair';
+  amount_cents: number;
+  vendor: string;
+  authorized_by: string;
+  created_at_utc: string;
+  status: 'prepared' | 'sent' | 'invoiced' | 'matched' | 'disputed';
+  mock: boolean;
+}
+
+export interface CaseInvoice {
+  invoice_id: string;
+  order_id: string | null;
+  amount_cents: number;
+  received_at_utc: string;
+  synthetic: boolean;
+  variance_cents: number | null;
+  matched: boolean | null;
+  note: string;
+}
+
+/** A unit of finance work opened by a material racing event (live_racing/cases.py). */
+export interface FinanceCase {
+  schema_version: number;
+  case_id: string;
+  version: number;
+  incident_id: string;
+  race_id: string;
+  replay_id: string;
+  team: string;
+  scope: 'own_team' | 'competitor';
+  car: number;
+  driver_id: string;
+  title: string;
+  summary: string;
+  state: CaseState;
+  owner: string;
+  opened_at_utc: string;
+  updated_at_utc: string;
+  race_clock_utc: string | null;
+  exposure_status: 'unknown_until_evidence' | 'projection_only' | 'estimated_from_garage_report' | 'authorized' | 'reconciled' | 'none';
+  exposure_cents: number | null;
+  exposure_label: string;
+  projection_delta_cents: number | null;
+  evidence: string[];
+  missing_evidence: string[];
+  next_action: string;
+  permissions: Record<string, boolean>;
+  garage_report: GarageReport | null;
+  evaluation: CostCapEvaluation | null;
+  approvals: CaseApproval[];
+  procurement: ProcurementOrder | null;
+  invoice: CaseInvoice | null;
+  escalation_reason: string | null;
+  closed_reason: string | null;
+  steps: CaseStep[];
+  stages: { key: string; label: string; status: 'done' | 'active' | 'pending' }[];
+}
+
+export interface Scorecard {
+  generated_at_utc: string;
+  how: string;
+  headline: Record<string, string | number>;
+  jev_routing: { mode: string; cases: number; agree: number | null; accuracy?: number; p50_ms?: number | null; p95_ms?: number | null; rows?: unknown[] };
+  contract_calculator: { passed: number; total: number; checks: { check: string; ok: boolean }[] };
+  workflow: Record<string, unknown>;
 }
 
 export interface ReplayStatus {
@@ -457,6 +588,8 @@ interface Snapshot {
   strategy?: StrategyAdvice | null;
   incident_plans?: IncidentPlan[];
   feed?: FeedHealth | null;
+  cases?: FinanceCase[];
+  team?: { id: string; label: string | null } | null;
 }
 
 export interface LiveState {
@@ -486,10 +619,22 @@ export interface LiveState {
   /** the latest feed health, and the browser's clock when it arrived (so the age can tick between polls) */
   feed: FeedHealth | null;
   feedAt: number;
+  /** every finance case of this replay, latest version each, oldest first */
+  cases: Published<FinanceCase>[];
+  /** which constructor the customer mirrors on the current replay */
+  team: { id: string; label: string | null } | null;
+  /** the measured scorecard (scripts/live_scorecard.py), when it exists */
+  scorecard: Scorecard | null;
   metrics: Metrics | null;
   log: string[];
   busy: string | null;
   error: string | null;
+  /** start any replay: the API's StartReplay body */
+  start: (body: Record<string, unknown>) => Promise<void>;
+  /** a person's decision on a case; the API refuses agents and self-approval */
+  approve: (caseId: string, role: 'engineering' | 'controller', by: string, decision: string, reason?: string) => Promise<string | null>;
+  garageReport: (caseId: string) => Promise<string | null>;
+  sendInvoice: (caseId: string, amountCents?: number) => Promise<string | null>;
   startBrazil: (pauseAtLap: number | null) => Promise<void>;
   startSpa: () => Promise<void>;
   /** Stop whatever is on the feed, then start this race. Switching is allowed mid-replay. */
@@ -503,7 +648,7 @@ export const SPA = '2024_belgian_gp';
 export const BRAZIL_WINDOW = { from_lap: 28, to_lap: 34, speed: 20 };
 export const SPA_SPEED = 120;
 
-const KINDS = ['race_state', 'incident_signal', 'jev_decision', 'finance_impact', 'result_change', 'replay_status', 'strategy_advice', 'incident_plan', 'feed_health'] as const;
+const KINDS = ['race_state', 'incident_signal', 'jev_decision', 'finance_impact', 'result_change', 'replay_status', 'strategy_advice', 'incident_plan', 'feed_health', 'finance_case'] as const;
 
 interface Store {
   replay: ReplayStatus | null;
@@ -518,6 +663,7 @@ interface Store {
   strategy: Published<StrategyAdvice> | null;
   strategyMoves: Published<StrategyAdvice>[];
   plans: Map<string, Published<IncidentPlan>>;
+  cases: Map<string, Published<FinanceCase>>;
   feed: Published<FeedHealth> | null;
   feedAt: number;
   lastSeq: number;
@@ -531,7 +677,7 @@ const impactKey = (p: FinanceImpactUpdate) => `${p.incident_id}:${p.received_at_
 
 const empty = (): Store => ({
   replay: null, race: null, states: [], moves: [], incidents: new Map(), results: new Map(), jev: new Map(), impacts: new Map(),
-  strategy: null, strategyMoves: [], plans: new Map(), feed: null, feedAt: 0, lastSeq: 0, replayStartedAt: '',
+  strategy: null, strategyMoves: [], plans: new Map(), cases: new Map(), feed: null, feedAt: 0, lastSeq: 0, replayStartedAt: '',
 });
 
 /** A new replay: the exposure story starts again and the previous race's state is not this one's. */
@@ -623,6 +769,11 @@ function fold(s: Store, r: Published<unknown>): void {
     case 'incident_plan':
       takePlan(s, r as Published<IncidentPlan>);
       break;
+    case 'finance_case': {
+      const cur = s.cases.get(r.id);
+      if (!cur || r.version >= cur.version) s.cases = new Map(s.cases).set(r.id, r as Published<FinanceCase>);
+      break;
+    }
     case 'feed_health':
       takeFeed(s, r as Published<FeedHealth>);
       break;
@@ -679,6 +830,10 @@ function seed(s: Store, snap: Snapshot): void {
     }
   }
   if (snap.feed) takeFeed(s, { kind: 'feed_health', id: snap.feed.replay_id ?? '', version: 1, status: snap.feed.state, published_at_utc: snap.feed.now_utc, payload: snap.feed, seq: seedSeq });
+  for (const c of snap.cases ?? []) {
+    const cur = s.cases.get(c.case_id);
+    if (!cur || c.version >= cur.version) s.cases = new Map(s.cases).set(c.case_id, { kind: 'finance_case', id: c.case_id, version: c.version, status: c.state, published_at_utc: c.updated_at_utc, payload: c, seq: seedSeq });
+  }
 }
 
 const bySeq = <T,>(a: Published<T>, b: Published<T>) => (a.seq < 0 || b.seq < 0 ? a.published_at_utc.localeCompare(b.published_at_utc) : a.seq - b.seq);
@@ -697,11 +852,20 @@ async function post<T>(path: string, body: unknown): Promise<T> {
 
 const Ctx = createContext<LiveState | null>(null);
 
+// The event stream holds a connection open for as long as the page lives. Browsers allow six per
+// origin over HTTP/1.1, and every dashboard tab proxied through the dev server was spending one of
+// the dev server's six, so page loads queued behind the streams. The stream therefore goes to the
+// live API's own origin (CORS is open there); the short polls stay proxied. A hidden tab closes its
+// stream and reopens it when shown, so background tabs cost nothing.
+const LIVE_API_ORIGIN: string = (import.meta.env.VITE_LIVE_API as string | undefined) ?? 'http://localhost:8020';
+
 export function LiveProvider({ children }: { children: ReactNode }) {
   const [online, setOnline] = useState(false);
   const [streaming, setStreaming] = useState(false);
   const [store, setStore] = useState<Store>(empty);
   const [metrics, setMetrics] = useState<Metrics | null>(null);
+  const [team, setTeam] = useState<{ id: string; label: string | null } | null>(null);
+  const [scorecard, setScorecard] = useState<Scorecard | null>(null);
   const [log, setLog] = useState<string[]>([]);
   const [busy, setBusy] = useState<string | null>(null);
   const [error, setError] = useState<string | null>(null);
@@ -718,6 +882,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
       const snap = parseLoose<Snapshot>(await r.text());
       setOnline(true);
       setMetrics(snap.metrics);
+      setTeam(snap.team ?? null);
       setLog(snap.log ?? []);
       if (snap.seq < seqRef.current) {
         // the API restarted: its sequence began again, so ours does too
@@ -743,14 +908,28 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     return () => window.clearInterval(t);
   }, [poll]);
 
+  useEffect(() => {
+    const load = async () => {
+      try {
+        const r = await fetch('/live/scorecard', { cache: 'no-store' });
+        if (r.ok) setScorecard((await r.json()) as Scorecard);
+      } catch {
+        /* no scorecard yet */
+      }
+    };
+    void load();
+    const t = window.setInterval(() => void load(), 60000);
+    return () => window.clearInterval(t);
+  }, []);
+
   // ---------------------------------------------------------------- every record, streamed
   useEffect(() => {
     let es: EventSource | null = null;
     let timer = 0;
     let live = true;
     const connect = () => {
-      if (!live) return;
-      es = new EventSource(`/live/stream?since=${seqRef.current}`);
+      if (!live || document.visibilityState === 'hidden') return;
+      es = new EventSource(`${LIVE_API_ORIGIN}/live/stream?since=${seqRef.current}`);
       const on = (e: Event) => {
         try {
           pending.current.push(parseLoose<Published<unknown>>((e as MessageEvent<string>).data));
@@ -767,6 +946,16 @@ export function LiveProvider({ children }: { children: ReactNode }) {
       };
     };
     connect();
+    const onVisibility = () => {
+      if (document.visibilityState === 'hidden') {
+        es?.close();
+        es = null;
+        setStreaming(false);
+      } else if (!es) {
+        connect();
+      }
+    };
+    document.addEventListener('visibilitychange', onVisibility);
     // the stream can carry ten state updates a second at 20x; fold them in batches
     const flush = window.setInterval(() => {
       if (!pending.current.length) return;
@@ -782,6 +971,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     return () => {
       live = false;
       es?.close();
+      document.removeEventListener('visibilitychange', onVisibility);
       window.clearTimeout(timer);
       window.clearInterval(flush);
     };
@@ -814,9 +1004,23 @@ export function LiveProvider({ children }: { children: ReactNode }) {
     const financeImpacts = [...store.impacts.values()].sort(bySeq);
     const states = [...store.states].sort((a, b) => a.payload.event_time_utc.localeCompare(b.payload.event_time_utc) || a.seq - b.seq);
     const plans = [...store.plans.values()].sort((a, b) => a.payload.as_of_utc.localeCompare(b.payload.as_of_utc) || a.published_at_utc.localeCompare(b.published_at_utc));
+    const cases = [...store.cases.values()].sort((a, b) => a.payload.opened_at_utc.localeCompare(b.payload.opened_at_utc));
+    const decide = async (path: string, body: unknown): Promise<string | null> => {
+      try {
+        await post(path, body);
+        await poll();
+        return null;
+      } catch (e) {
+        return e instanceof Error ? e.message : String(e);
+      }
+    };
     return {
       online, streaming, replay: store.replay, replayStartedAt: store.replayStartedAt, race: store.race, states, moves: store.moves, incidents, resultChanges, jevDecisions, financeImpacts,
-      strategy: store.strategy?.payload ?? null, strategyMoves: store.strategyMoves, plans, feed: store.feed?.payload ?? null, feedAt: store.feedAt, metrics, log, busy, error,
+      strategy: store.strategy?.payload ?? null, strategyMoves: store.strategyMoves, plans, cases, team, scorecard, feed: store.feed?.payload ?? null, feedAt: store.feedAt, metrics, log, busy, error,
+      start: (body) => act('Starting the replay', () => post('/live/replay', body)),
+      approve: (caseId, role, by, decision, reason = '') => decide(`/live/cases/${encodeURIComponent(caseId)}/approve`, { role, by, decision, reason }),
+      garageReport: (caseId) => decide(`/live/cases/${encodeURIComponent(caseId)}/garage-report`, null),
+      sendInvoice: (caseId, amountCents) => decide(`/live/cases/${encodeURIComponent(caseId)}/invoice`, amountCents === undefined ? null : { amount_cents: amountCents }),
       startBrazil: (pauseAtLap) =>
         act('Starting the São Paulo replay', () => post('/live/replay', { race_id: BRAZIL, ...BRAZIL_WINDOW, pause_at_lap: pauseAtLap })),
       startSpa: () => act('Starting the Spa replay', () => post('/live/replay', { race_id: SPA, speed: SPA_SPEED })),
@@ -829,7 +1033,7 @@ export function LiveProvider({ children }: { children: ReactNode }) {
       resume: () => act('Resuming', () => post('/live/replay/resume', {})),
       stop: () => act('Stopping', () => post('/live/replay/stop', {})),
     };
-  }, [online, streaming, store, metrics, log, busy, error, act]);
+  }, [online, streaming, store, metrics, team, scorecard, log, busy, error, act, poll]);
 
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

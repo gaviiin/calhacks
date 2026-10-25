@@ -58,6 +58,48 @@ Jev p50 67 ms / p95 98 ms, adapter received to published p95 1 ms. The labeled f
 routed as expected live, 11 requests, p50 68 ms, p95 167 ms (`make jev-smoke`). Without a key the
 same replay runs with every decision labelled `unavailable`.
 
+## The finance employee: cases, scope, feasibility, approvals (2026-10-25)
+
+The product review (docs/PLAN_FINANCE_CASES.md) asked for accountable autonomous work, not routing
+and forecasts. That is `cases.py`, `team.py` and the feasibility gate in `incident_planner.py`.
+
+- **A case per material incident** (`finance_case` records, `GET /live/cases`): states
+  `detected → investigating → awaiting_evidence → evaluated → awaiting_approval → authorized →
+  reconciling → closed | rejected`, with a stable id, the evidence, what is missing, the next
+  autonomous action, the agents' permissions, and every step taken, escalated or refused, with
+  actor, time and race clock. Each version is published and appended to `data/live_racing/cases.jsonl`.
+- **Team scope is a permission.** The replay runs as the Mercedes-mirror (cars 63, 44) or the
+  Williams-mirror (`team=williams`: cars 43, 23, 2; same synthetic contracts). Our car: the analyst
+  requests the garage report, the cost cap agent evaluates the options, procurement is prepared
+  once a person authorizes. A competitor's car: our projections move and the case closes; no
+  garage request, no cost-cap hand-off, no access to their books.
+- **Corroboration from the feed, no look-ahead.** A stopped car two laps down when the leader
+  starts a lap did not take the restart: `retired_per_timing` (17:01Z for car 43). The race report
+  is attached as a post-race reference, never as live evidence.
+- **The feasibility gate.** A stationary car cannot continue, pit or serve a penalty; a repair
+  needs engineering clearance; a red-flag stop frees track position, not the parts cost. Infeasible
+  outcomes are struck through on the page and never offered to the advisor.
+- **Approvals and guards** (`POST /live/cases/{id}/approve`): engineering clears or refuses the
+  repair, the controller authorizes or rejects the spend; an agent is refused, so is the person who
+  cleared feasibility trying to authorize, so is a controller before engineering. Refusals are
+  logged on the case and counted on the scorecard.
+- **Procurement and reconciliation.** Authorization prepares a mock order; the invoice (synthetic,
+  `POST /live/cases/{id}/invoice`) is matched within 2% or escalated back to the controller.
+- **Adversarial case.** Hamilton's lap-33 contact: a collision noted, the car racing, stewards no
+  further action, no damage reported: the case closes with no expense invented.
+- **Demo input is labelled.** With `demo=true` the synthetic garage report (replace $400k or repair
+  $130k, the plan's illustrative figures) arrives 8 s after the request and the synthetic invoice
+  10 s after authorization; both say `synthetic`.
+- **Measured proof.** `uv run python scripts/live_scorecard.py` writes `live_racing/out/scorecard.json`
+  (`GET /live/scorecard`): Jev routing on the labeled cases, the contract calculator against
+  hand-checked expectations, the two demo workflows, refused unauthorized attempts, unauthorized
+  actions executed. On 2026-10-25: 11/11, 6/6, crash to reconciled close in 19 audited steps with 3
+  refusals and 0 unauthorized actions.
+
+Labels on the page follow the review: current-position bonus scenario (not a forecast), change
+from the highest provisional scenario, provisional sponsor payout, estimated immediate
+position-related bonus change, unconfirmed incident exposure until garage evidence.
+
 ## The strategic layer: what every lever costs, and what a crash could cost
 
 Added on 2026-10-24 for the pit wall's "instant financial advisor" use. All of it is arithmetic on the
@@ -152,7 +194,8 @@ to a person; after corroboration Jev is asked again with `driver_attribution: co
 | `finance_projections.py` | if-finished-now exposure through `finance.bonuses.bonuses_for`; `diff` |
 | `jev_router.py` | the TypeSafe adapter, gates, fallback, cache, budget, latency |
 | `publisher.py` | memory bus, JSONL, SpacetimeDB `mirror_item`, webhook |
-| `strategy.py`, `incident_planner.py`, `advisor.py`, `health.py` | place and pit-stop values, priced accident outcomes, the Claude advisor, feed health |
+| `cases.py`, `team.py` | the financial case state machine with its guards; the customer's mirrored constructor and scope |
+| `strategy.py`, `incident_planner.py`, `advisor.py`, `health.py` | place and pit-stop values, priced accident outcomes behind a feasibility gate, the Claude advisor, feed health |
 | `replay.py`, `result_replay.py` | the OpenF1 replay and the FIA-document (Spa) replay |
 | `api.py` | the `/live` FastAPI app (:8020) |
 | `scripts/fetch_openf1_brazil_2024.py`, `scripts/replay_brazil_2024.py`, `scripts/replay_spa_2024.py`, `scripts/smoke_test_jev.py` | the commands |

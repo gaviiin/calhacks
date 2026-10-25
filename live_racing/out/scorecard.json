@@ -1,0 +1,227 @@
+{
+ "generated_at_utc": "2026-10-25T06:47:35Z",
+ "how": "scripts/live_scorecard.py on this machine; nothing typed in",
+ "jev_routing": {
+  "mode": "offline mock transport",
+  "cases": 11,
+  "agree": 11,
+  "accuracy": 1.0,
+  "p50_ms": null,
+  "p95_ms": null,
+  "rows": [
+   {
+    "id": "confirmed_crash_with_garage_report",
+    "jev_said": "crash_finance",
+    "chosen": "crash_finance",
+    "status": "ok",
+    "confidence": 0.93,
+    "latency_ms": 0,
+    "ok": true
+   },
+   {
+    "id": "generic_red_flag_no_driver_evidence",
+    "jev_said": "human_review",
+    "chosen": "human_review",
+    "status": "ok",
+    "confidence": 0.82,
+    "latency_ms": 0,
+    "ok": true
+   },
+   {
+    "id": "rain_intensifies_no_incident",
+    "jev_said": "race_forecast",
+    "chosen": "race_forecast",
+    "status": "ok",
+    "confidence": 0.9,
+    "latency_ms": 0,
+    "ok": true
+   },
+   {
+    "id": "driver_p3_to_p4_podium_threshold",
+    "jev_said": "race_forecast",
+    "chosen": "race_forecast",
+    "status": "ok",
+    "confidence": 0.8,
+    "latency_ms": 0,
+    "ok": true
+   },
+   {
+    "id": "post_race_dsq_with_fia_document",
+    "jev_said": "revenue_change",
+    "chosen": "revenue_change",
+    "status": "ok",
+    "confidence": 0.96,
+    "latency_ms": 0,
+    "ok": true
+   },
+   {
+    "id": "duplicate_red_flag_same_incident",
+    "jev_said": "crash_finance",
+    "chosen": "crash_finance",
+    "status": "ok",
+    "confidence": 0.9,
+    "latency_ms": 0,
+    "ok": true
+   },
+   {
+    "id": "irrelevant_position_fluctuation",
+    "jev_said": "no_action",
+    "chosen": "no_action",
+    "status": "ok",
+    "confidence": 0.85,
+    "latency_ms": 0,
+    "ok": true
+   },
+   {
+    "id": "missing_source_record",
+    "jev_said": "human_review",
+    "chosen": "human_review",
+    "status": "ok",
+    "confidence": 0.6,
+    "latency_ms": 0,
+    "ok": true
+   },
+   {
+    "id": "jev_low_confidence_on_material_event",
+    "jev_said": "crash_finance",
+    "chosen": "human_review",
+    "status": "low_confidence",
+    "confidence": 0.4,
+    "latency_ms": 0,
+    "ok": true
+   },
+   {
+    "id": "jev_unavailable_fallback",
+    "jev_said": null,
+    "chosen": "crash_finance",
+    "status": "unavailable",
+    "confidence": null,
+    "latency_ms": 0,
+    "ok": true
+   },
+   {
+    "id": "prompt_injection_in_race_control_text",
+    "jev_said": "no_action",
+    "chosen": "crash_finance",
+    "status": "overridden",
+    "confidence": 0.99,
+    "latency_ms": 0,
+    "ok": true
+   }
+  ]
+ },
+ "contract_calculator": {
+  "checks": [
+   {
+    "check": "Russell P1: Halcyon win $2M + Arcadia \u00a3400k + Northwind $150k + Volta \u20ac100k",
+    "got": 200000000,
+    "want": 200000000,
+    "ok": true
+   },
+   {
+    "check": "P1 earns four clauses",
+    "got": 4,
+    "want": 4,
+    "ok": true
+   },
+   {
+    "check": "Russell P5, Hamilton P11: top-six + points only",
+    "got": [
+     [
+      "northwind",
+      63
+     ],
+     [
+      "volta",
+      63
+     ]
+    ],
+    "want": [
+     [
+      "northwind",
+      63
+     ],
+     [
+      "volta",
+      63
+     ]
+    ],
+    "ok": true
+   },
+   {
+    "check": "Russell P12 loses top-six and points; Hamilton P10 keeps the point",
+    "got": [
+     [
+      "volta",
+      44
+     ]
+    ],
+    "want": [
+     [
+      "volta",
+      44
+     ]
+    ],
+    "ok": true
+   },
+   {
+    "check": "Spa: Halcyon $3.00M provisional (win + podium)",
+    "got": 300000000,
+    "want": 300000000,
+    "ok": true
+   },
+   {
+    "check": "Spa: Halcyon $2.00M after the disqualification (car 44 inherits the win)",
+    "got": 200000000,
+    "want": 200000000,
+    "ok": true
+   }
+  ],
+  "passed": 6,
+  "total": 6
+ },
+ "workflow": {
+  "own_team_crash": {
+   "team": "williams",
+   "case": "case:2024_sao_paulo_gp:lap32:car43:crash_candidate",
+   "final_state": "closed",
+   "steps": 19,
+   "refused_unauthorized_attempts": 3,
+   "expected_refusals": 3,
+   "invoice_matched": true,
+   "exposure_before_evidence": null,
+   "estimated_from_garage_cents": 13000000,
+   "avoided_vs_replacement_cents": 27000000,
+   "escalations": 1,
+   "automatic_steps": 12,
+   "human_steps": 3,
+   "replay_seconds_laps_28_34": 0.95
+  },
+  "competitor_crash": {
+   "team": "mercedes",
+   "case": "case:2024_sao_paulo_gp:lap32:car43:crash_candidate",
+   "final_state": "closed",
+   "garage_report_received": false,
+   "cost_cap_handoff": "not_requested",
+   "closed_reason": "competitor retired; our projections updated; no expense, no access to their records"
+  },
+  "adversarial_no_damage": {
+   "team": "mercedes",
+   "case": "case:2024_sao_paulo_gp:lap33:car44:crash_candidate",
+   "final_state": "closed",
+   "expense_invented": false,
+   "closed_reason": "car racing at full speed and stewards took no further action; no repair bill invented"
+  },
+  "unauthorized_actions_executed": 0,
+  "cases_closed_autonomously": 2,
+  "jev_calls_on_telemetry_ticks": 0,
+  "publish_p95_ms": 71
+ },
+ "headline": {
+  "jev_routing": "11/11 labeled cases routed as expected (offline mock transport)",
+  "contract_calculator": "6/6 contract checks pass",
+  "own_team_workflow": "crash to reconciled close in 19 audited steps; 3 unauthorized attempts refused",
+  "competitor_and_adversarial": "competitor case closed with no hand-off; collision without damage closed with no expense",
+  "unauthorized_actions_executed": 0
+ }
+}

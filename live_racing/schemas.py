@@ -188,7 +188,10 @@ class IncidentSignal(BaseModel):
     source_evidence: list[SourceRef] = Field(default_factory=list)
     corroborating_source_url: str | None = None
     corroboration_note: str | None = None
-    sporting_confirmation: Literal["incident_candidate", "needs_confirmation", "verified_historical_incident"] = "incident_candidate"
+    sporting_confirmation: Literal["incident_candidate", "needs_confirmation", "retired_per_timing", "verified_historical_incident"] = "incident_candidate"
+    scope: Literal["own_team", "competitor", "unknown"] = "unknown"
+    # a source published after the race, attached for the reader; never used as live evidence
+    post_race_reference: dict[str, Any] | None = None
     damage_confirmation: Literal["none", "awaiting_synthetic_garage_report", "synthetic_garage_report_received"] = "none"
     jev: JevDecision
     urgency: Urgency | None = None
@@ -355,6 +358,10 @@ class IncidentScenario(BaseModel):
     key: Literal["continue", "pit_now", "retire", "repair_and_rejoin", "penalty_5s", "penalty_10s", "drive_through", "disqualified"]
     label: str
     assumption: str
+    # the feasibility gate: an infeasible outcome is shown greyed and never offered to the advisor
+    feasible: bool = True
+    requires: list[str] = Field(default_factory=list)  # engineering_clearance | stewards_decision
+    why: str = ""
     position_after: int | None
     exposure_after_cents: int
     delta_cents: int
@@ -392,6 +399,9 @@ class IncidentPlan(BaseModel):
     car: int
     driver_id: str
     team_car: bool
+    scope: Literal["own_team", "competitor"] = "competitor"
+    car_status: str = "unknown"
+    feasibility_note: str = ""
     as_of_utc: str
     observed_at_utc: str
     lap: int | None
@@ -443,3 +453,128 @@ class FeedHealth(BaseModel):
     lost_from_peak_cents: int | None
     incidents: int = 0
     incident_plans: int = 0
+
+
+# ---------------------------------------------------------------------- financial cases (the work, not the telemetry)
+
+CaseState = Literal["detected", "investigating", "awaiting_evidence", "evaluated", "awaiting_approval", "authorized", "reconciling", "closed", "rejected"]
+Actor = Literal["system", "jev", "financial_analyst", "cost_cap_agent", "engineering", "controller", "procurement", "reconciliation", "person"]
+
+
+class CaseStep(BaseModel):
+    """One line of the case's audit trail: who did what, on what evidence, and whether it was automatic."""
+
+    at_utc: str
+    race_clock_utc: str | None = None
+    actor: Actor
+    by: str | None = None  # a person's id when a person acted
+    action: str
+    detail: str = ""
+    evidence: list[str] = Field(default_factory=list)
+    automatic: bool = True
+    status: Literal["done", "pending", "refused", "escalated"] = "done"
+    state_after: CaseState | None = None
+
+
+class GarageOption(BaseModel):
+    key: Literal["replace", "repair"]
+    label: str
+    cost_cents: int
+    lead_time: str
+    feasible_if: str | None = None
+
+
+class GarageReport(BaseModel):
+    """What the garage says it found. In the replay this is synthetic demo input and says so."""
+
+    synthetic: bool = True
+    source: str = "synthetic_demo_garage_report"
+    reported_at_utc: str
+    car: int
+    parts: list[dict[str, str]] = Field(default_factory=list)
+    options: list[GarageOption] = Field(default_factory=list)
+    engineer_note: str = ""
+
+
+class CostCapEvaluation(BaseModel):
+    """The cost cap desk's view of the garage options: treatment, cap effect, headroom, recommendation."""
+
+    treatment: str = "RELEVANT"
+    basis: str
+    headroom_before_cents: int | None
+    headroom_source: str
+    options: list[dict[str, Any]] = Field(default_factory=list)
+    recommended: Literal["replace", "repair"] | None = None
+    avoided_cents: int | None = None
+    conditions: list[str] = Field(default_factory=list)
+    evaluated_at_utc: str
+
+
+class Approval(BaseModel):
+    role: Literal["engineering", "controller"]
+    by: str
+    decision: Literal["cleared", "not_cleared", "authorized", "rejected"]
+    reason: str = ""
+    at_utc: str
+
+
+class ProcurementOrder(BaseModel):
+    order_id: str
+    option: Literal["replace", "repair"]
+    amount_cents: int
+    vendor: str
+    authorized_by: str
+    created_at_utc: str
+    status: Literal["prepared", "sent", "invoiced", "matched", "disputed"] = "prepared"
+    mock: bool = True
+
+
+class Invoice(BaseModel):
+    invoice_id: str
+    order_id: str | None
+    amount_cents: int
+    received_at_utc: str
+    synthetic: bool = True
+    variance_cents: int | None = None
+    matched: bool | None = None
+    note: str = ""
+
+
+class FinanceCase(BaseModel):
+    """A unit of finance work opened by a material racing event, with a state, a next action, what
+    is missing, what the agents may do, and every step that was taken or refused."""
+
+    schema_version: int = SCHEMA_VERSION
+    case_id: str
+    version: int = 1
+    incident_id: str
+    race_id: str
+    replay_id: str
+    team: str
+    scope: Literal["own_team", "competitor"]
+    car: int
+    driver_id: str
+    title: str
+    summary: str
+    state: CaseState = "detected"
+    owner: str = "financial_analyst"
+    opened_at_utc: str
+    updated_at_utc: str
+    race_clock_utc: str | None = None
+    exposure_status: Literal["unknown_until_evidence", "projection_only", "estimated_from_garage_report", "authorized", "reconciled", "none"] = "unknown_until_evidence"
+    exposure_cents: int | None = None
+    exposure_label: str = "Unconfirmed incident exposure until garage evidence arrives"
+    projection_delta_cents: int | None = None
+    evidence: list[str] = Field(default_factory=list)
+    missing_evidence: list[str] = Field(default_factory=list)
+    next_action: str = ""
+    permissions: dict[str, bool] = Field(default_factory=dict)
+    garage_report: GarageReport | None = None
+    evaluation: CostCapEvaluation | None = None
+    approvals: list[Approval] = Field(default_factory=list)
+    procurement: ProcurementOrder | None = None
+    invoice: Invoice | None = None
+    escalation_reason: str | None = None
+    closed_reason: str | None = None
+    steps: list[CaseStep] = Field(default_factory=list)
+    stages: list[dict[str, str]] = Field(default_factory=list)  # the workflow checklist the page draws
