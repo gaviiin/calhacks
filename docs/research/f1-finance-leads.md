@@ -118,6 +118,8 @@ Terms used below:
 
 ## Teammate pitch check
 
+> *Historical (24 Oct). This checked the Spa / Meridian pitch from before the Anneal pivot. It is not advice on the current pitch; see `docs/PITCH.md`.*
+
 | Pitch claim | Verdict | What's actually true | Source |
 |---|---|---|---|
 | "Every transaction must be classified as Relevant or Excluded under one of 27 categories." | **Partly right; framing wrong** | 2026 D5.1.1 does list exactly 27 exclusion sub-clauses (a–z plus aa); 2025 Art. 3.1 lists 25 (a–y). But Relevant is the default. A cost leaves the cap only if it is "Directly Attributable" to an exclusion, meaning it would not exist without that activity and can be identified without splitting it up. Several exclusions have limits, such as the bonus cap and the €22m engine price. Then 17 adjustments (D6.1.1 a–q) change the totals, for example fair value for barter, inventories and Sprints. | [SD D5.1.1, D6.1.1, "Directly Attributable"][SD]; [FR25 Art. 3.1][FR25] |
@@ -128,6 +130,8 @@ Terms used below:
 | "Two sets of books." | **Framing, not literal** | The submission is a reporting template built from the team's audited accounts. Relevant Costs are total costs in the books, minus exclusions, plus adjustments. The template must reconcile to the audited statements. Teams may also submit separately audited "Subset Accounts", but that is optional. Say "a regulatory view reconciled to the statutory accounts". | [SD "Cost Cap Reporting Template", "Relevant Costs", "Subset Accounts"][SD] |
 
 ## Lead triage
+
+> *Historical (24 Oct). The priorities below were set for the Spa / Meridian demo, not for Anneal. Read them as a record of what was found, not as current advice.*
 
 Rows 1–11 are the source's Part 5 cases. Rows A–F are leads implied elsewhere.
 
