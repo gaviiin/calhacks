@@ -492,3 +492,8 @@ app.include_router(build_microsoft_router(get_run, STORE))
 from .agent_api import build_router as build_agent_router  # noqa: E402
 
 app.include_router(build_agent_router(get_run))
+
+# --------------------------------------------------------------------------- cost cap strategy simulator
+from capsim.api import router as capsim_router  # noqa: E402
+
+app.include_router(capsim_router)
