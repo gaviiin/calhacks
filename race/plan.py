@@ -69,8 +69,8 @@ def _memo_parts(memo: str) -> list[str]:
 
 
 def _entry_components(e: Entry, inc: Incident, state) -> list[dict]:
-    """One component per part the entry covers (the memo's parts, else the allocation's), its amount split by probability
-    times price-book mid; labour and freight are one each."""
+    """One component per part the entry covers (the allocation's parts, else the memo's), its amount split by price-book
+    mid; labour and freight are one each."""
     expense = next((ln.account for ln in e.lines if ln.account in ("6050", "5200", "6300", "6910")), "")
     amount = e.amount_cents
     if expense == "6050":
@@ -78,12 +78,14 @@ def _entry_components(e: Entry, inc: Incident, state) -> list[dict]:
             alloc = logistics.allocate(inc, state)
         except (KeyError, ValueError, TypeError):
             alloc = {}
-        parts = _memo_parts(e.memo)
+        # the parts the entry pays for: the current belief's allocation (the amount is the whole crash's estimate, however
+        # few parts the memo named when it was first raised), else the parts the memo names
+        if e.recognition == "first_use":
+            parts = [p for p, a in alloc.items() if a["source"] != "make"]
+        else:
+            parts = [p for p, a in alloc.items() if a["source"] == "make"]
         if not parts:
-            if e.recognition == "first_use":
-                parts = [p for p, a in alloc.items() if a["source"] != "make"]
-            else:
-                parts = [p for p, a in alloc.items() if a["source"] == "make"]
+            parts = _memo_parts(e.memo)
         if e.recognition == "incurred" and "chassis" in parts:
             # the tub: a new monocoque or a repair at Grove, whichever the belief says
             b = logistics.belief_of(inc, state)["parts"]

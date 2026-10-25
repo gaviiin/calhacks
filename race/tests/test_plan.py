@@ -65,19 +65,27 @@ def test_a_plan_breaks_an_entry_into_parts_and_matches_each(fake_entries=None):
 
 
 def test_a_familiar_part_at_an_unfamiliar_price_is_novel_and_says_why():
+    """Every part the crash needs has a case at its price; the booking is four times what those parts have ever cost."""
     st = _weekend_state()
-    st.history = OperationStore([OpCase("c", "entry", "front_wing", "6050", "first_use", 12_700_000, summary="Melbourne 2024: front wing fitted")])
     inc = incident(car=43, at="2024-11-03T10:39:00Z", kph=166)
     st.incidents[inc.incident_key] = inc
+    parts = [p for p, a in logistics.allocate(inc, st).items() if a["source"] != "make"]
+    assert parts
+    st.history = OperationStore([OpCase(f"c:{p}", "entry", p, "6050", "first_use", P.PARTS[p].usd_cents()[1], summary=f"Melbourne 2024: {p} fitted") for p in parts])
+    usual = sum(P.PARTS[p].usd_cents()[1] for p in parts)
     from race.events import Entry, EntryLine
 
-    e = Entry(entry_key="x:first_use", incident_key=inc.incident_key, memo="Spares fitted to car 43: front wing - counts when fitted", effective_date="2024-11-03",
-              recognition="first_use", cap_relevant=True, lines=[EntryLine("6050", debit_cents=40_000_000), EntryLine("1400", credit_cents=40_000_000)], at=inc.first_seen_at)
-    st.entries[e.entry_key] = e
+    def entry_of(amount: int) -> Entry:
+        return Entry(entry_key=f"x{amount}:first_use", incident_key=inc.incident_key, memo="Spares fitted to car 43: crash damage parts - counts when fitted", effective_date="2024-11-03",
+                     recognition="first_use", cap_relevant=True, lines=[EntryLine("6050", debit_cents=amount), EntryLine("1400", credit_cents=amount)], at=inc.first_seen_at)
+
+    fair, dear = entry_of(int(usual * 0.8)), entry_of(usual * 4)
+    st.entries[fair.entry_key], st.entries[dear.entry_key] = fair, dear
     p = plan_mod.build(inc, st)
-    line = p.line(e.entry_key)
+    assert p.line(fair.entry_key)["status"] == "precedent", "below what the parts have cost is fine"
+    line = p.line(dear.entry_key)
     assert line is not None and line["status"] == "novel"
-    assert "$400,000" in line["why"] and "the closest case was $127,000" in line["why"]
+    assert "the closest case was" in line["why"] and all(c["status"] == "novel" for c in line["components"])
 
 
 def test_a_posted_entry_becomes_the_precedent_for_the_next_one():

@@ -1741,7 +1741,7 @@
 
 .plan-line {
   display: grid;
-  grid-template-columns: 68px minmax(0, 1fr) 72px 64px auto;
+  grid-template-columns: 62px minmax(0, 1fr) 64px 56px auto;
   gap: 8px;
   align-items: center;
   min-height: 34px;
@@ -1777,10 +1777,12 @@
 }
 
 .plan-line-label b {
+  display: -webkit-box;
   overflow: hidden;
   font-weight: 600;
-  text-overflow: ellipsis;
-  white-space: nowrap;
+  line-height: 1.25;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
 }
 
 .plan-line-why {

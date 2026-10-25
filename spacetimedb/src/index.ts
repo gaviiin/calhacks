@@ -1609,7 +1609,8 @@ const PostingInput = t.object('RacePostingInput', {
 const MODEL_DECIDERS = (decidedBy: string) => decidedBy === 'jev' || decidedBy.startsWith('claude');
 const PRECEDENT_MIN = 0.8; // a line executes on its own when its closest case in the team's history scores at least this
 
-type PlanLine = { ref: string; kind: string; label: string; amountCents: number; status: string; why?: string; precedent?: { caseId: string; similarity: number; summary?: string } | null };
+// Lines are written by the desk in snake_case (race/plan.py): case_id, amount_cents.
+type PlanLine = { ref: string; kind: string; label: string; amount_cents?: number; status: string; why?: string; precedent?: { case_id?: string; caseId?: string; similarity: number; summary?: string } | null };
 
 /** The plan line for an entry, when its incident has a plan that names it. */
 function planLineFor(ctx: any, entry: any): { plan: any; line: PlanLine | null } {
@@ -1671,7 +1672,7 @@ function authorizedReason(ctx: any, entry: any, after?: string): string {
   const signed = eff ? ctx.db.raceSignoffs.effectKey.find(eff.effectKey) : undefined;
   const { plan, line } = planLineFor(ctx, entry);
   const onPlan = plan ? `under the plan ${plan.approvedBy ? `${plan.approvedBy} approved` : plan.status}` : 'no incident';
-  const prec = line?.precedent ? `on precedent ${line.precedent.caseId} (similarity ${line.precedent.similarity.toFixed(2)})` : 'no precedent needed';
+  const prec = line?.precedent ? `on precedent ${line.precedent.case_id ?? line.precedent.caseId ?? '?'} (similarity ${Number(line.precedent.similarity).toFixed(2)})` : 'no precedent needed';
   const basis = signed ? `signed off by ${signed.name}` : eff ? `decided by ${eff.decidedBy}` : 'no estimate behind it';
   return `${after ? `${after}: ` : ''}authorized by pit-wall: ${usd(entry.amountCents)} ${prec}, ${onPlan}, ${basis}`.slice(0, 512);
 }

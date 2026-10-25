@@ -342,7 +342,7 @@ describe('the money gate', () => {
       d.as('race', ctx => mod.recordRacePlan(ctx, { plan: { planKey: 'i', incidentKey: 'i', version: 1, status, summary: 'the plan', precedented: lines.filter(l => l.status === 'precedent').length,
         novel: lines.filter(l => l.status === 'novel').length, approvedBy: '', approvedAt: '', updatedAt: AT,
         linesJson: JSON.stringify(lines.map(l => ({ ref: l.ref, kind: 'entry', label: l.ref, amountCents: 0, status: l.status, why: l.why ?? '',
-          precedent: l.status === 'precedent' ? { caseId: 'history-1', similarity: l.similarity ?? 0.93 } : null }))) } }));
+          precedent: l.status === 'precedent' ? { case_id: 'history-1', similarity: l.similarity ?? 0.93 } : null }))) } }));
     const approve = (by = 'x', who: Who = 'cos') => d.as(who, ctx => mod.approveRacePlan(ctx, { planKey: 'i', status: 'approved', by, at: AT }));
     return { ...d, entry, posting, plan, approve };
   }
