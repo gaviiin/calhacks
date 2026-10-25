@@ -16,6 +16,7 @@
 | 1:45 | Top right: the weekend | "Sunday night the module seals the weekend: $3.92m, against the 'nearly $4 million' the press reported weeks later. Vowles said they'd take a little from next year's cap. This told them how much, that night." |
 
 **If asked** (each is a click away, off the home screen):
+- **How accurate is it?** The **Learned** tab: tested on Williams' 2024 races in order, learning only from the races before each one (`make race-backtest`). 96% of 93 events right with nothing known after the event; 83% of the 24 damage events; 88% of the parts each crash destroyed reserved (95% of their value); São Paulo's estimate 6% under Auto Motor und Sport. The honest part: learning covered the routine (every pit stop, right) but only 2 of 24 damage events, and the split of São Paulo's cost between crashes is off (Albon +97%, Colapinto's race −40% against PlanetF1). Public data teaches routine; damage needs the team's own records, and the page lists which.
 - **Show me the books.** Books › Entries: every entry, its debit and credit, posted or waiting.
 - **Who did what?** Audit: one row per decision, refusals included. Or "things the agents did on their own" on the home screen for every instrument on one page.
 - **Is this real?** Timing, telemetry, race control and results are real (OpenF1, Jolpica). Money is press estimates and stated assumptions; every part-life figure is an assumption in `race/life.py`. Not affiliated with Williams.

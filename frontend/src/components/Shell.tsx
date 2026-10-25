@@ -10,13 +10,14 @@ import { ReplayControl } from '../views/roles/ReplayControl';
 import { IconPlug } from './icons';
 import './shell.css';
 
-export type View = 'overview' | 'instruments' | 'race' | 'replay' | 'inbox' | 'books' | 'cost-cap' | 'risk' | 'revenue' | 'evidence' | 'audit' | 'connect' | 'pitwall';
+export type View = 'overview' | 'instruments' | 'learned' | 'race' | 'replay' | 'inbox' | 'books' | 'cost-cap' | 'risk' | 'revenue' | 'evidence' | 'audit' | 'connect' | 'pitwall';
 
 // The bar: the car (home), the books and the audit. One operator holds every seat, so there is no seat to pick; the
 // services are six lamps. Everything else is still routable (#/instruments, #/day/<garage|strategy|accounting|cfo>,
 // #/inbox, #/race, #/replay, #/risk, #/pitwall, #/cost-cap, #/revenue, #/evidence; Connect behind the plug).
 export const NAV: { id: string; label: string; href: string; match: (view: View, arg: string | null) => boolean }[] = [
   { id: 'car', label: 'Car', href: '#/', match: (v, a) => (v === 'overview' && (!a || a === 'garage' || a === 'pitwall' || a === 'strategy')) || v === 'instruments' || v === 'race' || v === 'replay' },
+  { id: 'learned', label: 'Learned', href: '#/learned', match: (v) => v === 'learned' },
   { id: 'books', label: 'Books', href: '#/books', match: (v, a) => v === 'books' || v === 'cost-cap' || v === 'revenue' || (v === 'overview' && (a === 'accounting' || a === 'cfo')) },
   { id: 'audit', label: 'Audit', href: '#/audit', match: (v) => v === 'audit' || v === 'evidence' || v === 'pitwall' },
 ];

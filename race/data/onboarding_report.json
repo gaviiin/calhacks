@@ -1,0 +1,274 @@
+{
+ "team": "Williams Racing",
+ "learned_from": {
+  "race_sessions": 21,
+  "events": 93,
+  "press_cases": 2,
+  "by_kind": {
+   "pit_stop": 69,
+   "incident": 19,
+   "retirement_suspected": 3,
+   "car_stopped": 2
+  },
+  "by_outcome": {
+   "none": 77,
+   "light": 9,
+   "heavy": 6,
+   "moderate": 1
+  },
+  "window": "2024 races before S\u00e3o Paulo: nothing from the weekend it is tested on"
+ },
+ "policies": [
+  {
+   "id": "race-y2024-collision-continued",
+   "title": "Collision noted, car carried on",
+   "cases": 3,
+   "agree": 3,
+   "outcome": "light",
+   "lower_bound": 0.53,
+   "licensed": false
+  },
+  {
+   "id": "race-y2024-infringement-no-damage",
+   "title": "Procedural infringement: no part damaged",
+   "cases": 7,
+   "agree": 7,
+   "outcome": "none",
+   "lower_bound": 0.72,
+   "licensed": false
+  },
+  {
+   "id": "race-y2024-stopped-unannounced",
+   "title": "Car stopped with no stewards' message (mechanical or solo crash)",
+   "cases": 3,
+   "agree": 3,
+   "outcome": "heavy",
+   "lower_bound": 0.53,
+   "licensed": false
+  },
+  {
+   "id": "race-y2024-sc-pit-stop",
+   "title": "Pit stop under the safety car or VSC: no cost, free track time",
+   "cases": 10,
+   "agree": 10,
+   "outcome": "none",
+   "lower_bound": 0.79,
+   "licensed": true
+  },
+  {
+   "id": "race-y2024-green-pit-stop",
+   "title": "Routine pit stop: tyres are supplied, no cost line",
+   "cases": 59,
+   "agree": 59,
+   "outcome": "none",
+   "lower_bound": 0.96,
+   "licensed": true
+  }
+ ],
+ "operations": {
+  "cases": 178,
+  "crashes": 6,
+  "weekends": [
+   "Austin 2024",
+   "Melbourne 2024",
+   "Monza 2024",
+   "Suzuka 2024",
+   "Zandvoort 2024"
+  ],
+  "by_kind": {
+   "entry": 47,
+   "spares_reserve": 36,
+   "work_order": 32,
+   "td017_move": 31,
+   "pu_check": 6,
+   "parc_ferme_list": 6,
+   "fia_notice": 6,
+   "evidence_pack": 6,
+   "freight": 4,
+   "hand_carry": 4
+  },
+  "parts_replaced": [
+   {
+    "part": "floor",
+    "label": "floor and diffuser",
+    "times": 6
+   },
+   {
+    "part": "bodywork",
+    "label": "bodywork panels",
+    "times": 6
+   },
+   {
+    "part": "front_wing",
+    "label": "front wing",
+    "times": 5
+   },
+   {
+    "part": "rear_wing",
+    "label": "rear wing",
+    "times": 5
+   },
+   {
+    "part": "front_suspension",
+    "label": "front suspension corner",
+    "times": 4
+   },
+   {
+    "part": "rear_suspension",
+    "label": "rear suspension corner",
+    "times": 4
+   },
+   {
+    "part": "gearbox",
+    "label": "gearbox",
+    "times": 3
+   },
+   {
+    "part": "electronics",
+    "label": "loom and sensors",
+    "times": 2
+   },
+   {
+    "part": "chassis_repair",
+    "label": "chassis repaired",
+    "times": 1
+   },
+   {
+    "part": "chassis",
+    "label": "chassis (monocoque) replaced",
+    "times": 1
+   }
+  ]
+ },
+ "assumptions": [
+  {
+   "what": "Part life",
+   "now": "11 parts, kilometres per part (race/life.py)",
+   "basis": "assumption",
+   "replace_with": "the team's lifing system: mileage per part number"
+  },
+  {
+   "what": "Life used at the weekend start",
+   "now": "per car, per part (race/life.py)",
+   "basis": "assumption",
+   "replace_with": "the lifing system at the start of the weekend"
+  },
+  {
+   "what": "Wear per stress event",
+   "now": "1, 5, 15 or 25% of life by severity (race/life.py)",
+   "basis": "assumption",
+   "replace_with": "damage reports joined to telemetry: what a kerb strike or a contact actually cost each part"
+  },
+  {
+   "what": "Part prices",
+   "now": "16 lines: 2 press figures, 14 assumptions (race/prices.py)",
+   "basis": "press and assumption",
+   "replace_with": "the ERP: what each part number cost the last time it was made or bought"
+  },
+  {
+   "what": "Lead times",
+   "now": "16 parts, days to make (race/prices.py)",
+   "basis": "assumption",
+   "replace_with": "work orders: how long each rebuild actually took at Grove"
+  },
+  {
+   "what": "Repair hours",
+   "now": "hours per part for the garage (race/data/williams_2024.json)",
+   "basis": "assumption",
+   "replace_with": "work orders and the garage's timesheets"
+  },
+  {
+   "what": "Spares",
+   "now": "16 parts at the track and at Grove (race/data/williams_2024.json)",
+   "basis": "assumption",
+   "replace_with": "the stores system: the manifest for each event"
+  },
+  {
+   "what": "Power unit and gearbox allocation used",
+   "now": "per car (race/data/williams_2024.json)",
+   "basis": "assumption",
+   "replace_with": "the team's allocation log"
+  },
+  {
+   "what": "Freight cut-offs",
+   "now": "per event (race/data/williams_2024.json)",
+   "basis": "assumption",
+   "replace_with": "the logistics team's booking history"
+  },
+  {
+   "what": "Damage by severity",
+   "now": "which parts a light, moderate or heavy crash takes, with probabilities (race/prices.py)",
+   "basis": "assumption",
+   "replace_with": "damage reports: which parts each past crash actually destroyed"
+  }
+ ],
+ "accuracy": {
+  "events": {
+   "n": 93,
+   "accuracy": 0.957,
+   "baseline": 0.957,
+   "decided_by_learning": 0.645,
+   "learned_accuracy": 1.0,
+   "damage_n": 24,
+   "damage_accuracy": 0.833,
+   "damage_by_learning": 2,
+   "missed_damage": 4,
+   "false_alarms": 0,
+   "missed_without_telemetry": 2,
+   "recorded_accuracy": 0.968,
+   "recorded_damage_accuracy": 0.875
+  },
+  "parts": {
+   "n": 6,
+   "template": {
+    "precision": 0.8,
+    "recall": 0.875,
+    "value_recall": 0.946
+   },
+   "learned": {
+    "precision": 0.794,
+    "recall": 0.844,
+    "value_recall": 0.872
+   }
+  },
+  "cost": {
+   "estimate_cents": 376729519,
+   "booked_cents": 623452493,
+   "against": [
+    {
+     "source": "Auto Motor und Sport",
+     "cents": 400000000,
+     "estimate_error": -0.058,
+     "booked_error": 0.559
+    },
+    {
+     "source": "PlanetF1 (F1Maximaal per-part tally)",
+     "cents": 248054400,
+     "estimate_error": 0.519,
+     "booked_error": 1.513
+    }
+   ],
+   "per_crash": [
+    {
+     "car": 23,
+     "session": "Qualifying",
+     "estimate_cents": 170556200,
+     "booked_cents": 210461350,
+     "press_cents": 86400000,
+     "estimate_error": 0.974,
+     "booked_error": 1.436
+    },
+    {
+     "car": 43,
+     "session": "Race",
+     "estimate_cents": 96137545,
+     "booked_cents": 232294345,
+     "press_cents": 160941600,
+     "estimate_error": -0.403,
+     "booked_error": 0.443
+    }
+   ],
+   "note": "Estimate: each crash's cost weighted by how likely each part is damaged, the figure the seal reports. Booked: every part the garage replaced at its price-book mid, the entries in the books. The weekend total is not an independent test (two part prices were raised to land it near the AMuS figure), and the two press sources differ by 61%. The split between crashes is the real test."
+  }
+ }
+}

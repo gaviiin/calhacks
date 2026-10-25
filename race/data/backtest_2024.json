@@ -1,0 +1,2567 @@
+{
+ "events_strict": {
+  "strict": true,
+  "rows": [
+   {
+    "case": "press-mel24-fp1-23",
+    "kind": "car_stopped",
+    "summary": "Melbourne 2024 FP1, Albon: chassis broken at Turn 6, no spare tub, Sargeant stood down; tu",
+    "truth": "heavy",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": false,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9472-2-L10-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9472 car 2 L10: pit stop under green",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9472-23-L15-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9472 car 23 L15: pit stop under green",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9472-2-L28-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9472 car 2 L28: pit stop under green",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9472-23-L36-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9472 car 23 L36: pit stop under green",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9472-2-L40-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9472 car 2 L40: pit stop under green",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9480-2-L7-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9480 car 2 L7: pit stop under sc",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "5 cases at 0.91, 100% agree"
+   },
+   {
+    "case": "9480-23-L7-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9480 car 23 L7: pit stop under sc",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "5 cases at 0.91, 100% agree"
+   },
+   {
+    "case": "9480-23-L13-incident",
+    "kind": "incident",
+    "summary": "S9480 car 23 L13: TURN 4 INCIDENT INVOLVING CARS 20 (MAG) AND 23 (ALB) NOTED - CAUSING A C",
+    "truth": "light",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9488-23-L6-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9488 car 23 L6: pit stop under green",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9488-23-L27-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9488 car 23 L27: pit stop under green",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9496-2-L1-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9496 car 2 L1: pit stop under green",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "7 cases at 0.97, 100% agree"
+   },
+   {
+    "case": "9496-23-L2-incident",
+    "kind": "incident",
+    "summary": "S9496 car 23 L2: TURN 2 INCIDENT INVOLVING CARS 3 (RIC) AND 23 (ALB) NOTED - CAUSING A COL",
+    "truth": "heavy",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": false,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9496-2-L22-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9496 car 2 L22: pit stop under green",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "7 cases at 1.00, 100% agree"
+   },
+   {
+    "case": "9496-2-L34-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9496 car 2 L34: pit stop under green",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "7 cases at 0.97, 100% agree"
+   },
+   {
+    "case": "9496-2-L41-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9496 car 2 L41: pit stop under green",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "7 cases at 0.97, 100% agree"
+   },
+   {
+    "case": "9506-2-L1-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9506 car 2 L1: pit stop under sc",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9506-23-L1-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9506 car 23 L1: pit stop under sc",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9506-2-L2-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9506 car 2 L2: pit stop under sc",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9506-23-L2-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9506 car 23 L2: pit stop under sc",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9507-23-L10-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9507 car 23 L10: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (11 cases, lower bound 0.803)"
+   },
+   {
+    "case": "9507-2-L11-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9507 car 2 L11: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (11 cases, lower bound 0.803)"
+   },
+   {
+    "case": "9507-23-L14-incident",
+    "kind": "incident",
+    "summary": "S9507 car 23 L14: TURN 11 INCIDENT INVOLVING CARS 23 (ALB) AND 18 (STR) NOTED",
+    "truth": "light",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9507-2-L31-incident",
+    "kind": "incident",
+    "summary": "S9507 car 2 L31: TURN 3 INCIDENT INVOLVING CARS 20 (MAG) AND 2 (SAR) NOTED - CAUSING A COL",
+    "truth": "light",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9507-23-L53-incident",
+    "kind": "incident",
+    "summary": "S9507 car 23 L53: TURN 1 INCIDENT INVOLVING CARS 18 (STR) AND 23 (ALB) NOTED - LEAVING THE",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9507-23-L53-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9507 car 23 L53: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (11 cases, lower bound 0.803)"
+   },
+   {
+    "case": "9515-23-L8-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9515 car 23 L8: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (14 cases, lower bound 0.838)"
+   },
+   {
+    "case": "9515-23-L9-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9515 car 23 L9: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (14 cases, lower bound 0.838)"
+   },
+   {
+    "case": "9515-23-L13-incident",
+    "kind": "incident",
+    "summary": "S9515 car 23 L13: INCIDENT INVOLVING CAR 23 (ALB) NOTED - UNSAFE CONDITION",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9515-23-L23-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9515 car 23 L23: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (14 cases, lower bound 0.838)"
+   },
+   {
+    "case": "9515-23-L28-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9515 car 23 L28: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (14 cases, lower bound 0.838)"
+   },
+   {
+    "case": "9515-2-L31-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9515 car 2 L31: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (14 cases, lower bound 0.838)"
+   },
+   {
+    "case": "9523-2-L1-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9523 car 2 L1: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (19 cases, lower bound 0.875)"
+   },
+   {
+    "case": "9523-23-L1-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9523 car 23 L1: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (19 cases, lower bound 0.875)"
+   },
+   {
+    "case": "9523-2-L57-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9523 car 2 L57: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (19 cases, lower bound 0.875)"
+   },
+   {
+    "case": "9531-23-L21-incident",
+    "kind": "incident",
+    "summary": "S9531 car 23 L21: TURN 13 INCIDENT INVOLVING CARS 22 (TSU) AND 23 (ALB) NOTED",
+    "truth": "light",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9531-2-L23-retirement_suspected",
+    "kind": "retirement_suspected",
+    "summary": "S9531 car 2 L23: stopped, no stewards' message",
+    "truth": "heavy",
+    "tier": "classifier",
+    "predicted": "heavy",
+    "baseline": "heavy",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9531-23-L25-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9531 car 23 L25: pit stop under sc",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "6 cases at 0.97, 86% agree"
+   },
+   {
+    "case": "9531-23-L44-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9531 car 23 L44: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (22 cases, lower bound 0.89)"
+   },
+   {
+    "case": "9539-2-L14-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9539 car 2 L14: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (23 cases, lower bound 0.895)"
+   },
+   {
+    "case": "9539-23-L18-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9539 car 23 L18: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (23 cases, lower bound 0.895)"
+   },
+   {
+    "case": "9539-2-L34-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9539 car 2 L34: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (23 cases, lower bound 0.895)"
+   },
+   {
+    "case": "9539-23-L43-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9539 car 23 L43: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (23 cases, lower bound 0.895)"
+   },
+   {
+    "case": "9550-2-L1-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9550 car 2 L1: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (27 cases, lower bound 0.909)"
+   },
+   {
+    "case": "9550-23-L12-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9550 car 23 L12: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (27 cases, lower bound 0.909)"
+   },
+   {
+    "case": "9550-2-L20-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9550 car 2 L20: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (27 cases, lower bound 0.909)"
+   },
+   {
+    "case": "9550-23-L39-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9550 car 23 L39: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (27 cases, lower bound 0.909)"
+   },
+   {
+    "case": "9550-23-L43-incident",
+    "kind": "incident",
+    "summary": "S9550 car 23 L43: INCIDENT INVOLVING CAR 23 (ALB) NOTED - FAILING TO FOLLOW RACE DIRECTORS",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9550-2-L49-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9550 car 2 L49: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (27 cases, lower bound 0.909)"
+   },
+   {
+    "case": "9558-2-L27-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9558 car 2 L27: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (32 cases, lower bound 0.922)"
+   },
+   {
+    "case": "9558-23-L27-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9558 car 23 L27: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (32 cases, lower bound 0.922)"
+   },
+   {
+    "case": "9558-2-L38-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9558 car 2 L38: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (32 cases, lower bound 0.922)"
+   },
+   {
+    "case": "9558-23-L38-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9558 car 23 L38: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (32 cases, lower bound 0.922)"
+   },
+   {
+    "case": "9566-23-L6-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9566 car 23 L6: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (36 cases, lower bound 0.93)"
+   },
+   {
+    "case": "9566-2-L8-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9566 car 2 L8: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (36 cases, lower bound 0.93)"
+   },
+   {
+    "case": "9566-23-L29-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9566 car 23 L29: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (36 cases, lower bound 0.93)"
+   },
+   {
+    "case": "9566-2-L33-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9566 car 2 L33: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (36 cases, lower bound 0.93)"
+   },
+   {
+    "case": "9566-2-L63-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9566 car 2 L63: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (36 cases, lower bound 0.93)"
+   },
+   {
+    "case": "9574-23-L2-incident",
+    "kind": "incident",
+    "summary": "S9574 car 23 L2: TURN 5 INCIDENT INVOLVING CAR 23 (ALB) NOTED - LEAVING THE TRACK AND GAIN",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9574-2-L8-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9574 car 2 L8: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (41 cases, lower bound 0.938)"
+   },
+   {
+    "case": "9574-23-L8-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9574 car 23 L8: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (41 cases, lower bound 0.938)"
+   },
+   {
+    "case": "9574-23-L23-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9574 car 23 L23: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (41 cases, lower bound 0.938)"
+   },
+   {
+    "case": "9574-2-L24-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9574 car 2 L24: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (41 cases, lower bound 0.938)"
+   },
+   {
+    "case": "press-zan24-fp3-2",
+    "kind": "car_stopped",
+    "summary": "Zandvoort 2024 FP3, Sargeant: car destroyed, the new upgrade parts with it; older-spec par",
+    "truth": "heavy",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": false,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9582-23-L12-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9582 car 23 L12: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (45 cases, lower bound 0.943)"
+   },
+   {
+    "case": "9582-2-L22-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9582 car 2 L22: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (45 cases, lower bound 0.943)"
+   },
+   {
+    "case": "9582-23-L54-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9582 car 23 L54: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (45 cases, lower bound 0.943)"
+   },
+   {
+    "case": "9590-43-L16-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9590 car 43 L16: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (48 cases, lower bound 0.947)"
+   },
+   {
+    "case": "9590-23-L17-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9590 car 23 L17: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (48 cases, lower bound 0.947)"
+   },
+   {
+    "case": "9598-43-L10-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9598 car 43 L10: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (50 cases, lower bound 0.949)"
+   },
+   {
+    "case": "9598-23-L31-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9598 car 23 L31: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (50 cases, lower bound 0.949)"
+   },
+   {
+    "case": "9606-23-L11-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9606 car 23 L11: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (52 cases, lower bound 0.951)"
+   },
+   {
+    "case": "9606-23-L15-retirement_suspected",
+    "kind": "retirement_suspected",
+    "summary": "S9606 car 23 L15: stopped, no stewards' message",
+    "truth": "heavy",
+    "tier": "classifier",
+    "predicted": "heavy",
+    "baseline": "heavy",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9606-43-L29-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9606 car 43 L29: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (52 cases, lower bound 0.951)"
+   },
+   {
+    "case": "9606-43-L36-incident",
+    "kind": "incident",
+    "summary": "S9606 car 43 L36: TURN 16 INCIDENT INVOLVING CAR 43 (COL) NOTED - LEAVING THE TRACK AND GA",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9617-23-L3-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9617 car 23 L3: pit stop under sc",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "7 cases at 0.98, 100% agree"
+   },
+   {
+    "case": "9617-23-L4-incident",
+    "kind": "incident",
+    "summary": "S9617 car 23 L4: LAP 1 TURN 1 INCIDENT INVOLVING CARS 23 (ALB) AND 31 (OCO) NOTED - CAUSIN",
+    "truth": "light",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9617-23-L8-incident",
+    "kind": "incident",
+    "summary": "S9617 car 23 L8: TURN 15 INCIDENT INVOLVING CARS 18 (STR) AND 23 (ALB) NOTED - LEAVING THE",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "3 cases at 0.97, 100% agree"
+   },
+   {
+    "case": "9617-23-L22-incident",
+    "kind": "incident",
+    "summary": "S9617 car 23 L22: TURN 12 INCIDENT INVOLVING CARS 23 (ALB) AND 20 (MAG) NOTED - FORCING AN",
+    "truth": "light",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9617-23-L29-incident",
+    "kind": "incident",
+    "summary": "S9617 car 23 L29: TURN 15 INCIDENT INVOLVING CARS 10 (GAS) AND 23 (ALB) NOTED - LEAVING TH",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "3 cases at 0.97, 100% agree"
+   },
+   {
+    "case": "9617-23-L32-incident",
+    "kind": "incident",
+    "summary": "S9617 car 23 L32: TURN 12 INCIDENT INVOLVING CARS 22 (TSU) AND 23 (ALB) NOTED - FORCING AN",
+    "truth": "moderate",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": false,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9617-23-L33-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9617 car 23 L33: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (54 cases, lower bound 0.952)"
+   },
+   {
+    "case": "9617-43-L39-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9617 car 43 L39: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (54 cases, lower bound 0.952)"
+   },
+   {
+    "case": "9625-23-L1-retirement_suspected",
+    "kind": "retirement_suspected",
+    "summary": "S9625 car 23 L1: stopped, no stewards' message",
+    "truth": "heavy",
+    "tier": "classifier",
+    "predicted": "heavy",
+    "baseline": "heavy",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9625-43-L47-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9625 car 43 L47: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (56 cases, lower bound 0.954)"
+   },
+   {
+    "case": "9625-43-L67-incident",
+    "kind": "incident",
+    "summary": "S9625 car 43 L67: TURN 1 INCIDENT INVOLVING CARS 30 (LAW) AND 43 (COL) NOTED",
+    "truth": "light",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9673-23-L5-incident",
+    "kind": "incident",
+    "summary": "S9673 car 23 L5: TURN 14 INCIDENT INVOLVING CARS 23 (ALB) AND 10 (GAS) NOTED - FORCING ANO",
+    "truth": "light",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9673-23-L9-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9673 car 23 L9: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (57 cases, lower bound 0.955)"
+   },
+   {
+    "case": "9673-2-L12-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9673 car 2 L12: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (57 cases, lower bound 0.955)"
+   },
+   {
+    "case": "9673-23-L23-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9673 car 23 L23: pit stop under sc",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "7 cases at 0.98, 100% agree"
+   },
+   {
+    "case": "9673-2-L24-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9673 car 2 L24: pit stop under sc",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "7 cases at 0.98, 100% agree"
+   },
+   {
+    "case": "9673-2-L25-incident",
+    "kind": "incident",
+    "summary": "S9673 car 2 L25: INCIDENT INVOLVING CARS 2 (SAR) AND 27 (HUL) NOTED - SAFETY CAR INFRINGEM",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9673-2-L51-incident",
+    "kind": "incident",
+    "summary": "S9673 car 2 L51: TURN 6 INCIDENT INVOLVING CARS 2 (SAR) AND 10 (GAS) NOTED - FORCING ANOTH",
+    "truth": "light",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": true,
+    "why": "nothing learned covers it"
+   }
+  ],
+  "score": {
+   "n": 93,
+   "accuracy": 0.957,
+   "baseline_accuracy": 0.957,
+   "decided_by_learning": 0.645,
+   "learned_n": 60,
+   "learned_accuracy": 1.0,
+   "classifier_n": 33,
+   "classifier_accuracy": 0.879,
+   "by_tier": {
+    "classifier": 33,
+    "precedent": 12,
+    "policy": 48
+   },
+   "missed_damage": 4,
+   "false_alarms": 0,
+   "confusion": {
+    "heavy": {
+     "light": 3,
+     "heavy": 3
+    },
+    "moderate": {
+     "light": 1
+    },
+    "light": {
+     "light": 9
+    },
+    "none": {
+     "none": 77
+    }
+   }
+  },
+  "score_damage": {
+   "n": 24,
+   "accuracy": 0.833,
+   "baseline_accuracy": 0.833,
+   "decided_by_learning": 0.083,
+   "learned_n": 2,
+   "learned_accuracy": 1.0,
+   "classifier_n": 22,
+   "classifier_accuracy": 0.818,
+   "by_tier": {
+    "classifier": 22,
+    "precedent": 2
+   },
+   "missed_damage": 4,
+   "false_alarms": 0,
+   "confusion": {
+    "heavy": {
+     "light": 3,
+     "heavy": 3
+    },
+    "moderate": {
+     "light": 1
+    },
+    "light": {
+     "light": 9
+    },
+    "none": {
+     "none": 8
+    }
+   }
+  }
+ },
+ "events_recorded": {
+  "strict": false,
+  "rows": [
+   {
+    "case": "press-mel24-fp1-23",
+    "kind": "car_stopped",
+    "summary": "Melbourne 2024 FP1, Albon: chassis broken at Turn 6, no spare tub, Sargeant stood down; tu",
+    "truth": "heavy",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": false,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9472-2-L10-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9472 car 2 L10: pit stop under green",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9472-23-L15-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9472 car 23 L15: pit stop under green",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9472-2-L28-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9472 car 2 L28: pit stop under green",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9472-23-L36-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9472 car 23 L36: pit stop under green",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9472-2-L40-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9472 car 2 L40: pit stop under green",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9480-2-L7-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9480 car 2 L7: pit stop under sc",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "5 cases at 0.91, 100% agree"
+   },
+   {
+    "case": "9480-23-L7-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9480 car 23 L7: pit stop under sc",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "5 cases at 0.91, 100% agree"
+   },
+   {
+    "case": "9480-23-L13-incident",
+    "kind": "incident",
+    "summary": "S9480 car 23 L13: TURN 4 INCIDENT INVOLVING CARS 20 (MAG) AND 23 (ALB) NOTED - CAUSING A C",
+    "truth": "light",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9488-23-L6-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9488 car 23 L6: pit stop under green",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9488-23-L27-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9488 car 23 L27: pit stop under green",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9496-2-L1-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9496 car 2 L1: pit stop under green",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "7 cases at 0.97, 100% agree"
+   },
+   {
+    "case": "9496-23-L2-incident",
+    "kind": "incident",
+    "summary": "S9496 car 23 L2: TURN 2 INCIDENT INVOLVING CARS 3 (RIC) AND 23 (ALB) NOTED - CAUSING A COL",
+    "truth": "heavy",
+    "tier": "classifier",
+    "predicted": "heavy",
+    "baseline": "heavy",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9496-2-L22-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9496 car 2 L22: pit stop under green",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "7 cases at 1.00, 100% agree"
+   },
+   {
+    "case": "9496-2-L34-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9496 car 2 L34: pit stop under green",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "7 cases at 0.97, 100% agree"
+   },
+   {
+    "case": "9496-2-L41-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9496 car 2 L41: pit stop under green",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "7 cases at 0.97, 100% agree"
+   },
+   {
+    "case": "9506-2-L1-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9506 car 2 L1: pit stop under sc",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9506-23-L1-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9506 car 23 L1: pit stop under sc",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9506-2-L2-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9506 car 2 L2: pit stop under sc",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9506-23-L2-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9506 car 23 L2: pit stop under sc",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9507-23-L10-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9507 car 23 L10: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (11 cases, lower bound 0.803)"
+   },
+   {
+    "case": "9507-2-L11-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9507 car 2 L11: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (11 cases, lower bound 0.803)"
+   },
+   {
+    "case": "9507-23-L14-incident",
+    "kind": "incident",
+    "summary": "S9507 car 23 L14: TURN 11 INCIDENT INVOLVING CARS 23 (ALB) AND 18 (STR) NOTED",
+    "truth": "light",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9507-2-L31-incident",
+    "kind": "incident",
+    "summary": "S9507 car 2 L31: TURN 3 INCIDENT INVOLVING CARS 20 (MAG) AND 2 (SAR) NOTED - CAUSING A COL",
+    "truth": "light",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9507-23-L53-incident",
+    "kind": "incident",
+    "summary": "S9507 car 23 L53: TURN 1 INCIDENT INVOLVING CARS 18 (STR) AND 23 (ALB) NOTED - LEAVING THE",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "moderate",
+    "baseline": "moderate",
+    "right": false,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9507-23-L53-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9507 car 23 L53: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (11 cases, lower bound 0.803)"
+   },
+   {
+    "case": "9515-23-L8-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9515 car 23 L8: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (14 cases, lower bound 0.838)"
+   },
+   {
+    "case": "9515-23-L9-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9515 car 23 L9: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (14 cases, lower bound 0.838)"
+   },
+   {
+    "case": "9515-23-L13-incident",
+    "kind": "incident",
+    "summary": "S9515 car 23 L13: INCIDENT INVOLVING CAR 23 (ALB) NOTED - UNSAFE CONDITION",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9515-23-L23-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9515 car 23 L23: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (14 cases, lower bound 0.838)"
+   },
+   {
+    "case": "9515-23-L28-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9515 car 23 L28: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (14 cases, lower bound 0.838)"
+   },
+   {
+    "case": "9515-2-L31-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9515 car 2 L31: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (14 cases, lower bound 0.838)"
+   },
+   {
+    "case": "9523-2-L1-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9523 car 2 L1: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (19 cases, lower bound 0.875)"
+   },
+   {
+    "case": "9523-23-L1-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9523 car 23 L1: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (19 cases, lower bound 0.875)"
+   },
+   {
+    "case": "9523-2-L57-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9523 car 2 L57: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (19 cases, lower bound 0.875)"
+   },
+   {
+    "case": "9531-23-L21-incident",
+    "kind": "incident",
+    "summary": "S9531 car 23 L21: TURN 13 INCIDENT INVOLVING CARS 22 (TSU) AND 23 (ALB) NOTED",
+    "truth": "light",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9531-2-L23-retirement_suspected",
+    "kind": "retirement_suspected",
+    "summary": "S9531 car 2 L23: stopped, no stewards' message",
+    "truth": "heavy",
+    "tier": "classifier",
+    "predicted": "heavy",
+    "baseline": "heavy",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9531-23-L25-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9531 car 23 L25: pit stop under sc",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "6 cases at 0.97, 86% agree"
+   },
+   {
+    "case": "9531-23-L44-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9531 car 23 L44: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (22 cases, lower bound 0.89)"
+   },
+   {
+    "case": "9539-2-L14-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9539 car 2 L14: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (23 cases, lower bound 0.895)"
+   },
+   {
+    "case": "9539-23-L18-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9539 car 23 L18: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (23 cases, lower bound 0.895)"
+   },
+   {
+    "case": "9539-2-L34-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9539 car 2 L34: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (23 cases, lower bound 0.895)"
+   },
+   {
+    "case": "9539-23-L43-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9539 car 23 L43: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (23 cases, lower bound 0.895)"
+   },
+   {
+    "case": "9550-2-L1-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9550 car 2 L1: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (27 cases, lower bound 0.909)"
+   },
+   {
+    "case": "9550-23-L12-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9550 car 23 L12: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (27 cases, lower bound 0.909)"
+   },
+   {
+    "case": "9550-2-L20-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9550 car 2 L20: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (27 cases, lower bound 0.909)"
+   },
+   {
+    "case": "9550-23-L39-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9550 car 23 L39: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (27 cases, lower bound 0.909)"
+   },
+   {
+    "case": "9550-23-L43-incident",
+    "kind": "incident",
+    "summary": "S9550 car 23 L43: INCIDENT INVOLVING CAR 23 (ALB) NOTED - FAILING TO FOLLOW RACE DIRECTORS",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9550-2-L49-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9550 car 2 L49: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (27 cases, lower bound 0.909)"
+   },
+   {
+    "case": "9558-2-L27-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9558 car 2 L27: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (32 cases, lower bound 0.922)"
+   },
+   {
+    "case": "9558-23-L27-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9558 car 23 L27: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (32 cases, lower bound 0.922)"
+   },
+   {
+    "case": "9558-2-L38-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9558 car 2 L38: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (32 cases, lower bound 0.922)"
+   },
+   {
+    "case": "9558-23-L38-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9558 car 23 L38: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (32 cases, lower bound 0.922)"
+   },
+   {
+    "case": "9566-23-L6-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9566 car 23 L6: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (36 cases, lower bound 0.93)"
+   },
+   {
+    "case": "9566-2-L8-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9566 car 2 L8: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (36 cases, lower bound 0.93)"
+   },
+   {
+    "case": "9566-23-L29-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9566 car 23 L29: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (36 cases, lower bound 0.93)"
+   },
+   {
+    "case": "9566-2-L33-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9566 car 2 L33: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (36 cases, lower bound 0.93)"
+   },
+   {
+    "case": "9566-2-L63-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9566 car 2 L63: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (36 cases, lower bound 0.93)"
+   },
+   {
+    "case": "9574-23-L2-incident",
+    "kind": "incident",
+    "summary": "S9574 car 23 L2: TURN 5 INCIDENT INVOLVING CAR 23 (ALB) NOTED - LEAVING THE TRACK AND GAIN",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9574-2-L8-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9574 car 2 L8: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (41 cases, lower bound 0.938)"
+   },
+   {
+    "case": "9574-23-L8-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9574 car 23 L8: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (41 cases, lower bound 0.938)"
+   },
+   {
+    "case": "9574-23-L23-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9574 car 23 L23: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (41 cases, lower bound 0.938)"
+   },
+   {
+    "case": "9574-2-L24-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9574 car 2 L24: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (41 cases, lower bound 0.938)"
+   },
+   {
+    "case": "press-zan24-fp3-2",
+    "kind": "car_stopped",
+    "summary": "Zandvoort 2024 FP3, Sargeant: car destroyed, the new upgrade parts with it; older-spec par",
+    "truth": "heavy",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": false,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9582-23-L12-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9582 car 23 L12: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (45 cases, lower bound 0.943)"
+   },
+   {
+    "case": "9582-2-L22-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9582 car 2 L22: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (45 cases, lower bound 0.943)"
+   },
+   {
+    "case": "9582-23-L54-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9582 car 23 L54: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (45 cases, lower bound 0.943)"
+   },
+   {
+    "case": "9590-43-L16-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9590 car 43 L16: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (48 cases, lower bound 0.947)"
+   },
+   {
+    "case": "9590-23-L17-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9590 car 23 L17: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (48 cases, lower bound 0.947)"
+   },
+   {
+    "case": "9598-43-L10-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9598 car 43 L10: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (50 cases, lower bound 0.949)"
+   },
+   {
+    "case": "9598-23-L31-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9598 car 23 L31: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (50 cases, lower bound 0.949)"
+   },
+   {
+    "case": "9606-23-L11-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9606 car 23 L11: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (52 cases, lower bound 0.951)"
+   },
+   {
+    "case": "9606-23-L15-retirement_suspected",
+    "kind": "retirement_suspected",
+    "summary": "S9606 car 23 L15: stopped, no stewards' message",
+    "truth": "heavy",
+    "tier": "classifier",
+    "predicted": "heavy",
+    "baseline": "heavy",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9606-43-L29-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9606 car 43 L29: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (52 cases, lower bound 0.951)"
+   },
+   {
+    "case": "9606-43-L36-incident",
+    "kind": "incident",
+    "summary": "S9606 car 43 L36: TURN 16 INCIDENT INVOLVING CAR 43 (COL) NOTED - LEAVING THE TRACK AND GA",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9617-23-L3-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9617 car 23 L3: pit stop under sc",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "7 cases at 0.98, 100% agree"
+   },
+   {
+    "case": "9617-23-L4-incident",
+    "kind": "incident",
+    "summary": "S9617 car 23 L4: LAP 1 TURN 1 INCIDENT INVOLVING CARS 23 (ALB) AND 31 (OCO) NOTED - CAUSIN",
+    "truth": "light",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9617-23-L8-incident",
+    "kind": "incident",
+    "summary": "S9617 car 23 L8: TURN 15 INCIDENT INVOLVING CARS 18 (STR) AND 23 (ALB) NOTED - LEAVING THE",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "3 cases at 0.97, 100% agree"
+   },
+   {
+    "case": "9617-23-L22-incident",
+    "kind": "incident",
+    "summary": "S9617 car 23 L22: TURN 12 INCIDENT INVOLVING CARS 23 (ALB) AND 20 (MAG) NOTED - FORCING AN",
+    "truth": "light",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9617-23-L29-incident",
+    "kind": "incident",
+    "summary": "S9617 car 23 L29: TURN 15 INCIDENT INVOLVING CARS 10 (GAS) AND 23 (ALB) NOTED - LEAVING TH",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "3 cases at 0.97, 100% agree"
+   },
+   {
+    "case": "9617-23-L32-incident",
+    "kind": "incident",
+    "summary": "S9617 car 23 L32: TURN 12 INCIDENT INVOLVING CARS 22 (TSU) AND 23 (ALB) NOTED - FORCING AN",
+    "truth": "moderate",
+    "tier": "classifier",
+    "predicted": "moderate",
+    "baseline": "moderate",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9617-23-L33-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9617 car 23 L33: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (54 cases, lower bound 0.952)"
+   },
+   {
+    "case": "9617-43-L39-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9617 car 43 L39: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (54 cases, lower bound 0.952)"
+   },
+   {
+    "case": "9625-23-L1-retirement_suspected",
+    "kind": "retirement_suspected",
+    "summary": "S9625 car 23 L1: stopped, no stewards' message",
+    "truth": "heavy",
+    "tier": "classifier",
+    "predicted": "heavy",
+    "baseline": "heavy",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9625-43-L47-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9625 car 43 L47: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (56 cases, lower bound 0.954)"
+   },
+   {
+    "case": "9625-43-L67-incident",
+    "kind": "incident",
+    "summary": "S9625 car 43 L67: TURN 1 INCIDENT INVOLVING CARS 30 (LAW) AND 43 (COL) NOTED",
+    "truth": "light",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9673-23-L5-incident",
+    "kind": "incident",
+    "summary": "S9673 car 23 L5: TURN 14 INCIDENT INVOLVING CARS 23 (ALB) AND 10 (GAS) NOTED - FORCING ANO",
+    "truth": "light",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9673-23-L9-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9673 car 23 L9: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (57 cases, lower bound 0.955)"
+   },
+   {
+    "case": "9673-2-L12-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9673 car 2 L12: pit stop under green",
+    "truth": "none",
+    "tier": "policy",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "race-green-pit-stop (57 cases, lower bound 0.955)"
+   },
+   {
+    "case": "9673-23-L23-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9673 car 23 L23: pit stop under sc",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "7 cases at 0.98, 100% agree"
+   },
+   {
+    "case": "9673-2-L24-pit_stop",
+    "kind": "pit_stop",
+    "summary": "S9673 car 2 L24: pit stop under sc",
+    "truth": "none",
+    "tier": "precedent",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "7 cases at 0.98, 100% agree"
+   },
+   {
+    "case": "9673-2-L25-incident",
+    "kind": "incident",
+    "summary": "S9673 car 2 L25: INCIDENT INVOLVING CARS 2 (SAR) AND 27 (HUL) NOTED - SAFETY CAR INFRINGEM",
+    "truth": "none",
+    "tier": "classifier",
+    "predicted": "none",
+    "baseline": "none",
+    "right": true,
+    "why": "nothing learned covers it"
+   },
+   {
+    "case": "9673-2-L51-incident",
+    "kind": "incident",
+    "summary": "S9673 car 2 L51: TURN 6 INCIDENT INVOLVING CARS 2 (SAR) AND 10 (GAS) NOTED - FORCING ANOTH",
+    "truth": "light",
+    "tier": "classifier",
+    "predicted": "light",
+    "baseline": "light",
+    "right": true,
+    "why": "nothing learned covers it"
+   }
+  ],
+  "score": {
+   "n": 93,
+   "accuracy": 0.968,
+   "baseline_accuracy": 0.968,
+   "decided_by_learning": 0.645,
+   "learned_n": 60,
+   "learned_accuracy": 1.0,
+   "classifier_n": 33,
+   "classifier_accuracy": 0.909,
+   "by_tier": {
+    "classifier": 33,
+    "precedent": 12,
+    "policy": 48
+   },
+   "missed_damage": 2,
+   "false_alarms": 1,
+   "confusion": {
+    "heavy": {
+     "light": 2,
+     "heavy": 4
+    },
+    "moderate": {
+     "moderate": 1
+    },
+    "light": {
+     "light": 9
+    },
+    "none": {
+     "none": 76,
+     "moderate": 1
+    }
+   }
+  },
+  "score_damage": {
+   "n": 24,
+   "accuracy": 0.875,
+   "baseline_accuracy": 0.875,
+   "decided_by_learning": 0.083,
+   "learned_n": 2,
+   "learned_accuracy": 1.0,
+   "classifier_n": 22,
+   "classifier_accuracy": 0.864,
+   "by_tier": {
+    "classifier": 22,
+    "precedent": 2
+   },
+   "missed_damage": 2,
+   "false_alarms": 1,
+   "confusion": {
+    "heavy": {
+     "light": 2,
+     "heavy": 4
+    },
+    "moderate": {
+     "moderate": 1
+    },
+    "light": {
+     "light": 9
+    },
+    "none": {
+     "moderate": 1,
+     "none": 7
+    }
+   }
+  }
+ },
+ "parts": {
+  "crashes": [
+   {
+    "crash": "press-mel24-fp1-23",
+    "weekend": "Melbourne 2024",
+    "severity": "heavy",
+    "truth": [
+     "bodywork",
+     "chassis",
+     "floor",
+     "front_suspension",
+     "front_wing",
+     "rear_wing"
+    ],
+    "template": {
+     "predicted": [
+      "bodywork",
+      "chassis",
+      "electronics",
+      "floor",
+      "front_suspension",
+      "front_wing",
+      "gearbox",
+      "rear_suspension",
+      "rear_wing"
+     ],
+     "tp": 6,
+     "fp": 3,
+     "fn": 0,
+     "precision": 0.667,
+     "recall": 1.0,
+     "value_reserved": 169545000,
+     "value_needed": 169545000
+    },
+    "learned": {
+     "predicted": [
+      "bodywork",
+      "chassis",
+      "electronics",
+      "floor",
+      "front_suspension",
+      "front_wing",
+      "gearbox",
+      "rear_suspension",
+      "rear_wing"
+     ],
+     "tp": 6,
+     "fp": 3,
+     "fn": 0,
+     "precision": 0.667,
+     "recall": 1.0,
+     "value_reserved": 169545000,
+     "value_needed": 169545000,
+     "basis": "no earlier crash like it: the template"
+    }
+   },
+   {
+    "crash": "press-suz24-fp1-23",
+    "weekend": "Suzuka 2024",
+    "severity": "moderate",
+    "truth": [
+     "bodywork",
+     "floor",
+     "front_wing",
+     "rear_suspension",
+     "rear_wing"
+    ],
+    "template": {
+     "predicted": [
+      "bodywork",
+      "floor",
+      "front_wing"
+     ],
+     "tp": 3,
+     "fp": 0,
+     "fn": 2,
+     "precision": 1.0,
+     "recall": 0.6,
+     "value_reserved": 45085000,
+     "value_needed": 61595000
+    },
+    "learned": {
+     "predicted": [
+      "bodywork",
+      "floor",
+      "front_wing"
+     ],
+     "tp": 3,
+     "fp": 0,
+     "fn": 2,
+     "precision": 1.0,
+     "recall": 0.6,
+     "value_reserved": 45085000,
+     "value_needed": 61595000,
+     "basis": "no earlier crash like it: the template"
+    }
+   },
+   {
+    "crash": "press-suz24-fp1-2",
+    "weekend": "Suzuka 2024",
+    "severity": "heavy",
+    "truth": [
+     "bodywork",
+     "electronics",
+     "floor",
+     "front_suspension",
+     "front_wing",
+     "gearbox",
+     "rear_suspension"
+    ],
+    "template": {
+     "predicted": [
+      "bodywork",
+      "chassis",
+      "electronics",
+      "floor",
+      "front_suspension",
+      "front_wing",
+      "gearbox",
+      "rear_suspension",
+      "rear_wing"
+     ],
+     "tp": 7,
+     "fp": 2,
+     "fn": 0,
+     "precision": 0.778,
+     "recall": 1.0,
+     "value_reserved": 115570000,
+     "value_needed": 115570000
+    },
+    "learned": {
+     "predicted": [
+      "bodywork",
+      "chassis",
+      "floor",
+      "front_suspension",
+      "front_wing",
+      "rear_wing"
+     ],
+     "tp": 4,
+     "fp": 2,
+     "fn": 3,
+     "precision": 0.667,
+     "recall": 0.571,
+     "value_reserved": 53340000,
+     "value_needed": 115570000,
+     "basis": "1 earlier heavy crash"
+    }
+   },
+   {
+    "crash": "press-zan24-fp3-2",
+    "weekend": "Zandvoort 2024",
+    "severity": "heavy",
+    "truth": [
+     "bodywork",
+     "chassis",
+     "electronics",
+     "floor",
+     "front_suspension",
+     "front_wing",
+     "gearbox",
+     "rear_suspension",
+     "rear_wing"
+    ],
+    "template": {
+     "predicted": [
+      "bodywork",
+      "chassis",
+      "electronics",
+      "floor",
+      "front_suspension",
+      "front_wing",
+      "gearbox",
+      "rear_suspension",
+      "rear_wing"
+     ],
+     "tp": 9,
+     "fp": 0,
+     "fn": 0,
+     "precision": 1.0,
+     "recall": 1.0,
+     "value_reserved": 231775000,
+     "value_needed": 231775000
+    },
+    "learned": {
+     "predicted": [
+      "bodywork",
+      "chassis",
+      "electronics",
+      "floor",
+      "front_suspension",
+      "front_wing",
+      "gearbox",
+      "rear_suspension",
+      "rear_wing"
+     ],
+     "tp": 9,
+     "fp": 0,
+     "fn": 0,
+     "precision": 1.0,
+     "recall": 1.0,
+     "value_reserved": 231775000,
+     "value_needed": 231775000,
+     "basis": "2 earlier heavy crashes"
+    }
+   },
+   {
+    "crash": "press-mza24-fp2-2",
+    "weekend": "Monza 2024",
+    "severity": "light",
+    "truth": [
+     "bodywork",
+     "front_wing"
+    ],
+    "template": {
+     "predicted": [
+      "bodywork",
+      "front_wing"
+     ],
+     "tp": 2,
+     "fp": 0,
+     "fn": 0,
+     "precision": 1.0,
+     "recall": 1.0,
+     "value_reserved": 17145000,
+     "value_needed": 17145000
+    },
+    "learned": {
+     "predicted": [
+      "bodywork",
+      "front_wing"
+     ],
+     "tp": 2,
+     "fp": 0,
+     "fn": 0,
+     "precision": 1.0,
+     "recall": 1.0,
+     "value_reserved": 17145000,
+     "value_needed": 17145000,
+     "basis": "no earlier crash like it: the template"
+    }
+   },
+   {
+    "crash": "press-cota24-q-23",
+    "weekend": "Austin 2024",
+    "severity": "moderate",
+    "truth": [
+     "bodywork",
+     "rear_suspension",
+     "rear_wing"
+    ],
+    "template": {
+     "predicted": [
+      "bodywork",
+      "floor",
+      "front_wing"
+     ],
+     "tp": 1,
+     "fp": 2,
+     "fn": 2,
+     "precision": 0.333,
+     "recall": 0.333,
+     "value_reserved": 4445000,
+     "value_needed": 20955000
+    },
+    "learned": {
+     "predicted": [
+      "bodywork",
+      "floor",
+      "front_wing",
+      "rear_suspension",
+      "rear_wing"
+     ],
+     "tp": 3,
+     "fp": 2,
+     "fn": 0,
+     "precision": 0.6,
+     "recall": 1.0,
+     "value_reserved": 20955000,
+     "value_needed": 20955000,
+     "basis": "1 earlier moderate crash"
+    }
+   }
+  ],
+  "score": {
+   "template": {
+    "precision": 0.8,
+    "recall": 0.875,
+    "value_recall": 0.946
+   },
+   "learned": {
+    "precision": 0.794,
+    "recall": 0.844,
+    "value_recall": 0.872
+   }
+  },
+  "n": 6,
+  "note": "severity per crash from what it destroyed: the test is whether the parts follow from the severity"
+ },
+ "cost": {
+  "estimate_cents": 376729519,
+  "estimate_band_cents": [
+   246159440,
+   939260200
+  ],
+  "booked_cents": 623452493,
+  "incidents": [
+   {
+    "incident": "1249-9627-43-1",
+    "car": 43,
+    "session": "Qualifying",
+    "severity": "moderate",
+    "estimate_cents": 110035774,
+    "booked_cents": 180696798,
+    "press_cents": null
+   },
+   {
+    "incident": "1249-9627-23-1",
+    "car": 23,
+    "session": "Qualifying",
+    "severity": "heavy",
+    "estimate_cents": 170556200,
+    "booked_cents": 210461350,
+    "press_cents": 86400000
+   },
+   {
+    "incident": "1249-9636-43-1",
+    "car": 43,
+    "session": "Race",
+    "severity": "light",
+    "estimate_cents": 32042345,
+    "booked_cents": 32042345,
+    "press_cents": 160941600
+   },
+   {
+    "incident": "1249-9636-43-2",
+    "car": 43,
+    "session": "Race",
+    "severity": "heavy",
+    "estimate_cents": 64095200,
+    "booked_cents": 200252000,
+    "press_cents": 160941600
+   }
+  ],
+  "per_crash": [
+   {
+    "car": 23,
+    "session": "Qualifying",
+    "estimate_cents": 170556200,
+    "booked_cents": 210461350,
+    "press_cents": 86400000,
+    "estimate_error": 0.974,
+    "booked_error": 1.436
+   },
+   {
+    "car": 43,
+    "session": "Race",
+    "estimate_cents": 96137545,
+    "booked_cents": 232294345,
+    "press_cents": 160941600,
+    "estimate_error": -0.403,
+    "booked_error": 0.443
+   }
+  ],
+  "against": [
+   {
+    "source": "Auto Motor und Sport",
+    "cents": 400000000,
+    "estimate_error": -0.058,
+    "booked_error": 0.559
+   },
+   {
+    "source": "PlanetF1 (F1Maximaal per-part tally)",
+    "cents": 248054400,
+    "estimate_error": 0.519,
+    "booked_error": 1.513
+   }
+  ],
+  "independent": false,
+  "note": "Estimate: each crash's cost weighted by how likely each part is damaged, the figure the seal reports. Booked: every part the garage replaced at its price-book mid, the entries in the books. The weekend total is not an independent test (two part prices were raised to land it near the AMuS figure), and the two press sources differ by 61%. The split between crashes is the real test."
+ }
+}

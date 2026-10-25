@@ -15,7 +15,7 @@ AGENT_MODE := $(if $(OFFLINE),--offline,)
         rulebook world api stdb-publish stdb-test bootstrap advance sync learner review-policies \
         analyst standing review-items gateway redteam score cost-cap-run \
         revenue-api revenue-sim revenue-demo evidence-publish evidence-replay \
-        race-publish race-grant race-fixtures race-replay race-tape race-live race-onboard race-learn race-review-policies race-test \
+        race-publish race-grant race-backtest race-onboarding-report race-fixtures race-replay race-tape race-live race-onboard race-learn race-review-policies race-test \
         race-weekend race-demo race-onboard-2024 race-reset race-snapshot
 
 # ---------------------------------------------------------------- shared
@@ -162,6 +162,12 @@ race-demo:        ## the demo: São Paulo 2024 from just before Colapinto's qual
 
 race-onboard-2024: ## learn Williams' 2024 races before São Paulo (its own precedent store and race-y2024- policies; no hindsight)
 	$(ENV) uv run python -m race.policy_learner --onboard --era 2024 $(if $(OFFLINE),--offline,)
+
+race-backtest:    ## score the desk on Williams' 2024 races it had not seen: what happened, which parts, what it cost (race/data/backtest_2024.json)
+	uv run python -m race.backtest
+
+race-onboarding-report: ## what the desk knows before its first race: rules, history, assumptions, accuracy (race/data/onboarding_report.json, the dashboard's Learned page)
+	uv run python -m race.onboarding_report
 
 race-snapshot:    ## the demo's frozen moment: a clean pit-wall, then São Paulo up to a few minutes after Colapinto's lap-32 crash, the team's earlier decisions replayed; then listens (LINGER=3600 s) and posts what the dashboard approves
 	$(MAKE) race-reset
