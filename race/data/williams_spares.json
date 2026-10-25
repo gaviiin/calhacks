@@ -1,0 +1,21 @@
+{
+  "_note": "ASSUMPTION. A plausible race-weekend spares count for a midfield team's two cars; Williams does not publish this. The forecast agent uses it to say whether a damaged part comes from the truck or from the factory.",
+  "as_of": "2026-05-01",
+  "spares": {
+    "front_wing": 4,
+    "rear_wing": 2,
+    "floor": 2,
+    "front_suspension": 2,
+    "rear_suspension": 2,
+    "gearbox": 1,
+    "chassis": 1,
+    "bodywork": 3,
+    "brakes": 4,
+    "rear_brakes": 2,
+    "electronics": 2,
+    "steering_rack": 1,
+    "power_unit": 0,
+    "wheel_speed_sensor": 6
+  },
+  "factory_capacity_note": "Grove can turn a floor in 3-5 working days and a front wing in 2-3; a monocoque is 10-14 days plus FIA crash-test paperwork when a new one is laid up."
+}

@@ -8,6 +8,8 @@ import { Spine } from '../components/Spine';
 import { WhyPane } from '../components/Why';
 import { useCostCap } from '../lib/costcap';
 import { usdShort } from '../lib/format';
+import { useRace } from '../lib/race';
+import { TEAM, band, carLabel, eventDetail, kindMeta, ledger, sortTime, utcClock } from '../lib/raceModel';
 import { useRevenue } from '../lib/revenue';
 
 interface Scorecard {
@@ -34,6 +36,36 @@ function useScorecard(): Scorecard | null {
     };
   }, []);
   return s;
+}
+
+/** The race desk in one line: the newest event on the tape and what the race has cost so far. */
+function RaceLine() {
+  const race = useRace();
+  const latest = race.events.reduce<(typeof race.events)[number] | null>((best, e) => (!best || sortTime(e.at) >= sortTime(best.at) ? e : best), null);
+  const led = ledger(race.effects);
+  return (
+    <dl className="deskline">
+      <dt>
+        <a className="link" href="#/race">
+          Race desk · {TEAM} <IconArrow size={13} />
+        </a>
+      </dt>
+      {latest ? (
+        <>
+          <dd>
+            <span className="mono">{utcClock(latest.at)}</span> {latest.lap ? `L${latest.lap} ` : ''}
+            <span className="mono">{carLabel(latest.driverNumber)}</span> {kindMeta(latest.kind).label.toLowerCase()}: {eventDetail(latest)}
+          </dd>
+          <dd>
+            race cost <b>{usdShort(led.cost.mid)}</b>
+            {led.cost.n > 0 && <span className="mono muted"> {band(led.cost.low, led.cost.high)}</span>}
+          </dd>
+        </>
+      ) : (
+        <dd className="muted">{race.connected ? 'no race on the tape: run the replayer' : 'pit-wall not reachable'}</dd>
+      )}
+    </dl>
+  );
 }
 
 /** One line of figures per desk: what the agents did, what people decided, how it scores. */
@@ -114,6 +146,7 @@ function DeskLines() {
           <dd className="muted">{rev.online ? 'no season running: open Revenue to replay 2024' : 'revenue API not reachable (make revenue-api)'}</dd>
         )}
       </dl>
+      <RaceLine />
     </section>
   );
 }

@@ -42,3 +42,6 @@ replay/.cache/
 
 # Fetch.ai agent local storage
 agent1q*_data.json
+
+# OpenF1 response cache (race/)
+race/.cache/

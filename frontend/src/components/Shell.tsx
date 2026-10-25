@@ -7,13 +7,14 @@ import { PEOPLE, fetchSeatCodes, sha256Hex, useSeat, type SeatId } from '../lib/
 import { useSeatConnection } from '../lib/seatConnection';
 import { IconLive } from './icons';
 
-export type View = 'overview' | 'inbox' | 'cost-cap' | 'revenue' | 'evidence' | 'audit';
+export type View = 'overview' | 'inbox' | 'cost-cap' | 'revenue' | 'race' | 'evidence' | 'audit';
 
 const NAV: { id: View; label: string }[] = [
   { id: 'overview', label: 'Pit wall' },
   { id: 'inbox', label: 'Inbox' },
   { id: 'cost-cap', label: 'Cost cap' },
   { id: 'revenue', label: 'Revenue' },
+  { id: 'race', label: 'Race' },
   { id: 'evidence', label: 'Evidence' },
   { id: 'audit', label: 'Audit' },
 ];

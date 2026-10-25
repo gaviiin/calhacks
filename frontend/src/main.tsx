@@ -6,6 +6,7 @@ import { DbConnection as EvidenceConnection } from './module_bindings';
 import App from './App';
 import { CostCapDataProvider } from './lib/costcap';
 import { EvidenceBridge } from './lib/evidence';
+import { RaceBridge } from './lib/race';
 import { RevenueProvider } from './lib/revenue';
 import { COST_CAP_DB, EVIDENCE_DB, HOST, SeatProvider, readToken, saveToken } from './lib/seat';
 import { SeatConnectionProvider } from './lib/seatConnection';
@@ -26,7 +27,9 @@ function EvidenceRoot({ children }: { children: ReactNode }) {
   );
   return (
     <SpacetimeDBProvider connectionBuilder={builder}>
-      <EvidenceBridge>{children}</EvidenceBridge>
+      <EvidenceBridge>
+        <RaceBridge>{children}</RaceBridge>
+      </EvidenceBridge>
     </SpacetimeDBProvider>
   );
 }

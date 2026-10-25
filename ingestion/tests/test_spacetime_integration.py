@@ -187,4 +187,11 @@ def test_module_tables_are_the_evidence_and_finance_mirror(owner_db):
         "jeLines",
         "pitWallItems",
         "writers",
+        # race desk (race/): the live race tape and its money consequences
+        "raceEvents",
+        "carState",
+        "raceEffects",
+        "raceForecasts",
+        "racePolicies",
+        "racePrecedents",
     }

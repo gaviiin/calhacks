@@ -14,7 +14,8 @@ AGENT_MODE := $(if $(OFFLINE),--offline,)
 .PHONY: setup test stdb-start bindings dashboard landing \
         rulebook world api stdb-publish stdb-test bootstrap advance sync learner review-policies \
         analyst standing review-items gateway redteam score cost-cap-run \
-        revenue-api revenue-sim revenue-demo evidence-publish evidence-replay
+        revenue-api revenue-sim revenue-demo evidence-publish evidence-replay \
+        race-publish race-grant race-fixtures race-replay race-tape race-live race-onboard race-learn race-review-policies race-test
 
 # ---------------------------------------------------------------- shared
 
@@ -114,3 +115,41 @@ revenue-sim:      ## train on 2023 (controller rulings become rules), then score
 
 revenue-demo:     ## Act 1: replay the real Spa 2024 weekend, narrated
 	$(ENV) uv run python -m finance.demo --round 14 --pace 120
+
+# ---------------------------------------------------------------- race desk (race/): live race cost and revenue for Williams
+
+RACE_SESSION ?= 11291
+RACE_PACE ?= 60
+RACE_FROM_LAP ?= 0
+
+race-publish:     ## publish pit-wall with the race tables (keeps data when the schema allows), then regenerate bindings
+	spacetime publish --server local --module-path spacetimedb -y pit-wall
+	$(MAKE) bindings
+
+race-grant:       ## give this machine's CLI identity the 'race' writer role in pit-wall
+	uv run python scripts/race_grant.py
+
+race-fixtures:    ## download one OpenF1 session into race/fixtures/ (free tier, about 30 requests a minute)
+	uv run python -c "from pathlib import Path; from race.openf1 import save_fixture; print(save_fixture($(RACE_SESSION), Path('race/fixtures')))"
+
+race-replay:      ## replay RACE_SESSION at RACE_PACE into pit-wall (RACE_FROM_LAP=10 jumps ahead; OFFLINE=1 for no Jev/Claude)
+	$(ENV) uv run python -m race.replay --session $(RACE_SESSION) --pace $(RACE_PACE) --from-lap $(RACE_FROM_LAP) $(if $(OFFLINE),--offline,)
+
+race-tape:        ## print the tape only, nothing written (quick check of a session)
+	uv run python -m race.replay --session $(RACE_SESSION) --pace 0 --no-sink --offline --no-forecast --fixtures-only
+
+race-live:        ## subscribe to OpenF1's live MQTT feed (needs OPENF1_USERNAME / OPENF1_PASSWORD, paid tier)
+	$(ENV) uv run python -m race.live --team $(or $(RACE_TEAM),Williams)
+
+race-onboard:     ## the learner drafts race policies from Williams' 2025-26 history (Claude reviews each; OFFLINE=1 skips review)
+	$(ENV) uv run python -m race.policy_learner --onboard $(if $(OFFLINE),--offline,)
+
+race-learn:       ## turn corrections and Jev contradictions since the last run into proposed child policies
+	$(ENV) uv run python -m race.policy_learner --learn $(if $(OFFLINE),--offline,)
+
+race-review-policies: ## the Head of Racing Finance grants autonomy to every shadow policy (REJECT="id=reason" to refuse one)
+	uv run python -m race.policy_learner --approve-all $(if $(REJECT),--reject "$(REJECT)",)
+
+race-test:        ## race desk tests: pytest race/tests + the module's vitest
+	uv run pytest -q race/tests
+	cd spacetimedb && npm test
