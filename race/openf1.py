@@ -69,9 +69,12 @@ def get(path: str, *, refresh: bool = False, **params) -> list[dict]:
             continue
         if r.status_code == 401:
             raise OpenF1Error(f"{url}: 401 (historical data is locked during live sessions; try later)")
-        if r.status_code != 200:
+        if r.status_code == 404 and "No results" in r.text:
+            data = []  # an empty window (a red flag, before the start): a valid answer, cached like any other
+        elif r.status_code != 200:
             raise OpenF1Error(f"{url}: HTTP {r.status_code} {r.text[:200]}")
-        data = r.json()
+        else:
+            data = r.json()
         CACHE.mkdir(parents=True, exist_ok=True)
         cp.write_text(json.dumps(data))
         return data
@@ -113,6 +116,49 @@ def save_fixture(session_key: int, out_dir: Path) -> Path:
     (out / "session.json").write_text(json.dumps(session(session_key), indent=1))
     for ep, rows in load_session(session_key).items():
         (out / f"{ep}.json").write_text(json.dumps(rows))
+    return out
+
+
+def load_telemetry(session: dict, driver_number: int, *, chunk_minutes: int = 10) -> list[dict]:
+    """car_data (about 3.7 Hz: speed, rpm, throttle, brake, gear) for one car over the whole session, in chunks
+    small enough for the free tier. Only the columns the tripwire reads are kept."""
+    from datetime import datetime, timedelta
+
+    start = datetime.fromisoformat(session["date_start"]) - timedelta(minutes=5)
+    end = datetime.fromisoformat(session["date_end"]) + timedelta(minutes=90)  # red flags run long
+    rows: list[dict] = []
+    t = start
+    while t < end:
+        u = t + timedelta(minutes=chunk_minutes)
+        chunk = get("car_data", session_key=session["session_key"], driver_number=driver_number,
+                    **{"date>": t.isoformat(), "date<": u.isoformat()})
+        rows.extend({"date": r["date"], "speed": r["speed"], "rpm": r["rpm"], "throttle": r["throttle"],
+                     "brake": r["brake"], "n_gear": r["n_gear"]} for r in chunk)
+        t = u
+    return rows
+
+
+def save_telemetry(session_key: int, drivers: list[int], out_dir: Path) -> None:
+    import gzip
+
+    s = session(session_key)
+    out = out_dir / str(session_key)
+    out.mkdir(parents=True, exist_ok=True)
+    for car in drivers:
+        rows = load_telemetry(s, car)
+        with gzip.open(out / f"car_data_{car}.json.gz", "wt") as f:
+            json.dump(rows, f, separators=(",", ":"))
+        print(f"  car_data {session_key} #{car}: {len(rows)} rows")
+
+
+def load_car_data(session_key: int, fixtures_dir: Path) -> dict[int, list[dict]]:
+    """car -> telemetry rows from race/fixtures/<key>/car_data_<car>.json.gz (empty when not fetched)."""
+    import gzip
+
+    out: dict[int, list[dict]] = {}
+    for p in sorted((fixtures_dir / str(session_key)).glob("car_data_*.json.gz")):
+        with gzip.open(p, "rt") as f:
+            out[int(p.name.split("_")[2].split(".")[0])] = json.load(f)
     return out
 
 
