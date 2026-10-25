@@ -400,6 +400,57 @@ describe('the money gate', () => {
     expect(d.lastAudit()).toMatchObject({ action: 'plan_approved', allowed: false, reason: 'the plan is approved, not a draft' });
   });
 
+  it('approving with edits holds the plan until the desk applies them; then the approval releases what has a precedent', () => {
+    const d = desk();
+    const planRow = () => d.h.db.racePlans.planKey.find('i')!;
+    d.as('race', ctx => mod.recordRaceEffects(ctx, { eventKey: KEY_A, effects: [d.effect(0, { decidedBy: 'policy:p1', status: 'autonomous' })] }));
+    d.entry('wing', `${KEY_A}:0`, 9_000_000n);
+    d.plan([{ ref: 'wing', status: 'precedent' }]);
+    d.as('race', ctx => mod.requestRacePosting(ctx, { entryKey: 'wing', at: AT }));
+    // empty words are not an edit; an agent may not edit for a person; a seat that does not approve plans is refused
+    expect(() => d.as('cos', ctx => mod.approveRacePlanWithEdits(ctx, { planKey: 'i', edits: '   ', by: 'x', at: AT }))).toThrow(/empty/);
+    d.as('race', ctx => mod.approveRacePlanWithEdits(ctx, { planKey: 'i', edits: 'cancel the air freight', by: 'agent', at: AT }));
+    expect(d.lastAudit()).toMatchObject({ action: 'plan_edited', allowed: false });
+    d.as('stranger', ctx => mod.approveRacePlanWithEdits(ctx, { planKey: 'i', edits: 'cancel the air freight', by: 'x', at: AT }));
+    expect(d.lastAudit().reason).toMatch(/head of cost cap does not approve a response plan/);
+    expect(planRow().status).toBe('draft');
+    // the chief of staff approves with edits: recorded at once, the plan held as revising
+    d.as('cos', ctx => mod.approveRacePlanWithEdits(ctx, { planKey: 'i', edits: 'Hand carry the floor; cancel the air freight.', by: 'x', at: AT }));
+    expect(d.lastAudit()).toMatchObject({ action: 'plan_edited', allowed: true, name: 'Sam Reyes' });
+    expect(planRow()).toMatchObject({ status: 'revising', approvedBy: 'Sam Reyes', approvedAt: AT });
+    expect(d.h.db.racePlanEdits.editKey.find('i:1')).toMatchObject({ planKey: 'i', status: 'pending', by: 'Sam Reyes', text: 'Hand carry the floor; cancel the air freight.' });
+    // nothing posts while the desk applies the edits, precedent or not
+    expect(d.posting('wing')).toMatchObject({ status: 'held', reviewRole: 'chief_of_staff' });
+    expect(d.posting('wing').reason).toMatch(/approved with edits: the agent is applying them/);
+    // a second edit waits for the first; the desk re-recording the plan keeps it revising
+    d.as('cos', ctx => mod.approveRacePlanWithEdits(ctx, { planKey: 'i', edits: 'and a PU check', by: 'x', at: AT }));
+    expect(d.lastAudit()).toMatchObject({ allowed: false });
+    expect(d.lastAudit().reason).toMatch(/edits wait until the agent has applied the last ones/);
+    d.plan([{ ref: 'wing', status: 'precedent', similarity: 0.95 }]);
+    expect(planRow().status).toBe('revising');
+    // only the desk applies an edit
+    d.as('cos', ctx => mod.applyRacePlanEdit(ctx, { editKey: 'i:1', status: 'applied', changesJson: '[]', note: '', model: 'x', at: T2 }));
+    expect(d.lastAudit()).toMatchObject({ action: 'plan_edit_applied', allowed: false, reason: 'only the race desk applies a plan edit' });
+    const changes = JSON.stringify([{ op: 'reroute', ref: 'i:freight', label: 'floor by hand carry', applied: true, why: 'as asked' }]);
+    d.as('race', ctx => mod.applyRacePlanEdit(ctx, { editKey: 'i:1', status: 'applied', changesJson: changes, note: '1 change applied', model: 'offline-rules', at: T2 }));
+    expect(d.lastAudit()).toMatchObject({ action: 'plan_edit_applied', allowed: true });
+    expect(d.h.db.racePlanEdits.editKey.find('i:1')).toMatchObject({ status: 'applied', changesJson: changes, model: 'offline-rules', appliedAt: T2 });
+    // the approval takes effect: the plan is approved, the precedented line is released in the same transaction
+    expect(planRow()).toMatchObject({ status: 'approved', approvedBy: 'Sam Reyes' });
+    expect(d.posting('wing')).toMatchObject({ status: 'authorized', reviewRole: '' });
+    // an edit is applied once
+    d.as('race', ctx => mod.applyRacePlanEdit(ctx, { editKey: 'i:1', status: 'applied', changesJson: '[]', note: '', model: 'x', at: T2 }));
+    expect(d.lastAudit()).toMatchObject({ allowed: false, reason: 'the edit is applied' });
+    // an approved plan can be edited again, and is held again
+    d.as('cos', ctx => mod.approveRacePlanWithEdits(ctx, { planKey: 'i', edits: 'add a power unit check on car 43', by: 'x', at: T2 }));
+    expect(planRow().status).toBe('revising');
+    expect(d.h.db.racePlanEdits.editKey.find('i:2')).toMatchObject({ status: 'pending' });
+    // a failed reading keeps the words on the record and releases the plan as it stood
+    d.as('race', ctx => mod.applyRacePlanEdit(ctx, { editKey: 'i:2', status: 'failed', changesJson: '[]', note: 'could not read the edits', model: 'offline-rules', at: T2 }));
+    expect(planRow().status).toBe('approved');
+    expect(d.h.db.racePlanEdits.editKey.find('i:2')).toMatchObject({ status: 'failed', text: 'add a power unit check on car 43' });
+  });
+
   it('holds an estimate that is only Jev\'s when nothing like it is on the record; the signer cannot also approve its posting', () => {
     const d = desk();
     d.as('race', ctx => mod.recordRaceEffects(ctx, { eventKey: KEY_A, effects: [d.effect(0, { decidedBy: 'jev', status: 'needs_person' })] }));

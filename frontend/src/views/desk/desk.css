@@ -2234,3 +2234,146 @@
     grid-template-columns: 1fr;
   }
 }
+
+/* ---------------------------------------------------------------- editing a plan in your own words */
+
+.plan-edit-box {
+  width: 100%;
+  min-height: 96px;
+  margin-top: 8px;
+  padding: 12px 14px;
+  border: 1px solid var(--g-hair);
+  border-radius: 12px;
+  background: var(--g-raised-solid);
+  color: var(--navy);
+  font: 400 15px/1.45 var(--body);
+  resize: vertical;
+}
+
+.plan-edit-box:focus {
+  outline: none;
+  border-color: var(--lime);
+  box-shadow: 0 0 0 3px rgba(10, 91, 216, 0.14);
+}
+
+.plan-edit-hint {
+  margin: 8px 0 0;
+  font: 400 12.5px/1.45 var(--body);
+  color: var(--steel);
+}
+
+.plan-edit-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+
+.plan-chip {
+  padding: 5px 10px;
+  border: 1px dashed rgba(10, 91, 216, 0.35);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--lime);
+  font: 500 12px/1.2 var(--body);
+  cursor: pointer;
+}
+
+.plan-chip:hover {
+  background: var(--g-lit);
+}
+
+.plan-edits {
+  display: grid;
+  gap: 10px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plan-edit-rec {
+  padding: 12px 14px;
+  border-radius: 12px;
+  background: var(--g-well);
+}
+
+.plan-edit-rec--pending {
+  box-shadow: inset 0 0 0 1.5px rgba(224, 154, 43, 0.45);
+}
+
+.plan-edit-said {
+  display: grid;
+  grid-template-columns: auto 1fr;
+  gap: 4px 10px;
+  align-items: start;
+}
+
+.plan-edit-said q {
+  font: 500 14px/1.4 var(--body);
+  color: var(--navy);
+  quotes: '“' '”';
+}
+
+.plan-edit-said .mono {
+  grid-column: 2;
+  font-size: 11px;
+}
+
+.plan-edit-changes {
+  display: grid;
+  gap: 6px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.plan-edit-changes li {
+  display: grid;
+  grid-template-columns: 16px 1fr;
+  gap: 8px;
+  align-items: start;
+  font: 400 13px/1.35 var(--body);
+}
+
+.plan-edit-changes li svg {
+  margin-top: 2px;
+}
+
+.plan-edit-changes .is-done svg {
+  color: var(--g-live);
+}
+
+.plan-edit-changes .is-not svg {
+  color: var(--alert);
+}
+
+.plan-edit-changes b {
+  display: block;
+  font-weight: 600;
+  color: var(--navy);
+}
+
+.plan-edit-changes em {
+  display: block;
+  font-style: normal;
+  color: var(--steel);
+}
+
+.plan-edit-wait {
+  margin: 8px 0 0;
+  font: 400 13px/1.4 var(--body);
+  color: var(--hold);
+}
+
+.plan-line-edited {
+  margin-left: 8px;
+  padding: 1px 6px;
+  border-radius: 4px;
+  background: rgba(10, 91, 216, 0.1);
+  color: var(--lime);
+  font: 600 10px/1.4 var(--mono);
+  font-style: normal;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  vertical-align: 1px;
+}

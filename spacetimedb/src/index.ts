@@ -450,6 +450,27 @@ const racePlans = table(
   }
 );
 
+// What a person asked to change in a response plan when they approved it, in their own words, and what the agent did
+// with it. Approving with edits holds the plan ('revising'): nothing it covers posts until the agent has read the edits,
+// changed the operations, rebuilt the plan against the team's history and recorded here, line by line, what it applied
+// and what it could not. Then the approval takes effect.
+const racePlanEdits = table(
+  { name: 'race_plan_edits', public: true },
+  {
+    editKey: t.string().primaryKey(), // planKey:n
+    planKey: t.string().index('btree'),
+    incidentKey: t.string(),
+    text: t.string(), // the person's words
+    by: t.string(),
+    at: t.string(),
+    status: t.string(), // pending | applied | failed
+    changesJson: t.string(), // [{op, ref, label, applied, why}] the agent's reading, line by line
+    note: t.string(),
+    model: t.string(), // who read the edits: claude-…, or offline-rules
+    appliedAt: t.string(),
+  }
+);
+
 // Which outside services the desk actually used on this run, and how they did: OpenF1, Jev, Claude, the ERP,
 // SpacetimeDB itself, the notification channels. Shown on every view so nothing claims to be live that is not.
 const raceHealth = table(
@@ -571,6 +592,7 @@ const spacetimedb = schema({
   raceOptions,
   racePostings,
   racePlans,
+  racePlanEdits,
   raceHealth,
   raceAudit,
   raceSeats,
@@ -1271,7 +1293,7 @@ function answererOf(ctx: any, questionKey: string): string {
 
 const INCIDENT_STATUSES = ['suspected', 'corroborated', 'confirmed', 'assessed', 'closed'];
 const ACTION_KINDS = ['garage_check', 'spares_reserve', 'work_order', 'freight', 'hand_carry', 'withdraw_car', 'parc_ferme_list',
-  'pu_check', 'td017_move', 'fia_notice', 'evidence_pack'];
+  'pu_check', 'td017_move', 'fia_notice', 'evidence_pack', 'task'];
 const ACTION_STATUSES = ['auto', 'awaiting_approval', 'approved', 'rejected', 'done', 'cancelled'];
 const RECOGNITION = ['first_use', 'incurred', 'excluded', 'already_expensed'];
 const QUESTION_KINDS = ['damage', 'decision', 'approval'];
@@ -1652,6 +1674,7 @@ function postingDecision(ctx: any, entry: any): { role: string; reasons: string[
     if (!plan) need('chief_of_staff', 'no response plan for this incident yet');
     else if (plan.status === 'draft') need('chief_of_staff', 'the response plan for this incident waits for the chief of staff');
     else if (plan.status === 'rejected') need('chief_of_staff', 'the response plan for this incident was rejected');
+    else if (plan.status === 'revising') need('chief_of_staff', 'approved with edits: the agent is applying them to the plan');
     if (plan && !line) need('head_of_cost_cap', 'the entry is not on the response plan');
     else if (line && !precedented) need('head_of_cost_cap', `no entry like it in the team's history${line.why ? `: ${line.why}` : ''}`);
   }
@@ -1693,7 +1716,7 @@ function reconsiderIncidentPostings(ctx: any, incidentKey: string, by: string) {
   }
 }
 
-const PLAN_STATUSES = ['draft', 'approved', 'rejected'];
+const PLAN_STATUSES = ['draft', 'approved', 'rejected', 'revising'];
 const PlanInput = t.object('RacePlanInput', {
   planKey: t.string(), incidentKey: t.string(), version: t.u32(), status: t.string(), summary: t.string(), linesJson: t.string(),
   precedented: t.u32(), novel: t.u32(), approvedBy: t.string(), approvedAt: t.string(), updatedAt: t.string(),
@@ -1743,6 +1766,62 @@ export const approveRacePlan = spacetimedb.reducer(
         ctx.db.racePlans.planKey.update({ ...cur, status, approvedBy: who, approvedAt: at, updatedAt: at });
         reconsiderIncidentPostings(ctx, cur.incidentKey, `${who} ${status} the plan`);
         return `response plan v${cur.version} ${status} by ${who} (${c.person ? c.role : 'replayed'}): ${cur.precedented} on precedent, ${cur.novel} novel`;
+      });
+  }
+);
+
+// The chief of staff approves the plan with edits, in their own words ("hand carry the floor, cancel the air freight,
+// add a power unit check on car 23"). The approval is recorded now; the plan is held as 'revising' and nothing it covers
+// posts until the agent applies the edits (apply_race_plan_edit). A plan already approved can be edited the same way.
+export const approveRacePlanWithEdits = spacetimedb.reducer(
+  { planKey: t.string(), edits: t.string(), by: t.string(), at: t.string() },
+  (ctx, { planKey, edits, by, at }) => {
+    requireIso('at', at);
+    const text = edits.trim();
+    if (!text) throw new SenderError('invalid edits: empty');
+    requireLen('edits', text, 2000);
+    const cur = ctx.db.racePlans.planKey.find(planKey);
+    if (!cur) throw new SenderError('no such plan');
+    const n = [...ctx.db.racePlanEdits.planKey.filter(planKey)].length + 1;
+    const editKey = `${planKey}:${n}`;
+    gate(ctx, 'plan_edited', planKey,
+      (c) => {
+        const p = personOrReplay(ctx, c, by);
+        if (p) return p;
+        if (cur.status !== 'draft' && cur.status !== 'approved') return `the plan is ${cur.status}: edits wait until the agent has applied the last ones`;
+        if (c.person && !PLAN_APPROVERS.includes(c.role)) return `a ${c.role.replace(/_/g, ' ')} does not approve a response plan; the chief of staff does`;
+        return null;
+      },
+      (c) => {
+        const who = c.person ? c.name : by;
+        ctx.db.racePlanEdits.insert({ editKey, planKey, incidentKey: cur.incidentKey, text, by: who, at, status: 'pending', changesJson: '[]', note: '', model: '', appliedAt: '' });
+        ctx.db.racePlans.planKey.update({ ...cur, status: 'revising', approvedBy: who, approvedAt: at, updatedAt: at });
+        reconsiderIncidentPostings(ctx, cur.incidentKey, `${who} approved the plan with edits`);
+        return `response plan v${cur.version} approved by ${who} with edits (${editKey}): "${text.slice(0, 200)}"`;
+      });
+  }
+);
+
+// The agent has read a person's edits and changed the plan: it records what it applied, line by line, and the approval
+// takes effect (the plan is 'approved' again and every held entry is reconsidered). 'failed' keeps the edits on the
+// record and releases the plan as it stood, so a misunderstanding never blocks the books; the person can edit again.
+export const applyRacePlanEdit = spacetimedb.reducer(
+  { editKey: t.string(), status: t.string(), changesJson: t.string(), note: t.string(), model: t.string(), at: t.string() },
+  (ctx, { editKey, status, changesJson, note, model, at }) => {
+    if (!['applied', 'failed'].includes(status)) throw new SenderError('invalid status');
+    requireIso('at', at);
+    requireLen('changesJson', changesJson, 16384);
+    requireLen('note', note, 1024);
+    const ed = ctx.db.racePlanEdits.editKey.find(editKey);
+    if (!ed) throw new SenderError('no such edit');
+    const plan = ctx.db.racePlans.planKey.find(ed.planKey);
+    gate(ctx, `plan_edit_${status}`, ed.planKey,
+      (c) => (c.role !== 'race' && !c.owner ? 'only the race desk applies a plan edit' : ed.status !== 'pending' ? `the edit is ${ed.status}` : null),
+      () => {
+        ctx.db.racePlanEdits.editKey.update({ ...ed, status, changesJson, note, model: model.slice(0, 64), appliedAt: at });
+        if (plan && plan.status === 'revising') ctx.db.racePlans.planKey.update({ ...plan, status: 'approved', updatedAt: at });
+        reconsiderIncidentPostings(ctx, ed.incidentKey, `the agent ${status === 'applied' ? 'applied' : 'could not apply'} ${ed.by}'s edits`);
+        return `${editKey} ${status}: ${note.slice(0, 300)}`;
       });
   }
 );

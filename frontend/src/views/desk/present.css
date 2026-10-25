@@ -383,3 +383,53 @@
     min-width: 200px;
   }
 }
+
+.pv-call .pv-see {
+  height: 40px;
+  padding: 0 16px;
+  font-size: 15px;
+}
+
+.pv-call--done .pv-call-act,
+.pv-call .pv-call-act:only-child {
+  margin-top: 12px;
+}
+
+.pv-said {
+  display: block;
+  margin: 10px 0 0;
+  padding: 10px 12px;
+  border-radius: 10px;
+  background: var(--g-well);
+  font: 500 15px/1.4 var(--body);
+  color: var(--navy);
+  quotes: '“' '”';
+}
+
+.pv-edit-note {
+  margin: 8px 0 0;
+  padding-top: 8px;
+  border-top: 1px solid var(--g-hair);
+  font: 400 13.5px/1.45 var(--body) !important;
+}
+
+.pv-spin {
+  width: 14px;
+  height: 14px;
+  border-radius: 50%;
+  border: 2px solid rgba(10, 91, 216, 0.2);
+  border-top-color: var(--lime);
+  animation: pv-spin 0.9s linear infinite;
+}
+
+@keyframes pv-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pv-spin {
+    animation: none;
+  }
+}

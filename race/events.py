@@ -185,7 +185,7 @@ class Incident:
 
 
 ACTION_KINDS = ("garage_check", "spares_reserve", "work_order", "freight", "hand_carry", "withdraw_car", "parc_ferme_list",
-                "pu_check", "td017_move", "fia_notice", "evidence_pack")
+                "pu_check", "td017_move", "fia_notice", "evidence_pack", "task")
 ACTION_STATUSES = ("auto", "awaiting_approval", "approved", "rejected", "done", "cancelled")
 
 
@@ -369,7 +369,7 @@ class OptionSet:
                 "trigger": self.trigger, "options_json": _j(self.options)[:8192]}
 
 
-PLAN_STATUSES = ("draft", "approved", "rejected")
+PLAN_STATUSES = ("draft", "approved", "rejected", "revising")
 
 
 @dataclass

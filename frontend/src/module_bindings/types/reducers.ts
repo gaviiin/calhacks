@@ -8,8 +8,10 @@ import { type Infer as __Infer } from "spacetimedb";
 // Import all reducer arg schemas
 import AnswerRaceQuestionReducer from "../answer_race_question_reducer";
 import ApplyRaceAnswerReducer from "../apply_race_answer_reducer";
+import ApplyRacePlanEditReducer from "../apply_race_plan_edit_reducer";
 import ApproveRaceCloseReducer from "../approve_race_close_reducer";
 import ApproveRacePlanReducer from "../approve_race_plan_reducer";
+import ApproveRacePlanWithEditsReducer from "../approve_race_plan_with_edits_reducer";
 import AskRaceQuestionReducer from "../ask_race_question_reducer";
 import ChooseRaceActionOptionReducer from "../choose_race_action_option_reducer";
 import ConfirmRaceEffectReducer from "../confirm_race_effect_reducer";
@@ -48,8 +50,10 @@ import UpsertRaceIncidentReducer from "../upsert_race_incident_reducer";
 
 export type AnswerRaceQuestionParams = __Infer<typeof AnswerRaceQuestionReducer>;
 export type ApplyRaceAnswerParams = __Infer<typeof ApplyRaceAnswerReducer>;
+export type ApplyRacePlanEditParams = __Infer<typeof ApplyRacePlanEditReducer>;
 export type ApproveRaceCloseParams = __Infer<typeof ApproveRaceCloseReducer>;
 export type ApproveRacePlanParams = __Infer<typeof ApproveRacePlanReducer>;
+export type ApproveRacePlanWithEditsParams = __Infer<typeof ApproveRacePlanWithEditsReducer>;
 export type AskRaceQuestionParams = __Infer<typeof AskRaceQuestionReducer>;
 export type ChooseRaceActionOptionParams = __Infer<typeof ChooseRaceActionOptionReducer>;
 export type ConfirmRaceEffectParams = __Infer<typeof ConfirmRaceEffectReducer>;

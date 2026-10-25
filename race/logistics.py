@@ -26,7 +26,7 @@ from datetime import timedelta
 from functools import lru_cache
 from pathlib import Path
 
-from race import prices as P
+from race import plan_edits, prices as P
 from race.events import Action, Incident, iso, parse_iso
 from race.points import points_for
 
@@ -487,7 +487,8 @@ def plan(inc: Incident, state) -> list[Action]:
          "sources": [v.get("url") for v in (assumptions(state).get("sources") or {}).values() if v.get("url")]},
         owner="head_of_cost_cap")
 
-    return _settle(inc, out, state)
+    # a person's edits to the response plan (race/plan_edits.py) stay in force whenever the playbook runs again
+    return plan_edits.overlay(inc, _settle(inc, out, state), state)
 
 
 def _settle(inc: Incident, acts: list[Action], state) -> list[Action]:

@@ -539,6 +539,21 @@ export const RacePartLifeInput = __t.object("RacePartLifeInput", {
 });
 export type RacePartLifeInput = __Infer<typeof RacePartLifeInput>;
 
+export const RacePlanEdits = __t.object("RacePlanEdits", {
+  editKey: __t.string(),
+  planKey: __t.string(),
+  incidentKey: __t.string(),
+  text: __t.string(),
+  by: __t.string(),
+  at: __t.string(),
+  status: __t.string(),
+  changesJson: __t.string(),
+  note: __t.string(),
+  model: __t.string(),
+  appliedAt: __t.string(),
+});
+export type RacePlanEdits = __Infer<typeof RacePlanEdits>;
+
 export const RacePlanInput = __t.object("RacePlanInput", {
   planKey: __t.string(),
   incidentKey: __t.string(),

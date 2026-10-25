@@ -26,7 +26,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from race import cap_forecast, close as close_mod, erp, incidents, ledger, life, logistics, people, plan as plan_mod, questions, season_sim, strategy
+from race import cap_forecast, close as close_mod, erp, incidents, ledger, life, logistics, people, plan as plan_mod, plan_edits, questions, season_sim, strategy
 from race.events import Action, Close, Effect, Entry, Incident, OptionSet, Plan, Posting, Question, RaceEvent, SimRun, now_iso
 from race.replay import Replay
 from race.sink import RaceSink
@@ -62,6 +62,7 @@ class WeekendState:
     options: dict[str, OptionSet] = field(default_factory=dict)  # the latest priced decisions per car
     postings: dict[str, Posting] = field(default_factory=dict)  # entry key -> where it went in the books
     plans: dict[str, Plan] = field(default_factory=dict)  # incident key -> the response plan the chief of staff approves
+    plan_edits: dict[str, list] = field(default_factory=dict)  # incident key -> the edits a person made to its plan, applied in order
     history: object | None = None  # race/history.py OperationStore: what the team has done before (loaded on first use)
     close: Close | None = None
     replay: Replay | None = None  # the live session's replay (its EffectsContext, policies, precedents)
@@ -245,6 +246,54 @@ class Weekend:
                 self.say(f"[plan] {p.incident_key} approved by {p.approved_by}: {n} operations join the team's history")
                 self.record_postings(erp.reconsider(st, p.incident_key, self.sink))
 
+    def follow_plan_edits(self) -> None:
+        """A person approved a plan with edits in their own words: read them, change the operations, rebuild the plan against
+        the team's history, and tell pit-wall what was applied, line by line. The approval takes effect then."""
+        if self.sink is None or self.sink.disabled:
+            return
+        now = time.monotonic()
+        if now - getattr(self, "_edit_poll", 0.0) < 1.0:
+            return
+        self._edit_poll = now
+        done = self.__dict__.setdefault("_edits_done", set())
+        for r in self.sink.sql("SELECT * FROM race_plan_edits WHERE status = 'pending'"):
+            key = r.get("edit_key") or ""
+            if not key or key in done:
+                continue
+            done.add(key)
+            self.apply_plan_edit(key, r.get("incident_key") or "", r.get("text") or "", r.get("by") or "a person")
+
+    def apply_plan_edit(self, edit_key: str, incident_key: str, text: str, by: str) -> list[dict]:
+        st = self.state
+        inc = st.incidents.get(incident_key)
+        at = now_iso()
+        if inc is None:
+            if self.sink:
+                self.sink.apply_plan_edit(edit_key, "failed", [], f"no incident {incident_key} on this desk", "desk", at)
+            return []
+        t0 = time.perf_counter()
+        changes, model = plan_edits.interpret(text, inc, st, offline=self.offline)
+        recorded = plan_edits.record(st, inc, changes, by=by, edit_key=edit_key, text=text)
+        acts = logistics.plan(inc, st)  # the playbook again, with the edits laid over it
+        fresh = [a for a in acts if st.actions.get(a.action_key) != a]
+        for a in acts:
+            st.actions[a.action_key] = a
+        if fresh and self.sink:
+            self.sink.actions(fresh)
+        for a in fresh:
+            self.say(f"[edit] {a.kind}: {a.title} ({a.status})")
+        self.record_plan(inc)
+        applied = any(c["applied"] for c in recorded)
+        note = plan_edits.summary(recorded)
+        if self.sink:
+            self.sink.apply_plan_edit(edit_key, "applied" if applied else "failed", recorded, note, model, at)
+        self._time("edit", t0)
+        self.say(f"[edit] {edit_key} by {by} read by {model}: {note[:200]}")
+        p = st.plans.get(incident_key)
+        if p is not None and p.status == "approved":  # an approved plan edited again: post what the edits released
+            self.record_postings(erp.reconsider(st, incident_key, self.sink))
+        return recorded
+
     def record_postings(self, postings: list[Posting]) -> None:
         t0 = time.perf_counter()
         for p in postings:
@@ -312,6 +361,7 @@ class Weekend:
         Held entries a person approved are posted to the ERP here too, and decisions are followed."""
         self.record_postings(erp.apply_reviews(self.state, self.sink))
         self.follow_decisions()
+        self.follow_plan_edits()
         self.follow_plans()
         changed = questions.apply_answers(self.state, self.sink, self.book)
         pend = getattr(self.state, "pending_entries", None)

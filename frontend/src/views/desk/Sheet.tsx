@@ -1,4 +1,4 @@
-import { useEffect, useMemo, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { IconApproved, IconDenied, IconExternal, IconPerson, IconWaiting } from '../../components/icons';
 import { pct, usdShort } from '../../lib/format';
 import { carLabel, sortTime } from '../../lib/raceModel';
@@ -318,18 +318,21 @@ function LogisticsSheet({ desk, go }: { desk: Desk; go: (tab: string, anchor?: s
 
 const LINE_KIND: Record<string, string> = {
   entry: 'Entry', spares_reserve: 'Spare', work_order: 'Work order', td017_move: 'Inventory', evidence_pack: 'Evidence', parc_ferme_list: 'Parc fermé',
-  pu_check: 'PU check', hand_carry: 'Hand-carry', freight: 'Freight', fia_notice: 'FIA notice',
+  pu_check: 'PU check', hand_carry: 'Hand-carry', freight: 'Freight', fia_notice: 'FIA notice', task: 'Task',
 };
 
-function PlanLineRow({ l, open }: { l: PlanLine; open: (t: SheetTarget) => void }) {
+function PlanLineRow({ l, open, edited = false }: { l: PlanLine; open: (t: SheetTarget) => void; edited?: boolean }) {
   const sim = l.precedent?.similarity ?? Math.max(0, ...(l.components ?? []).map((c) => c.similarity ?? 0));
   const novel = l.status === 'novel';
   const title = [l.why, l.precedent ? `${l.precedent.case_id}: ${l.precedent.summary ?? ''}` : null, ...(l.components ?? []).map((c) => `${c.label}: ${c.status} ${c.similarity ?? ''}${c.nearest ? ` (closest ${c.nearest.summary})` : ''}`)].filter(Boolean).join('\n');
   return (
-    <li className={`plan-line plan-line--${l.status}`} title={title} onClick={() => (l.kind === 'entry' ? open({ kind: 'decision', id: l.ref }) : null)} role={l.kind === 'entry' ? 'button' : undefined}>
+    <li className={`plan-line plan-line--${l.status} ${edited ? 'plan-line--edited' : ''}`} title={title} onClick={() => (l.kind === 'entry' ? open({ kind: 'decision', id: l.ref }) : null)} role={l.kind === 'entry' ? 'button' : undefined}>
       <span className="plan-line-kind">{LINE_KIND[l.kind] ?? l.kind}</span>
       <span className="plan-line-label">
-        <b>{l.label}</b>
+        <b>
+          {l.label}
+          {edited ? <i className="plan-line-edited">edited</i> : null}
+        </b>
         {novel && l.why ? <span className="plan-line-why">{l.why}</span> : null}
       </span>
       <span className="plan-line-sim">
@@ -342,24 +345,69 @@ function PlanLineRow({ l, open }: { l: PlanLine; open: (t: SheetTarget) => void 
   );
 }
 
+interface EditChange {
+  op: string;
+  ref?: string;
+  label: string;
+  applied: boolean;
+  why: string;
+  kind?: string;
+  seq?: number;
+  part?: string;
+  edit_key?: string;
+}
+
+const EDIT_HINTS = [
+  'Hand carry the floor instead of the air freight',
+  'The monocoque spare comes from Grove',
+  'Order a second front wing',
+  'Cancel the parc fermé list',
+  'Tell the press office before 18:00',
+];
+
+const PLAN_TONE: Record<string, Tone> = { draft: 'wait', revising: 'wait', approved: 'ok', rejected: 'bad' };
+
 function PlanSheet({ desk, id, go, open }: { desk: Desk; id: string; go: (tab: string, anchor?: string) => void; open: (t: SheetTarget) => void }) {
   const race = desk.race;
+  const [edits, setEdits] = useState('');
   const p = desk.plans.find((x) => x.plan.planKey === id);
+  const history = useMemo(() => race.planEdits.filter((e) => e.planKey === id).slice().sort((a, b) => a.editKey.localeCompare(b.editKey, 'en', { numeric: true })), [race.planEdits, id]);
   if (!p) return <Frame title="Response plan">Not found</Frame>;
-  const draft = p.plan.status === 'draft';
+  const status = p.plan.status;
+  const draft = status === 'draft';
+  const revising = status === 'revising';
+  const editable = draft || status === 'approved';
+  // what the applied edits touched: changed lines by ref, added lines by the key the desk gives them
+  const touched = new Set<string>();
+  for (const e of history) {
+    for (const c of parse<EditChange[]>(e.changesJson, [])) {
+      if (!c.applied) continue;
+      if (c.ref) touched.add(c.ref);
+      if (c.op === 'reroute') touched.add(`${p.plan.incidentKey}:${(c as EditChange & { to?: string }).to}`);
+      if (c.op === 'add') touched.add(`${p.plan.incidentKey}:${c.kind}:edit${c.seq}${c.part ? `:${c.part}` : ''}`);
+    }
+  }
   const ops = p.lines.filter((l) => l.kind !== 'entry');
   const ents = p.lines.filter((l) => l.kind === 'entry');
+  const words = edits.trim();
+  const send = (by: string, at: string) => race.approvePlanWithEdits({ planKey: p.plan.planKey, edits: words, by, at }).then(() => setEdits(''));
   return (
     <Frame
       title={`Response plan · ${p.label}`}
       id={`v${p.plan.version}`}
-      tone={draft ? 'wait' : p.plan.status === 'approved' ? 'ok' : 'bad'}
+      tone={PLAN_TONE[status] ?? 'neutral'}
       foot={
         draft ? (
           <>
             <ActButton label="Reject" run={(by, at) => race.approvePlan({ planKey: p.plan.planKey, status: 'rejected', by, at })} />
-            <ActButton label="Approve the plan" primary busyLabel="Approving…" run={(by, at) => race.approvePlan({ planKey: p.plan.planKey, status: 'approved', by, at })} />
+            {words ? (
+              <ActButton label="Approve with these edits" primary busyLabel="Sending…" run={send} />
+            ) : (
+              <ActButton label="Approve the plan" primary busyLabel="Approving…" run={(by, at) => race.approvePlan({ planKey: p.plan.planKey, status: 'approved', by, at })} />
+            )}
           </>
+        ) : status === 'approved' && words ? (
+          <ActButton label="Send these edits" primary busyLabel="Sending…" run={send} />
         ) : (
           <button type="button" className="g-btn" onClick={() => go('cfo')}>
             Open the CFO view <IconExternal size={12} />
@@ -369,25 +417,91 @@ function PlanSheet({ desk, id, go, open }: { desk: Desk; id: string; go: (tab: s
     >
       <section className="sheet-sec">
         <div className="sheet-figs">
-          <div className="fig"><span className="fig-label">On precedent</span><span className="fig-value mono">{p.plan.precedented}</span><span className="fig-sub">post alone once approved</span></div>
-          <div className="fig"><span className="fig-label">Novel</span><span className={`fig-value mono ${p.plan.novel ? 'tone-alert' : ''}`}>{p.plan.novel}</span><span className="fig-sub">wait for the Head of Cost Cap</span></div>
+          <div className="fig"><span className="fig-label">On precedent</span><span className="fig-value mono">{p.plan.precedented}</span><span className="fig-sub">run on their own once approved</span></div>
+          <div className="fig"><span className="fig-label">New to the team</span><span className={`fig-value mono ${p.plan.novel ? 'tone-alert' : ''}`}>{p.plan.novel}</span><span className="fig-sub">wait for the Head of Cost Cap</span></div>
           <div className="fig"><span className="fig-label">Entries</span><span className="fig-value mono">{usdShort(p.amountCents)}</span><span className="fig-sub">{p.entries} lines</span></div>
         </div>
-        <Shares parts={[{ tone: 'navy', value: p.plan.precedented, label: 'precedent' }, { tone: 'bad', value: p.plan.novel, label: 'novel' }]} height={8} />
-        <Row k="Status" v={<Pill tone={draft ? 'wait' : p.plan.status === 'approved' ? 'ok' : 'bad'}>{draft ? 'Waiting for the Chief of Staff' : `${p.plan.status} by ${p.plan.approvedBy}`}</Pill>} />
+        <Row
+          k="Status"
+          v={<Pill tone={PLAN_TONE[status] ?? 'neutral'}>{draft ? 'Waiting for your approval' : revising ? `Approved by ${p.plan.approvedBy} with edits: the agent is applying them` : `${status} by ${p.plan.approvedBy}`}</Pill>}
+        />
       </section>
+
+      {editable ? (
+        <section className="sheet-sec plan-edit">
+          <h3 className="g-label">{draft ? 'Edit the plan before you approve it' : 'Edit the approved plan'}</h3>
+          <textarea
+            className="plan-edit-box"
+            value={edits}
+            onChange={(e) => setEdits(e.target.value)}
+            rows={4}
+            maxLength={2000}
+            placeholder={`In your own words. For example:\n${EDIT_HINTS.slice(0, 3).join('. ')}.`}
+            aria-label="Your edits to the plan"
+          />
+          <p className="plan-edit-hint">
+            The agent applies them when it executes: cancel an operation, move parts between the air freight and the hand carry, change where a spare comes from, add a spare, a work order, a check or a task for someone, change a deadline or an owner. Money is changed in Books. Nothing posts until the agent has applied your edits, and it records what it did with each one.
+          </p>
+          <div className="plan-edit-chips">
+            {EDIT_HINTS.map((h) => (
+              <button key={h} type="button" className="plan-chip" onClick={() => setEdits((x) => (x.trim() ? `${x.trim().replace(/[.]?$/, '.')} ${h}.` : `${h}.`))}>
+                {h}
+              </button>
+            ))}
+          </div>
+        </section>
+      ) : null}
+
+      {history.length ? (
+        <section className="sheet-sec">
+          <h3 className="g-label">Your edits, and what the agent did</h3>
+          <ol className="plan-edits">
+            {history.map((e) => {
+              const changes = parse<EditChange[]>(e.changesJson, []);
+              return (
+                <li key={e.editKey} className={`plan-edit-rec plan-edit-rec--${e.status}`}>
+                  <div className="plan-edit-said">
+                    <Pill tone={e.status === 'applied' ? 'ok' : e.status === 'pending' ? 'wait' : 'bad'}>{e.status === 'applied' ? 'Applied' : e.status === 'pending' ? 'Applying…' : 'Not applied'}</Pill>
+                    <q>{e.text}</q>
+                    <span className="mono muted">
+                      {e.by} · {clock(e.at)}
+                      {e.model ? ` · read by ${e.model}` : ''}
+                    </span>
+                  </div>
+                  {changes.length ? (
+                    <ul className="plan-edit-changes">
+                      {changes.map((c, i) => (
+                        <li key={i} className={c.applied ? 'is-done' : 'is-not'}>
+                          {c.applied ? <IconApproved size={12} /> : <IconDenied size={12} />}
+                          <span>
+                            <b>{c.label}</b>
+                            {c.why ? <em>{c.applied ? `“${c.why}”` : c.why}</em> : null}
+                          </span>
+                        </li>
+                      ))}
+                    </ul>
+                  ) : e.status === 'pending' ? (
+                    <p className="plan-edit-wait">The agent is reading your edits and changing the operations. Nothing in this plan posts until it has.</p>
+                  ) : null}
+                </li>
+              );
+            })}
+          </ol>
+        </section>
+      ) : null}
+
       <section className="sheet-sec">
-        <h3 className="g-label">Entries · each matched part by part against the team's history</h3>
+        <h3 className="g-label">Operations · {ops.length}</h3>
         <ol className="plan-lines">
-          {ents.map((l) => (
-            <PlanLineRow key={l.ref} l={l} open={open} />
+          {ops.map((l) => (
+            <PlanLineRow key={l.ref} l={l} open={open} edited={touched.has(l.ref)} />
           ))}
         </ol>
       </section>
       <section className="sheet-sec">
-        <h3 className="g-label">Operations · reversible ones run ahead of the approval</h3>
+        <h3 className="g-label">Entries · {ents.length}, each matched part by part against the team's history</h3>
         <ol className="plan-lines">
-          {ops.map((l) => (
+          {ents.map((l) => (
             <PlanLineRow key={l.ref} l={l} open={open} />
           ))}
         </ol>

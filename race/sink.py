@@ -7,6 +7,8 @@ Disables itself with one message if the server or database is missing, so a repl
 
 from __future__ import annotations
 
+import json
+
 import os
 import threading
 
@@ -106,6 +108,10 @@ class RaceSink:
     def plan(self, p: Plan) -> bool:
         """The desk's response plan for an incident (every version); only a person approves it."""
         return self.call("record_race_plan", [p.wire()])
+
+    def apply_plan_edit(self, edit_key: str, status: str, changes: list[dict], note: str, model: str, at: str) -> bool:
+        """What the desk did with a person's edits to a plan; pit-wall then lets the approval take effect."""
+        return self.call("apply_race_plan_edit", [edit_key, status, json.dumps(changes, separators=(",", ":"), default=str)[:16000], note[:1000], model[:64], at])
 
     def request_posting(self, entry_key: str, at: str) -> dict | None:
         """Ask pit-wall to authorize an entry; return its decision row (status authorized | held, review_role, reason)."""

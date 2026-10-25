@@ -7,6 +7,7 @@ import type {
   RaceBeliefs,
   RaceCloses,
   RacePlans,
+  RacePlanEdits,
   RaceEffects,
   RaceEntries,
   RaceEntryLines,
@@ -75,6 +76,8 @@ export interface RaceData {
   closes: readonly RaceCloses[];
   /** The response plan per incident: operations and entries with their precedent; the chief of staff approves it. */
   plans: readonly RacePlans[];
+  /** What a person asked to change in a plan when approving it, and what the agent did with it, line by line. */
+  planEdits: readonly RacePlanEdits[];
   options: readonly RaceOptions[];
   postings: readonly RacePostings[];
   /** Each part's life on our cars, from laps, stress events and crashes (race/life.py). */
@@ -101,6 +104,8 @@ export interface RaceData {
   approveClose: (args: { closeKey: string; by: string; at: string }) => Promise<void>;
   /** The chief of staff approves or rejects an incident's response plan as a whole. */
   approvePlan: (args: { planKey: string; status: string; by: string; at: string }) => Promise<void>;
+  /** Approves the plan with edits in the person's own words: pit-wall holds it while the agent applies them. */
+  approvePlanWithEdits: (args: { planKey: string; edits: string; by: string; at: string }) => Promise<void>;
   /** Calls the correct_race_effect reducer; rejects with the module's refusal when not permitted. */
   correct: (args: CorrectArgs) => Promise<void>;
   /** Calls confirm_race_effect: the band stands as booked, the precedent records that a person checked it. */
@@ -127,6 +132,7 @@ const Ctx = createContext<RaceData>({
   sims: [],
   closes: [],
   plans: [],
+  planEdits: [],
   options: [],
   postings: [],
   partLife: [],
@@ -144,6 +150,7 @@ const Ctx = createContext<RaceData>({
   answer: () => Promise.reject(new Error('not connected to pit-wall')),
   approveClose: () => Promise.reject(new Error('not connected to pit-wall')),
   approvePlan: () => Promise.reject(new Error('not connected to pit-wall')),
+  approvePlanWithEdits: () => Promise.reject(new Error('not connected to pit-wall')),
 });
 
 export function RaceBridge({ children }: { children: ReactNode }) {
@@ -176,6 +183,7 @@ export function RaceBridge({ children }: { children: ReactNode }) {
   const [sims] = useTable(tables.raceSims);
   const [closes] = useTable(tables.raceCloses);
   const [plans] = useTable(tables.racePlans);
+  const [planEdits] = useTable(tables.racePlanEdits);
   const [options] = useTable(tables.raceOptions);
   const [postings] = useTable(tables.racePostings);
   const [partLife] = useTable(tables.racePartLife);
@@ -251,15 +259,16 @@ export function RaceBridge({ children }: { children: ReactNode }) {
   const answer = useMemo(() => withConn((c, a: { questionKey: string; answerJson: string; by: string; at: string }) => c.reducers.answerRaceQuestion(a), (a) => a.questionKey), [withConn]);
   const approveClose = useMemo(() => withConn((c, a: { closeKey: string; by: string; at: string }) => c.reducers.approveRaceClose(a), (a) => a.closeKey), [withConn]);
   const approvePlan = useMemo(() => withConn((c, a: { planKey: string; status: string; by: string; at: string }) => c.reducers.approveRacePlan(a), (a) => a.planKey), [withConn]);
+  const approvePlanWithEdits = useMemo(() => withConn((c, a: { planKey: string; edits: string; by: string; at: string }) => c.reducers.approveRacePlanWithEdits(a), (a) => a.planKey), [withConn]);
 
   const value = useMemo<RaceData>(
     () => ({
       connected: conn.isActive, identityHex, events, cars, effects, forecasts, policies, precedents, correct, confirm,
-      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, plans, options, postings, partLife, health, decidePosting, decideAction, chooseOption, answer, approveClose, approvePlan,
+      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, plans, planEdits, options, postings, partLife, health, decidePosting, decideAction, chooseOption, answer, approveClose, approvePlan, approvePlanWithEdits,
       audit, seats, rules, signoffs, online, latency, mySeat,
     }),
     [conn.isActive, identityHex, events, cars, effects, forecasts, policies, precedents, correct, confirm,
-      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, plans, options, postings, partLife, health, decidePosting, decideAction, chooseOption, answer, approveClose, approvePlan,
+      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, plans, planEdits, options, postings, partLife, health, decidePosting, decideAction, chooseOption, answer, approveClose, approvePlan, approvePlanWithEdits,
       audit, seats, rules, signoffs, online, latency, mySeat]
   );
   // A replay at full speed writes thousands of rows a second, and each one re-renders the tables above. The views
@@ -320,6 +329,7 @@ export function scopeToMeeting(race: RaceData, meeting: number | null): RaceData
     sims: race.sims.filter((x) => x.meetingKey === meeting),
     closes: race.closes.filter((c) => c.meetingKey === meeting),
     plans: race.plans.filter((p) => incKeys.has(p.incidentKey)),
+    planEdits: race.planEdits.filter((e) => incKeys.has(e.incidentKey)),
     options: race.options.filter((o) => o.meetingKey === meeting),
     postings: race.postings.filter((p) => entryKeys.has(p.entryKey)),
     partLife: race.partLife.filter((p) => p.meetingKey === meeting),

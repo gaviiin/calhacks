@@ -8,6 +8,7 @@ import { ActButton, parse } from '../raceday/shared';
 import { Hero, LENSES } from './Hero';
 import { useDesk, type Desk, type DeskCar, type DeskLens, type PlanView } from './model';
 import { HeldRow } from './panels';
+import { SideSheet, type SheetTarget } from './Sheet';
 import './desk.css';
 import './present.css';
 
@@ -42,6 +43,7 @@ function Present({ nav }: { nav: (h: string) => void }) {
   const [pick, setPick] = useState<string | null>(null);
   const [lens, setLens] = useState<DeskLens>('condition');
   const [hoverCost, setHoverCost] = useState<CostId | null>(null);
+  const [sheet, setSheet] = useState<SheetTarget | null>(null);
 
   // the crash on screen: the one picked, else the latest whose plan waits, else the latest
   const waiting = incidents.filter((i) => desk.plans.some((p) => p.plan.incidentKey === i.incidentKey && p.plan.status === 'draft'));
@@ -77,9 +79,10 @@ function Present({ nav }: { nav: (h: string) => void }) {
         </section>
         <aside className="pv-side">
           {inc ? <Story desk={desk} inc={inc} car={car} /> : <NoCrash car={car} />}
-          {inc ? <Call desk={desk} inc={inc} /> : null}
+          {inc ? <Call desk={desk} inc={inc} openPlan={(k) => setSheet({ kind: 'plan', id: k })} /> : null}
         </aside>
       </div>
+      {sheet ? <SideSheet target={sheet} desk={desk} close={() => setSheet(null)} go={(tab) => nav(`/day/${tab}`)} open={setSheet} /> : null}
     </div>
   );
 }
@@ -207,11 +210,18 @@ const pct = (x: number) => (x < 0.0005 ? '0%' : x > 0.9995 ? '100%' : `${(x * 10
 
 // ------------------------------------------------------------------------------------------ the one call
 
-function Call({ desk, inc }: { desk: Desk; inc: Inc }) {
+function Call({ desk, inc, openPlan }: { desk: Desk; inc: Inc; openPlan: (planKey: string) => void }) {
   const race = useRace();
   const plan: PlanView | undefined = desk.plans.find((p) => p.plan.incidentKey === inc.incidentKey);
   const held = desk.held.filter((g) => g.rows.some((r) => r.incidentKey === inc.incidentKey));
   const books = incidentBooks(race, inc.incidentKey);
+  const edits = race.planEdits.filter((e) => e.incidentKey === inc.incidentKey).sort((a, b) => a.editKey.localeCompare(b.editKey, 'en', { numeric: true }));
+  const lastEdit = edits[edits.length - 1] ?? null;
+  const see = plan ? (
+    <button type="button" className="btn pv-see" onClick={() => openPlan(plan.plan.planKey)}>
+      Open the plan
+    </button>
+  ) : null;
 
   if (plan && plan.plan.status === 'draft') {
     return (
@@ -227,26 +237,50 @@ function Call({ desk, inc }: { desk: Desk; inc: Inc }) {
             <>
               <b>All match what the team has done before</b>: approve once and they run and post on their own.
             </>
-          )}
+          )}{' '}
+          Open the plan to read every line or change it in your own words.
         </p>
         <div className="pv-call-act">
           <span className="pv-call-amt mono">{plan.amountCents ? usdShort(plan.amountCents) : ''}</span>
+          {see}
           <ActButton label="Approve the plan" busyLabel="Approving…" primary run={(by, at) => race.approvePlan({ planKey: plan.plan.planKey, status: 'approved', by, at })} />
-          <ActButton label="Reject" busyLabel="Rejecting…" run={(by, at) => race.approvePlan({ planKey: plan.plan.planKey, status: 'rejected', by, at })} />
         </div>
       </section>
     );
   }
+  if (plan && plan.plan.status === 'revising') {
+    return (
+      <section className="glass pv-call pv-call--wait" aria-label="Applying your edits">
+        <h2>
+          <span className="pv-spin" aria-hidden /> Applying your edits
+        </h2>
+        {lastEdit ? <q className="pv-said">{lastEdit.text}</q> : null}
+        <p>The agent is changing the operations and rebuilding the plan against the team's history. Nothing in it posts until it has.</p>
+        <div className="pv-call-act">{see}</div>
+      </section>
+    );
+  }
+  const changes = lastEdit ? parse<{ applied?: boolean }[]>(lastEdit.changesJson, []) : [];
+  const done = changes.filter((c) => c.applied).length;
+  const editNote =
+    lastEdit && lastEdit.status !== 'pending' ? (
+      <p className="pv-edit-note">
+        Your edits: <b>{done} applied</b>
+        {changes.length > done ? `, ${changes.length - done} not` : ''}, read by {lastEdit.model.startsWith('claude') ? 'Claude' : 'the rules'}. Open the plan to see each one.
+      </p>
+    ) : null;
   if (held.length) {
     return (
       <section className="glass pv-call pv-call--wait" aria-label="Your call">
-        <h2>New to the team</h2>
-        <p>The plan is approved and everything the team has done before is booked. These lines have no precedent: your approval becomes one.</p>
+        <h2>One more call</h2>
+        <p>The plan is approved and everything it could book on its own is booked. {held.length === 1 ? 'This line waits' : 'These lines wait'} for you: {held[0]!.reasons[0] ?? 'it has no precedent'}.</p>
+        {editNote}
         <ul className="dk-waits pv-held">
           {held.map((g) => (
             <HeldRow key={g.key} g={g} />
           ))}
         </ul>
+        <div className="pv-call-act">{see}</div>
       </section>
     );
   }
@@ -257,9 +291,11 @@ function Call({ desk, inc }: { desk: Desk; inc: Inc }) {
         <IconApproved size={14} /> {plan?.plan.status === 'rejected' ? 'Plan rejected' : books.posted.length ? 'Booked' : 'Nothing waits for you'}
       </h2>
       <p>
-        {plan?.plan.status === 'approved' ? `Plan approved by ${plan.plan.approvedBy || 'you'}. ` : ''}
+        {plan?.plan.status === 'approved' ? `Plan approved by ${plan.plan.approvedBy || 'you'}${edits.length ? ' with edits' : ''}. ` : ''}
         {books.posted.length ? `${books.posted.length} entries in the ERP${last ? `, last ${last}` : ''}.` : 'The module keeps watching the car.'}
       </p>
+      {editNote}
+      <div className="pv-call-act">{see}</div>
     </section>
   );
 }
