@@ -1,0 +1,238 @@
+{
+ "race_id": "2024_sao_paulo_gp",
+ "name": "2024 São Paulo Grand Prix",
+ "season": 2024,
+ "round": 21,
+ "slug": "sao-paulo-grand-prix",
+ "source_system": "openf1",
+ "base_url": "https://api.openf1.org/v1",
+ "session": {
+  "session_key": 9636,
+  "meeting_key": 1249,
+  "session_name": "Race",
+  "session_type": "Race",
+  "date_start": "2024-11-03T15:30:00+00:00",
+  "date_end": "2024-11-03T17:30:00+00:00",
+  "circuit_short_name": "Interlagos",
+  "country_name": "Brazil",
+  "location": "São Paulo",
+  "year": 2024,
+  "gmt_offset": "-03:00:00"
+ },
+ "drivers": [
+  {
+   "driver_number": 1,
+   "name_acronym": "VER",
+   "full_name": "Max VERSTAPPEN",
+   "team_name": "Red Bull Racing",
+   "team_colour": "3671C6"
+  },
+  {
+   "driver_number": 4,
+   "name_acronym": "NOR",
+   "full_name": "Lando NORRIS",
+   "team_name": "McLaren",
+   "team_colour": "FF8000"
+  },
+  {
+   "driver_number": 10,
+   "name_acronym": "GAS",
+   "full_name": "Pierre GASLY",
+   "team_name": "Alpine",
+   "team_colour": "0093cc"
+  },
+  {
+   "driver_number": 11,
+   "name_acronym": "PER",
+   "full_name": "Sergio PEREZ",
+   "team_name": "Red Bull Racing",
+   "team_colour": "3671C6"
+  },
+  {
+   "driver_number": 14,
+   "name_acronym": "ALO",
+   "full_name": "Fernando ALONSO",
+   "team_name": "Aston Martin",
+   "team_colour": "229971"
+  },
+  {
+   "driver_number": 16,
+   "name_acronym": "LEC",
+   "full_name": "Charles LECLERC",
+   "team_name": "Ferrari",
+   "team_colour": "E80020"
+  },
+  {
+   "driver_number": 18,
+   "name_acronym": "STR",
+   "full_name": "Lance STROLL",
+   "team_name": "Aston Martin",
+   "team_colour": "229971"
+  },
+  {
+   "driver_number": 22,
+   "name_acronym": "TSU",
+   "full_name": "Yuki TSUNODA",
+   "team_name": "RB",
+   "team_colour": "6692FF"
+  },
+  {
+   "driver_number": 23,
+   "name_acronym": "ALB",
+   "full_name": "Alexander ALBON",
+   "team_name": "Williams",
+   "team_colour": "64C4FF"
+  },
+  {
+   "driver_number": 24,
+   "name_acronym": "ZHO",
+   "full_name": "ZHOU Guanyu",
+   "team_name": "Kick Sauber",
+   "team_colour": "52e252"
+  },
+  {
+   "driver_number": 27,
+   "name_acronym": "HUL",
+   "full_name": "Nico HULKENBERG",
+   "team_name": "Haas F1 Team",
+   "team_colour": "B6BABD"
+  },
+  {
+   "driver_number": 30,
+   "name_acronym": "LAW",
+   "full_name": "Liam LAWSON",
+   "team_name": "RB",
+   "team_colour": "6692FF"
+  },
+  {
+   "driver_number": 31,
+   "name_acronym": "OCO",
+   "full_name": "Esteban OCON",
+   "team_name": "Alpine",
+   "team_colour": "0093cc"
+  },
+  {
+   "driver_number": 43,
+   "name_acronym": "COL",
+   "full_name": "Franco COLAPINTO",
+   "team_name": "Williams",
+   "team_colour": "64C4FF"
+  },
+  {
+   "driver_number": 44,
+   "name_acronym": "HAM",
+   "full_name": "Lewis HAMILTON",
+   "team_name": "Mercedes",
+   "team_colour": "27F4D2"
+  },
+  {
+   "driver_number": 50,
+   "name_acronym": "BEA",
+   "full_name": "Oliver BEARMAN",
+   "team_name": "Haas F1 Team",
+   "team_colour": "B6BABD"
+  },
+  {
+   "driver_number": 55,
+   "name_acronym": "SAI",
+   "full_name": "Carlos SAINZ",
+   "team_name": "Ferrari",
+   "team_colour": "E80020"
+  },
+  {
+   "driver_number": 63,
+   "name_acronym": "RUS",
+   "full_name": "George RUSSELL",
+   "team_name": "Mercedes",
+   "team_colour": "27F4D2"
+  },
+  {
+   "driver_number": 77,
+   "name_acronym": "BOT",
+   "full_name": "Valtteri BOTTAS",
+   "team_name": "Kick Sauber",
+   "team_colour": "52e252"
+  },
+  {
+   "driver_number": 81,
+   "name_acronym": "PIA",
+   "full_name": "Oscar PIASTRI",
+   "team_name": "McLaren",
+   "team_colour": "FF8000"
+  }
+ ],
+ "incident_windows": [
+  {
+   "label": "car43_lap32_stop",
+   "driver_number": 43,
+   "anchor": {
+    "flag": "RED",
+    "lap_number": 32,
+    "message": "RED FLAG",
+    "event_time_utc": "2024-11-03T16:37:22.000Z"
+   },
+   "start_utc": "2024-11-03T16:35:22.000Z",
+   "end_utc": "2024-11-03T16:37:42.000Z",
+   "note": "car_data and location for car 43 only, from two minutes before the lap-32 red flag to twenty seconds after it; the rest of the race's car_data is not downloaded",
+   "car_data_rows": 531,
+   "last_sample_moving_utc": "2024-11-03T16:37:03.394Z",
+   "location_rows": 543
+  }
+ ],
+ "raw_counts": {
+  "sessions": 5,
+  "drivers": 20,
+  "race_control": 111,
+  "weather": 201,
+  "position": 360,
+  "laps": 1137,
+  "stints": 54,
+  "pit": 35,
+  "car_data": 531,
+  "location": 543,
+  "session_result": 20
+ },
+ "event_counts": {
+  "position": 360,
+  "weather": 201,
+  "race_control": 111,
+  "stint_start": 53,
+  "lap_start": 1136,
+  "lap_complete": 1132,
+  "pit": 35,
+  "car_data": 531,
+  "location": 543
+ },
+ "events_total": 4102,
+ "first_event_utc": "2024-11-03T14:38:06.760Z",
+ "last_event_utc": "2024-11-03T17:58:26.311Z",
+ "gaps": [
+  "car43_lap32_stop: race_control never names car 43 between laps 28 and 34; attribution must come from car data plus corroboration"
+ ],
+ "never_replayed": [
+  "session_result (validation only)",
+  "drivers",
+  "sessions"
+ ],
+ "masking": {
+  "stint_start": [
+   "lap_end"
+  ],
+  "lap_start": [
+   "lap_duration",
+   "sectors",
+   "speeds"
+  ]
+ },
+ "corroboration": [
+  {
+   "url": "https://www.formula1.com/en/latest/article/verstappen-wins-chaotic-sao-paulo-grand-prix-after-stunning-recovery-from.1DIc8pzRmGbC3jHJmvtBi1",
+   "publisher": "formula1.com race report",
+   "claim": "Franco Colapinto (Williams, #43) crashed under the Safety Car on lap 32 in wet conditions; the race was red-flagged.",
+   "read_on": "2026-10-24"
+  }
+ ],
+ "team_cars_note": "Meridian Racing mirrors Mercedes' real results: cars 63 (Russell) and 44 (Hamilton). Car 43 (Colapinto) drove for Williams; the fictional Meridian garage investigation is a demo device.",
+ "openf1_requests": 2,
+ "cache_hits": 9
+}

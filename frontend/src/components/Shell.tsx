@@ -2,15 +2,17 @@ import { useEffect, useRef, useState } from 'react';
 import { useSpacetimeDB } from 'spacetimedb/react';
 import { useCostCap } from '../lib/costcap';
 import { useEvidence } from '../lib/evidence';
+import { useLive } from '../lib/live';
 import { useRevenue } from '../lib/revenue';
 import { PEOPLE, fetchSeatCodes, sha256Hex, useSeat, type SeatId } from '../lib/seat';
 import { useSeatConnection } from '../lib/seatConnection';
 import { IconLive } from './icons';
 
-export type View = 'overview' | 'inbox' | 'cost-cap' | 'risk' | 'revenue' | 'evidence' | 'audit' | 'connect';
+export type View = 'overview' | 'live' | 'inbox' | 'cost-cap' | 'risk' | 'revenue' | 'evidence' | 'audit' | 'connect';
 
 const NAV: { id: View; label: string }[] = [
   { id: 'overview', label: 'Pit wall' },
+  { id: 'live', label: 'Live race' },
   { id: 'inbox', label: 'Inbox' },
   { id: 'cost-cap', label: 'Cost cap' },
   { id: 'risk', label: 'Cap risk' },
@@ -84,6 +86,7 @@ export function Shell({ view, go, inboxCount, status }: { view: View; go: (v: Vi
   const costCap = useSpacetimeDB();
   const evidence = useEvidence();
   const revenue = useRevenue();
+  const live = useLive();
 
   return (
     <header className="shell">
@@ -114,6 +117,7 @@ export function Shell({ view, go, inboxCount, status }: { view: View; go: (v: Vi
           <Source ok={costCap.isActive} label="cost-cap-desk" />
           <Source ok={evidence.connected} label="pit-wall" />
           <Source ok={revenue.online} label="revenue api" />
+          <Source ok={live.online} label="live api" />
         </div>
         <label className="seat">
           <span className="seat-label">Seat</span>

@@ -50,6 +50,7 @@ Three things make it hireable rather than a demo:
 | `system_of_work/` | `cost-cap-desk` module: work items, policies as Ripple-Down Rules, allocations, audit log, agent steps, roles matrix, `transition()` ([SCHEMA.md](SCHEMA.md)) | SpacetimeDB 2.13 TypeScript, port 3000 |
 | `rulebook/` | FIA Financial Regulations as data: 2025 (Issue 22) and 2026 (Section D Issue 07) | Python |
 | `world/` | Both desks' worlds: the cost side's systems of record (generator, cursor API on port 8010) and the revenue side's contracts, sponsors, results and people | Python, JSON |
+| `live_racing/` | The live financial feed of a race: OpenF1 replay (2024 São Paulo GP, cached), as-of race state, if-finished-now sponsor exposure, Jev (TypeSafe System One) routing with deterministic fallback, versioned incident signals handed to the cost cap desk, the Spa 2024 result change from the real FIA documents ([live_racing/README.md](live_racing/README.md)) | Python, FastAPI, port 8020 |
 | `landing/` | Marketing page | Vite, React, three.js, port 5175 |
 | `deploy/azure/`, `docs/microsoft/` | Azure deployment and the Microsoft track write-up | Bicep |
 
@@ -98,6 +99,16 @@ Open http://localhost:5173. The **Pit wall** tab opens on results (lines decided
 Pick a seat in the top bar (the browser claims it with a one-time code `make bootstrap` minted), and work the inbox. On the Revenue tab, replay 2024 to the Belgian Grand Prix and run the weekend: George Russell finishes first on the road and is disqualified for an underweight car, and the desk holds his bonuses until the FIA's final classification.
 
 The revenue desk on its own: `make revenue-sim` trains on 2023 and scores 2024; `make revenue-demo` narrates the Spa weekend.
+
+The live feed: replay laps 28 to 34 of the real 2024 São Paulo Grand Prix from the cached OpenF1 records. Russell leads with $2.74M of sponsor bonuses if the race ended now, pits under the Virtual Safety Car and drops to $260k; Colapinto's car stops under the Safety Car (car_data), the red flag follows, the two are correlated into one versioned incident, the race report corroborates it and the cost cap desk is asked to investigate. Every decision says whether Jev (TypeSafe) made it or the deterministic fallback did.
+
+```bash
+make live-replay
+```
+
+```bash
+make live-spa
+```
 
 ## What it did today
 

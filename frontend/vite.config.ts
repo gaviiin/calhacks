@@ -205,6 +205,8 @@ export default defineConfig({
     proxy: {
       // the revenue desk API (finance/api.py)
       '/api': { target: process.env.PITWALL_API ?? 'http://localhost:8000', changeOrigin: true },
+      // the live racing feed (live_racing/api.py): race state, incident signals, SSE at /live/stream
+      '/live': { target: process.env.PITWALL_LIVE_API ?? 'http://localhost:8020', changeOrigin: true },
     },
   },
 });

@@ -22,8 +22,9 @@ spacetimedb/dist/
 system_of_work/spacetimedb/target/
 system_of_work/spacetimedb/dist/
 
-# finance
-/data/
+# finance (data/openf1 is the committed OpenF1 cache the live racing replay reads)
+/data/*
+!/data/openf1/
 keys/
 
 # cost cap desk

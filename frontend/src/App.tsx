@@ -9,10 +9,11 @@ import { RiskView } from './views/RiskView';
 import { CostCapView } from './views/CostCapView';
 import { EvidenceView } from './views/EvidenceView';
 import { InboxView } from './views/InboxView';
+import { LiveView } from './views/LiveView';
 import { Overview } from './views/Overview';
 import { RevenueView } from './views/RevenueView';
 
-// #/ · #/inbox/<key> · #/cost-cap · #/revenue · #/evidence · #/audit/<from>-<to>
+// #/ · #/live · #/inbox/<key> · #/cost-cap · #/revenue · #/evidence · #/audit/<from>-<to>
 
 interface Route {
   view: View;
@@ -21,7 +22,7 @@ interface Route {
 
 function parse(hash: string): Route {
   const [, view = '', ...rest] = hash.replace(/^#/, '').split('/');
-  const known: View[] = ['inbox', 'cost-cap', 'risk', 'revenue', 'evidence', 'audit', 'connect'];
+  const known: View[] = ['live', 'inbox', 'cost-cap', 'risk', 'revenue', 'evidence', 'audit', 'connect'];
   return { view: (known as string[]).includes(view) ? (view as View) : 'overview', arg: rest.join('/') || null };
 }
 
@@ -58,10 +59,12 @@ export default function App() {
       </a>
       <Shell view={route.view} go={(v) => nav(v === 'overview' ? '/' : `/${v}`)} inboxCount={inbox.length} status={status} />
       <main id="main" className="page">
-        {!cc.ready && route.view !== 'revenue' && route.view !== 'evidence' && route.view !== 'connect' ? (
+        {!cc.ready && route.view !== 'revenue' && route.view !== 'evidence' && route.view !== 'connect' && route.view !== 'live' ? (
           <p className="muted loading">Connecting to the cost cap desk on SpacetimeDB…</p>
         ) : route.view === 'overview' ? (
           <Overview inbox={inbox} status={status} />
+        ) : route.view === 'live' ? (
+          <LiveView />
         ) : route.view === 'inbox' ? (
           <InboxView inbox={inbox} selected={route.arg} select={(k) => nav(`/inbox/${k}`)} status={status} />
         ) : route.view === 'cost-cap' ? (

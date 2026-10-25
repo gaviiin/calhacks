@@ -14,7 +14,8 @@ AGENT_MODE := $(if $(OFFLINE),--offline,)
 .PHONY: setup test stdb-start bindings dashboard landing \
         rulebook world api stdb-publish stdb-test bootstrap advance sync learner review-policies \
         analyst standing review-items gateway redteam score cost-cap-run \
-        revenue-api revenue-sim revenue-demo evidence-publish evidence-replay
+        revenue-api revenue-sim revenue-demo evidence-publish evidence-replay \
+        live-fetch live-replay live-spa live-api jev-smoke
 
 # ---------------------------------------------------------------- shared
 
@@ -114,3 +115,20 @@ revenue-sim:      ## train on 2023 (controller rulings become rules), then score
 
 revenue-demo:     ## Act 1: replay the real Spa 2024 weekend, narrated
 	$(ENV) uv run python -m finance.demo --round 14 --pace 120
+
+# ---------------------------------------------------------------- live racing (live_racing/): OpenF1 replay, Jev routing, incident hand-off
+
+live-fetch:       ## cache the 2024 São Paulo GP race from OpenF1 (real records with provenance, data/openf1; committed, so the replay runs offline)
+	uv run python scripts/fetch_openf1_brazil_2024.py
+
+live-replay:      ## replay laps FROM-TO (default 28-34) of the 2024 São Paulo GP at SPEED x (default 20); publishes to pit-wall when SpacetimeDB is up
+	$(ENV) uv run python scripts/replay_brazil_2024.py --from-lap $(or $(FROM),28) --to-lap $(or $(TO),34) --speed $(or $(SPEED),20) $(if $(PAUSE),--pause-at $(PAUSE),)
+
+live-spa:         ## P1: the Spa 2024 result change replayed from the real FIA documents (Doc 43, 44, 46)
+	$(ENV) uv run python scripts/replay_spa_2024.py --speed $(or $(SPEED),120)
+
+live-api:         ## the live racing API on :8020 (start/pause a replay, /live/state, /live/stream SSE, the finance-impact hand-off)
+	$(ENV) uv run uvicorn live_racing.api:app --port 8020
+
+jev-smoke:        ## credentialed Jev (TypeSafe System One) smoke test over the labeled fixtures; BLOCKED without TYPESAFE_API_KEY
+	$(ENV) uv run python scripts/smoke_test_jev.py

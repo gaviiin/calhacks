@@ -3170,3 +3170,406 @@ code {
 .audit > .spine {
   grid-column: 1 / -1;
 }
+
+/* ---------------------------------------------------------------- live race */
+
+.live-race {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+}
+
+.live-race > section {
+  background: var(--panel);
+  border: 1px solid var(--line-soft);
+  border-radius: 2px;
+  padding: 18px 20px;
+}
+
+.live-race .intro {
+  max-width: 72ch;
+  margin-top: 6px;
+}
+
+.live-race .run-bar .outcome {
+  flex-basis: 100%;
+}
+
+.replay-option {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  min-height: 38px;
+  padding: 0 4px;
+  color: var(--steel);
+  font-size: 12.5px;
+}
+
+.replay-option input {
+  accent-color: var(--steel);
+}
+
+.replay-panel {
+  display: grid;
+  grid-template-columns: minmax(0, 1.5fr) minmax(300px, 1fr);
+  gap: 16px 32px;
+}
+
+.replay-status {
+  display: grid;
+  gap: 10px;
+  align-content: start;
+}
+
+.replay-line {
+  color: var(--steel);
+}
+
+.metrics {
+  padding-left: 24px;
+  border-left: 1px solid var(--line-soft);
+}
+
+.metrics .kv div {
+  grid-template-columns: 190px 1fr;
+}
+
+.progress-fill--steel {
+  background: var(--steel);
+}
+
+.chip-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.flag--neutral {
+  color: var(--steel);
+}
+
+.flag > span {
+  min-width: 0;
+}
+
+.race-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 8px 18px;
+  margin-bottom: 10px;
+}
+
+.race-clock {
+  font: 600 32px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.race-lap {
+  font: 600 21px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.weather {
+  color: var(--steel);
+  font-size: 13px;
+}
+
+.weather b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.small {
+  font-size: 12.5px;
+}
+
+.block {
+  display: block;
+}
+
+.cars td,
+.cars th {
+  white-space: nowrap;
+}
+
+.exposure {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 14px;
+  margin: 14px 0 4px;
+  font-size: 15px;
+  color: var(--steel);
+}
+
+.exposure > b {
+  font: 600 30px/1 var(--mono);
+  font-variant-numeric: tabular-nums;
+  color: var(--ink);
+}
+
+.lines-list {
+  display: grid;
+  gap: 4px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+}
+
+.lines-list li {
+  display: grid;
+  grid-template-columns: 80px 1fr;
+  gap: 12px;
+}
+
+.lines-list .mono {
+  text-align: right;
+  color: var(--ink);
+}
+
+.live-race h3 {
+  margin-top: 16px;
+}
+
+.moves {
+  display: grid;
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 13px;
+}
+
+.move {
+  display: grid;
+  grid-template-columns: 150px 1fr;
+  gap: 12px;
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+}
+
+.move--down {
+  border-left-color: var(--steel);
+}
+
+.move > span:first-child {
+  font-size: 11.5px;
+}
+
+.move b {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.classification {
+  margin-top: 14px;
+}
+
+.classification summary,
+.log-summary {
+  cursor: pointer;
+  color: var(--steel);
+  font: 600 13px/1.35 var(--body);
+}
+
+.row--team td {
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.incidents {
+  display: grid;
+  gap: 12px;
+}
+
+.incident {
+  display: grid;
+  gap: 10px;
+  padding: 14px 16px;
+  border-radius: 2px;
+  background: var(--panel-2);
+}
+
+.incident-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 6px 14px;
+}
+
+.incident-title {
+  margin: 0;
+  color: var(--ink);
+  font-size: 14px;
+}
+
+.versions {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.version {
+  display: grid;
+  gap: 8px;
+  padding: 2px 0 2px 12px;
+  border-left: 1px solid var(--line);
+}
+
+.version--hold {
+  border-left-color: var(--hold);
+}
+
+.version-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  font-size: 12.5px;
+}
+
+.version-head > b.mono {
+  color: var(--ink);
+}
+
+.version-message {
+  max-width: 90ch;
+  font-size: 13px;
+  line-height: 1.55;
+}
+
+.evidence-list {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+  color: var(--steel);
+}
+
+.evidence-list li {
+  display: grid;
+  grid-template-columns: 64px 150px 1fr;
+  gap: 10px;
+  align-items: baseline;
+}
+
+.evidence-list .mono {
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.impact {
+  padding: 10px 12px;
+  border-radius: 2px;
+  background: var(--raise);
+}
+
+.impact h3 {
+  margin-top: 0;
+}
+
+.routing-body {
+  display: grid;
+  gap: 4px;
+}
+
+.routing-body .chip-row {
+  margin-top: 2px;
+}
+
+.results-list {
+  display: grid;
+  gap: 12px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.result {
+  display: grid;
+  gap: 10px;
+  padding: 12px 14px 12px 16px;
+  border-left: 1px solid var(--line);
+  border-radius: 2px;
+  background: var(--panel-2);
+}
+
+.result--hold {
+  border-left-color: var(--hold);
+}
+
+.before-after {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr);
+  gap: 12px 20px;
+  align-items: center;
+}
+
+.before-after > div {
+  display: grid;
+  gap: 2px;
+}
+
+.before-after .big {
+  font-size: 22px;
+  font-weight: 600;
+  color: var(--ink);
+}
+
+.before-after .delta {
+  font-size: 15px;
+  color: var(--ink);
+}
+
+@media (max-width: 1180px) {
+  .replay-panel {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .metrics {
+    padding-left: 0;
+    border-left: 0;
+    padding-top: 14px;
+    border-top: 1px solid var(--line-soft);
+  }
+}
+
+@media (max-width: 720px) {
+  .live-race > section {
+    padding: 14px;
+  }
+
+  .metrics .kv div,
+  .lines-list li,
+  .move,
+  .evidence-list li,
+  .before-after {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 2px;
+  }
+
+  .lines-list .mono {
+    text-align: left;
+  }
+
+  .race-clock {
+    font-size: 26px;
+  }
+
+  .exposure > b {
+    font-size: 24px;
+  }
+
+  .before-after .delta {
+    justify-self: start;
+  }
+}

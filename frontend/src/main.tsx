@@ -6,6 +6,7 @@ import { DbConnection as EvidenceConnection } from './module_bindings';
 import App from './App';
 import { CostCapDataProvider } from './lib/costcap';
 import { EvidenceBridge } from './lib/evidence';
+import { LiveProvider } from './lib/live';
 import { RevenueProvider } from './lib/revenue';
 import { COST_CAP_DB, EVIDENCE_DB, HOST, SeatProvider, readToken, saveToken } from './lib/seat';
 import { SeatConnectionProvider } from './lib/seatConnection';
@@ -53,11 +54,13 @@ createRoot(document.getElementById('root')!).render(
     <SeatProvider>
       <SeatConnectionProvider>
       <RevenueProvider>
-        <EvidenceRoot>
-          <CostCapRoot>
-            <App />
-          </CostCapRoot>
-        </EvidenceRoot>
+        <LiveProvider>
+          <EvidenceRoot>
+            <CostCapRoot>
+              <App />
+            </CostCapRoot>
+          </EvidenceRoot>
+        </LiveProvider>
       </RevenueProvider>
       </SeatConnectionProvider>
     </SeatProvider>

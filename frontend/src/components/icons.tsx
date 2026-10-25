@@ -137,3 +137,15 @@ export const IconMail = (p: P) => (
     <path d="M2.5 4h11v8.5h-11zM2.5 4.5L8 9l5.5-4.5" />
   </Svg>
 );
+
+export const IconFlag = (p: P) => (
+  <Svg {...p}>
+    <path d="M3.5 14V2.5M3.5 3h9l-2 3 2 3h-9" />
+  </Svg>
+);
+
+export const IconStop = (p: P) => (
+  <Svg {...p}>
+    <path d="M4 4h8v8H4z" />
+  </Svg>
+);
