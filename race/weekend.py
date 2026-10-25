@@ -107,6 +107,8 @@ class Weekend:
         inc = self.book.observe(ev, effects, jev)
         self._time("log", t0)
         if inc is None:
+            if any(e.bucket == "6910" for e in effects):  # an FIA fine: an entry outside the cap, no incident
+                self.book_entries(ledger.entries_for(None, effects, st))
             self.apply_answers()
             return
         st.incidents[inc.incident_key] = inc
@@ -126,14 +128,8 @@ class Weekend:
             self.say(f"[respond] {a.kind}: {a.title} ({a.status})")
 
         t0 = time.perf_counter()
-        ents = ledger.entries_for(inc, effects, st)
+        self.book_entries(ledger.entries_for(inc, effects, st))
         self._time("account", t0)
-        for e in ents:
-            if e.entry_key not in st.entries:
-                st.entries[e.entry_key] = e
-                if self.sink:
-                    self.sink.entry(e)
-                self.say(f"[account] {e.memo} ${e.amount_cents / 100:,.0f} ({e.recognition})")
 
         t0 = time.perf_counter()
         qs = questions.questions_for(inc, effects, st)
@@ -170,6 +166,14 @@ class Weekend:
                     self.say(f"[ask] {q.route_role}: {q.prompt}")
         self.replan(f"result:{replay.session.get('session_key')}")
 
+    def book_entries(self, ents: list[Entry]) -> None:
+        for e in ents:
+            if e.entry_key not in self.state.entries:
+                self.state.entries[e.entry_key] = e
+                if self.sink:
+                    self.sink.entry(e)
+                self.say(f"[account] {e.memo[:90]} ${e.amount_cents / 100:,.0f} ({e.recognition})")
+
     # ------------------------------------------------------------------ stages that run on their own clock
     def replan(self, trigger: str) -> None:
         t0 = time.perf_counter()
@@ -204,16 +208,22 @@ class Weekend:
     # ------------------------------------------------------------------ run
     def run(self) -> dict:
         stats = {}
+        booked_before = 0
         for key in self.sessions:
             r = Replay(key, self.state.team, pace=self.pace, from_lap=0, sink=self.sink, offline=self.offline, forecast=self.forecast,
                        fixtures_only=self.fixtures_only, max_sleep=self.max_sleep, quiet=self.quiet, hooks=self,
                        from_at=self.from_at.get(key, ""), era=self.info.get("era", "2025-26"))
+            # One cap year across the weekend: the season's cap, what was booked before it, and the earlier sessions.
+            r.ctx.year = self.state.year
+            r.ctx.cap_level_cents = cap_forecast.cap_level_cents(self.state.year)
+            r.ctx.cap_relevant_cents = cap_forecast.relevant_before_cents(self.state) + booked_before
             self.state.replay = r
             self.state.session = r.session
             self.state.session_type = r.session_type
             if key == self.sessions[0]:
                 self.replan("baseline")
             stats[key] = r.run()
+            booked_before += r.ctx.race_cost_mid
         waited = 0.0
         while self.linger and waited < self.linger and any(q.status == "open" for q in self.state.questions.values()):
             time.sleep(1.0)

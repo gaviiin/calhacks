@@ -194,4 +194,13 @@ def test_module_tables_are_the_evidence_and_finance_mirror(owner_db):
         "raceForecasts",
         "racePolicies",
         "racePrecedents",
+        # race day (race/weekend.py): the flow after the tape
+        "raceIncidents",
+        "raceBeliefs",
+        "raceActions",
+        "raceEntries",
+        "raceEntryLines",
+        "raceQuestions",
+        "raceSims",
+        "raceCloses",
     }
