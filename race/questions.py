@@ -243,21 +243,22 @@ def apply_answers(state, sink, book) -> list[Incident]:
 
 def _apply_to_lines(q: Question, opt: dict, by: str, state, sink) -> None:
     lo, mid, hi = (int(x) for x in opt["band"])
-    reason = f"{by}: {opt['label']} ({q.question_key})"[:512]
     for ev, effs in state.effects:
         for i, e in enumerate(effs):
             k = f"{ev.key}:{i}"
             if k not in q.effect_keys:
                 continue
+            # The desk applies the person's recorded answer through pit-wall, which checks the answer exists and covers
+            # this line, and records whose sign-off it is (a deadline default signs nothing off).
             if e.bucket == "6050" and abs(e.mid_cents - mid) > 0.05 * max(mid, 1):
                 parts_lo, parts_mid, parts_hi = _parts_share(opt["severity"], lo, mid, hi)
                 e.status = "corrected"
                 if sink is not None:
-                    sink.correct(k, parts_lo, parts_mid, parts_hi, reason, by, state.now)
-            elif e.status in ("needs_person", "proposed"):
+                    sink.apply_answer(q.question_key, k, True, parts_lo, parts_mid, parts_hi, state.now)
+            elif e.status in ("needs_person", "proposed", "autonomous"):
                 e.status = "confirmed"
                 if sink is not None:
-                    sink.confirm(k, reason, by, state.now)
+                    sink.apply_answer(q.question_key, k, False, e.low_cents, e.mid_cents, e.high_cents, state.now)
 
 
 def _parts_share(sev: str, lo: int, mid: int, hi: int) -> tuple[int, int, int]:

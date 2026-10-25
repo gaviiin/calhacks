@@ -33,6 +33,40 @@ Learning has eras (`policy_learner.ERAS`): São Paulo 2024 learns only from Will
 (`make race-onboard-2024`, store `data/precedents_2024.jsonl`, policies `race-y2024-*`) plus two press-sourced practice
 crashes, so a replay never matches its own future. Every assumption is in `data/williams_2024.json` with its basis.
 
+## pit-wall is the backend, not a store
+
+The rules that must hold no matter which process misbehaves live in the pit-wall module (`spacetimedb/src/index.ts`),
+not in Python:
+
+- **One door, one audit row.** Every decision that moves money or speaks for a person goes through `gate()`: the module
+  resolves who is calling from the connection's identity (never from a `by` argument), checks the rule, then applies the
+  change or refuses it, and writes exactly one `race_audit` row in the same transaction. A refusal is committed, never
+  thrown, so the attempt is on the record even when nothing changed.
+- **The database authorizes postings.** The desk asks (`request_race_posting`); the module answers `authorized` or
+  `held` for a named review role from the entry, the estimate behind it and the CFO's rules (`race_rules`): under
+  $250,000 the desk may post; from $250,000 the head of cost cap decides; from $1,000,000 the CFO; an estimate that is
+  only Jev's or the forecast agent's needs a person's sign-off (`race_signoffs`) first. A sign-off re-runs the decision
+  in the same transaction. The ERP (`world/api.py`) accepts a race entry only when pit-wall authorized it, so an agent
+  holding the gateway key still cannot post around the rule (403; 503 if pit-wall cannot be asked).
+- **People are seats.** `grant_seat` gives an identity a role and a name (`race_seats`); decisions are recorded under that
+  name. The publisher's identity runs the agents and never counts as a person. Agents are refused every person
+  decision, a seat must be at least as senior as the role an entry was held for, and the person who signed off an
+  estimate cannot also approve its posting.
+- **The database keeps time.** A question's deadline is a scheduled reducer (`race_question_timers`): when it comes due the
+  module takes the stated default even if no agent is running. The replay's pace (`set_race_clock`) maps race time to
+  the wall clock. A default applies the conservative option but signs nothing off.
+- **Measured, live.** `race_latency` is measured inside the transaction (desk read -> commit); `race_online` is kept by
+  the connect/disconnect hooks. The race-day views show both, the dashboard's own commit-to-screen time, and the audit
+  trail (`views/roles/PitWallProof.tsx`).
+
+Seat people on their own devices (each browser has its own pit-wall identity, shown on the strip):
+
+```bash
+uv run python scripts/race_grant.py --role race_head --identity <hex> --name "Morgan Hale"
+uv run python scripts/race_grant.py --role head_of_cost_cap --identity <hex> --name "Priya Shah"
+uv run python scripts/race_grant.py --role cfo --identity <hex> --name "Dana Okafor"
+```
+
 ## Run
 
 ```bash

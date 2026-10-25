@@ -36,6 +36,26 @@ from .generate import SOURCES
 DEFAULT_OUT = Path(__file__).resolve().parent / "out"
 SIM_START = date(2026, 1, 1)
 DEFAULT_GATEWAY_KEY = "dev-gateway-key"
+# A race entry (evidence ref race_entry:<key>) is accepted only when pit-wall authorized it (or a person approved it):
+# the gateway key alone is not enough. ERP_REQUIRE_PITWALL=0 turns the check off for tests of the ERP itself.
+PITWALL_OK = ("authorized", "approved", "posted")
+
+
+def pitwall_posting_status(entry_key: str) -> str | None:
+    """race_postings.status for an entry in pit-wall, '' when there is no row, None when pit-wall cannot be asked."""
+    import httpx
+
+    base = os.environ.get("SPACETIME_URL", "http://127.0.0.1:3000").rstrip("/")
+    db = os.environ.get("SPACETIME_DB", "pit-wall")
+    q = "SELECT status FROM race_postings WHERE entry_key = '" + entry_key.replace("'", "''") + "'"
+    try:
+        r = httpx.post(f"{base}/v1/database/{db}/sql", content=q, headers={"Content-Type": "text/plain"}, timeout=4)
+    except httpx.HTTPError:
+        return None
+    if r.status_code != 200:
+        return None
+    rows = [row for stmt in r.json() for row in stmt.get("rows", [])]
+    return str(rows[0][0]) if rows else ""
 SUBLEDGER_ACCOUNT = re.compile(r"^cap(cat|adj)-[A-Z0-9_]+$")
 
 
@@ -167,6 +187,16 @@ def create_app(out_dir: Path | str | None = None) -> FastAPI:
         except ValueError as e:  # JSON decode or pydantic ValidationError
             detail = e.errors(include_url=False) if isinstance(e, ValidationError) else str(e)
             return JSONResponse({"detail": detail}, status_code=422)
+        if os.environ.get("ERP_REQUIRE_PITWALL", "1") != "0":
+            for ref in entry.evidence_refs:
+                if not ref.startswith("race_entry:"):
+                    continue
+                key = ref.split(":", 1)[1]
+                status = pitwall_posting_status(key)
+                if status is None:  # fail closed: no authorization can be read, so none is assumed
+                    return JSONResponse({"detail": f"pit-wall unreachable: race entry {key} cannot be authorized"}, status_code=503)
+                if status not in PITWALL_OK:
+                    return JSONResponse({"detail": f"pit-wall has not authorized race entry {key} ({status or 'never requested'})"}, status_code=403)
         s = st(request)
         for ln in entry.lines:
             if (ln.debit_minor > 0) == (ln.credit_minor > 0):

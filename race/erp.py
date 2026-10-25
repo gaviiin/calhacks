@@ -13,9 +13,14 @@ Each new entry is either posted now or held. It is held when
                                           human_head_of_cost_cap may approve, the controller decides below it
     c) the entry is outside the cap (`recognition == 'excluded'`, an FIA fine)  -> Head of Cost Cap confirms the exclusion
 
-The highest role wins (cfo > head_of_cost_cap > controller) and every reason is kept. Otherwise the desk posts it on
-its own authority. A held entry reaches the ERP only after a person approves it in the dashboard
-(decideRacePosting); a rejected one never does.
+The highest role wins (cfo > head_of_cost_cap > controller) and every reason is kept.
+
+pit-wall decides, not this file. With SpacetimeDB up, the desk asks the module to authorize each entry
+(request_race_posting) and sends to the ERP only what it authorized; the module applies the rules above plus one more
+(an estimate that is only Jev's or the forecast agent's waits for a person's sign-off), and the ERP gateway refuses a
+race entry pit-wall has not authorized. `review_for` below is the same rule set, used only for a dry run without the
+database. A held entry reaches the ERP only after a person approves it (decideRacePosting) or signs off the estimate
+behind it; a rejected one never does.
 
 The journal entry (POST /erp/journal_entries on the world API, :8010, header X-Gateway-Key):
 
@@ -241,10 +246,29 @@ def _post_one(state, entry: Entry, sink, *, reason: str, by: str = "race_desk", 
 
 
 # ---------------------------------------------------------------------------------------------- the two calls
+def _authorize(e: Entry, sink) -> tuple[str, str, str] | None:
+    """pit-wall's decision on an entry: (status, review role, reason), or None without the database."""
+    if not _usable(sink) or not hasattr(sink, "request_posting"):
+        return None
+    row = sink.request_posting(e.entry_key, now_iso())
+    if not isinstance(row, dict) or not row:
+        return None
+    return _sql_str(row.get("status")), _sql_str(row.get("review_role")), _sql_str(row.get("reason"))
+
+
 def post(state, entries: list[Entry], sink) -> list[Posting]:
     out = []
     for e in entries:
         try:
+            decision = _authorize(e, sink)
+            if decision is not None:
+                status, role, reason = decision
+                if status in ("authorized", "approved"):
+                    out.append(_post_one(state, e, sink, reason=reason, review_role=role))
+                elif status != "posted":  # held (or a person already decided): pit-wall's row is the record
+                    out.append(Posting(entry_key=e.entry_key, incident_key=e.incident_key, status=status if status in ("held", "rejected", "posted") else "held",
+                                       amount_cents=e.amount_cents, review_role=role, reason=reason or "held by pit-wall"))
+                continue
             role, why = review_for(e, state)
             if role:
                 out.append(Posting(entry_key=e.entry_key, incident_key=e.incident_key, status="held", amount_cents=e.amount_cents,
@@ -273,7 +297,7 @@ def apply_reviews(state, sink) -> list[Posting]:
     out: list[Posting] = []
     now = time.monotonic()
     try:
-        waiting = [k for k, p in postings.items() if p.status in ("held", "approved")]
+        waiting = [k for k, p in postings.items() if p.status in ("held", "approved", "authorized")]
         if waiting and _usable(sink) and now - desk["last_read"] >= READ_EVERY_S:
             desk["last_read"] = now
             rows = {_sql_str(r.get("entry_key")): r for r in sink.sql("SELECT * FROM race_postings")}
@@ -287,6 +311,8 @@ def apply_reviews(state, sink) -> list[Posting]:
                     desk["approver"][key] = who
                     out.append(_post_one(state, e, sink, by=f"race_desk after {who}", review_role=cur.review_role,
                                          reason=f"approved by {who} ({cur.review_role.replace('_', ' ')})"))
+                elif status == "authorized" and cur.status != "authorized":  # a person signed off the estimate behind it
+                    out.append(_post_one(state, e, sink, review_role=cur.review_role, reason=_sql_str(r.get("reason")) or "authorized by pit-wall"))
                 elif status == "rejected" and cur.status != "rejected":
                     out.append(Posting(entry_key=key, incident_key=e.incident_key, status="rejected", amount_cents=e.amount_cents,
                                        review_role=cur.review_role, by=who, reason=f"rejected by {who}: kept out of the ERP"))

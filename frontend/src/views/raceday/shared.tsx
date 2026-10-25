@@ -71,7 +71,7 @@ export function ActButton({ label, busyLabel, run, primary = false, disabled = f
       await run(person.name, new Date().toISOString());
     } catch (e) {
       const msg = e instanceof Error ? e.message : String(e);
-      setError(/race_head|unauthorized/i.test(msg) ? 'This browser does not hold the race_head seat in pit-wall (scripts/race_grant.py --role race_head).' : msg);
+      setError(/no seat|race_head|unauthorized/i.test(msg) ? `${msg}. Seat this browser: scripts/race_grant.py --role race_head --identity <hex> --name "<name>"` : msg);
     } finally {
       setBusy(false);
     }

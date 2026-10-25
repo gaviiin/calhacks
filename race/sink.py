@@ -99,6 +99,21 @@ class RaceSink:
     def posting(self, p: Posting) -> bool:
         return self.call("record_race_posting", [p.wire()])
 
+    def request_posting(self, entry_key: str, at: str) -> dict | None:
+        """Ask pit-wall to authorize an entry; return its decision row (status authorized | held, review_role, reason)."""
+        if not self.call("request_race_posting", [entry_key, at]):
+            return None
+        rows = self.sql(f"SELECT * FROM race_postings WHERE entry_key = '{entry_key.replace(chr(39), chr(39) * 2)}'")
+        return rows[0] if rows else None
+
+    def apply_answer(self, question_key: str, effect_key: str, corrected: bool, low: int, mid: int, high: int, at: str) -> bool:
+        """Apply a person's recorded answer (or a deadline default) to one line the question covered."""
+        return self.call("apply_race_answer", [question_key, effect_key, corrected, low, mid, high, at])
+
+    def set_clock(self, pace: float) -> bool:
+        """Tell pit-wall how fast race time runs, so the database keeps question deadlines on the wall clock."""
+        return self.call("set_race_clock", [float(min(max(pace or 1000.0, 0.001), 1000.0))])
+
     def correct(self, effect_key: str, low: int, mid: int, high: int, reason: str, by: str, at: str) -> bool:
         return self.call("correct_race_effect", [effect_key, low, mid, high, reason, by, at])
 
