@@ -1,0 +1,1295 @@
+/* The car blueprint. A drawing sheet in the desk's dark world: navy paper, blue ink, the desk's own
+   faces (Barlow Condensed labels, Plex Mono figures) and its status lamps for condition (amber possible,
+   coral likely damaged), always with a word next to the colour. */
+
+.bp-stage {
+  --bp-paper: #040a19;
+  --bp-paper-2: #071025;
+  --bp-rule: rgba(112, 162, 255, 0.16);
+  --bp-rule-strong: rgba(112, 162, 255, 0.3);
+  --bp-ink: #c4d9ff;
+  --bp-ink-dim: #7fa3e0;
+  --bp-ink-faint: #5a7bb5;
+  --bp-cyan: #66c4ff;
+  --bp-glass: rgba(5, 14, 36, 0.86);
+}
+
+.bp-sheet {
+  position: relative;
+  display: grid;
+  grid-template-rows: auto auto;
+  background: var(--bp-paper);
+  border: 1px solid var(--bp-rule-strong);
+  border-radius: var(--r-lg, 2px);
+  overflow: hidden;
+  isolation: isolate;
+}
+
+.bp-canvas {
+  position: absolute;
+  left: 0;
+  top: 0;
+  z-index: 0;
+  pointer-events: none;
+  opacity: 0;
+  transition: opacity 420ms var(--ease);
+}
+
+.bp-sheet.is-ready .bp-canvas {
+  opacity: 1;
+}
+
+/* ---------------------------------------------------------------- hero */
+
+.bp-hero {
+  position: relative;
+  z-index: 1;
+  height: clamp(380px, 40vw, 560px);
+  cursor: grab;
+  touch-action: pan-y;
+  user-select: none;
+  -webkit-user-select: none;
+}
+
+.bp-hero.is-dragging {
+  cursor: grabbing;
+}
+
+.bp-hero-title {
+  position: absolute;
+  left: 18px;
+  bottom: 14px;
+  pointer-events: none;
+}
+
+.bp-hero-corner {
+  position: absolute;
+  right: 16px;
+  bottom: 12px;
+}
+
+.bp-leader {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.bp-leader path {
+  fill: none;
+  stroke: #a9dcff;
+  stroke-width: 1;
+  vector-effect: non-scaling-stroke;
+}
+
+.bp-leader circle {
+  fill: #eaf7ff;
+}
+
+.bp-leader .bp-leader-ring {
+  fill: none;
+  stroke: #a9dcff;
+  stroke-width: 1;
+  opacity: 0.7;
+}
+
+.bp-callout {
+  position: absolute;
+  top: 16px;
+  width: min(300px, calc(50% - 40px));
+  padding: 12px 14px 13px;
+  background: var(--bp-glass);
+  border: 1px solid var(--bp-rule-strong);
+  border-radius: var(--r-md, 2px);
+  backdrop-filter: blur(8px);
+  -webkit-backdrop-filter: blur(8px);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(-4px);
+  transition:
+    opacity 160ms var(--ease),
+    transform 220ms var(--ease);
+}
+
+.bp-callout--l {
+  left: 16px;
+}
+
+.bp-callout--r {
+  right: 16px;
+}
+
+.bp-callout.is-on {
+  opacity: 1;
+  transform: none;
+}
+
+.bp-loading {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-content: center;
+  gap: 10px;
+  justify-items: center;
+  font: 600 11px/1 var(--display);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bp-ink-dim);
+}
+
+.bp-loading-bar {
+  width: 160px;
+  height: 1px;
+  background:
+    linear-gradient(90deg, transparent, var(--bp-cyan), transparent) -160px 0 / 160px 1px no-repeat,
+    var(--bp-rule);
+  animation: bp-scan 1.1s linear infinite;
+}
+
+@keyframes bp-scan {
+  to {
+    background-position:
+      160px 0,
+      0 0;
+  }
+}
+
+/* ---------------------------------------------------------------- the rigid views */
+
+.bp-views {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  grid-template-columns: minmax(0, 1.62fr) minmax(0, 1fr);
+  grid-template-rows: 196px 236px auto;
+  border-top: 1px solid var(--bp-rule-strong);
+}
+
+.bp-view {
+  position: relative;
+  margin: 0;
+  cursor: crosshair;
+  border-bottom: 1px solid var(--bp-rule);
+}
+
+.bp-view--side,
+.bp-view--bottom {
+  border-right: 1px solid var(--bp-rule);
+}
+
+.bp-view figcaption {
+  position: absolute;
+  left: 12px;
+  top: 10px;
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font: 600 11px/1 var(--display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--bp-ink-dim);
+  pointer-events: none;
+}
+
+.bp-view figcaption b {
+  display: inline-grid;
+  place-items: center;
+  width: 16px;
+  height: 16px;
+  border: 1px solid var(--bp-ink-faint);
+  border-radius: 50%;
+  font-size: 10px;
+  letter-spacing: 0;
+  color: var(--bp-ink);
+}
+
+.bp-view figcaption .mono {
+  font: 500 9.5px/1 var(--mono);
+  letter-spacing: 0.04em;
+  color: var(--bp-ink-faint);
+}
+
+.bp-dims {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  overflow: visible;
+  pointer-events: none;
+}
+
+.bp-dim line {
+  stroke: #6d96dc;
+  stroke-width: 0.75;
+}
+
+.bp-dim path {
+  fill: #6d96dc;
+}
+
+.bp-dim text {
+  font: 500 9.5px var(--mono);
+  fill: #9cc0fb;
+  letter-spacing: 0.03em;
+  paint-order: stroke;
+  stroke: var(--bp-paper-2);
+  stroke-width: 3px;
+}
+
+.bp-centre {
+  stroke: rgba(120, 168, 255, 0.42);
+  stroke-width: 0.75;
+  stroke-dasharray: 14 3 2 3;
+}
+
+.bp-ground {
+  stroke: rgba(120, 168, 255, 0.3);
+  stroke-width: 0.75;
+}
+
+.bp-titleblock {
+  grid-column: 1 / -1;
+  min-height: 40px;
+}
+
+/* ---------------------------------------------------------------- the stage around the sheet */
+
+.bp-stage {
+  display: grid;
+  gap: 12px;
+  outline: none;
+}
+
+.bp-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 14px 20px;
+}
+
+.bp-head-title {
+  display: grid;
+  gap: 2px;
+  margin-right: auto;
+}
+
+.bp-stage .bp-head-title h2 {
+  margin: 0;
+  font-size: 21px;
+}
+
+.bp-cars {
+  display: flex;
+  gap: 6px;
+}
+
+.bp-car {
+  display: inline-flex;
+  align-items: center;
+  gap: 9px;
+  min-height: 40px;
+  padding: 0 10px 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-md, 2px);
+  background: transparent;
+  color: var(--steel);
+  cursor: pointer;
+  transition:
+    background 160ms var(--ease),
+    border-color 160ms var(--ease),
+    color 160ms var(--ease);
+}
+
+.bp-car:hover {
+  background: var(--panel-2);
+  color: var(--ink);
+}
+
+.bp-car.is-on {
+  background: var(--raise);
+  border-color: var(--steel);
+  color: var(--ink);
+}
+
+.bp-car-num {
+  font-weight: 600;
+  font-size: 14px;
+}
+
+.bp-car-code {
+  font: 700 14px/1 var(--display);
+  letter-spacing: 0.06em;
+}
+
+.bp-car-pos {
+  color: var(--muted);
+}
+
+.bp-flag {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 7px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  font: 600 11.5px/1.2 var(--body);
+  color: var(--steel);
+  white-space: nowrap;
+}
+
+.bp-flag--ok {
+  color: #9fd8ff;
+  border-color: rgba(120, 190, 255, 0.4);
+  background: rgba(102, 196, 255, 0.08);
+}
+
+.bp-flag--hold {
+  color: var(--hold);
+  border-color: rgba(255, 181, 71, 0.45);
+  background: var(--hold-wash);
+}
+
+.bp-flag--alert {
+  color: var(--alert);
+  border-color: rgba(255, 114, 95, 0.45);
+  background: var(--alert-wash);
+}
+
+.bp-tools {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.bp-explode {
+  min-width: 118px;
+  justify-content: center;
+}
+
+.bp-explode.is-on {
+  background: var(--raise);
+}
+
+.bp-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 372px;
+  gap: 12px;
+  align-items: start;
+}
+
+.bp-sheet--wait,
+.bp-sheet--none {
+  min-height: clamp(380px, 40vw, 560px);
+  display: grid;
+  place-items: center;
+  padding: 24px;
+  text-align: center;
+}
+
+/* ---------------------------------------------------------------- hero overlays */
+
+.bp-hero-title {
+  display: grid;
+  gap: 6px;
+}
+
+.bp-iso {
+  font: 600 11px/1 var(--display);
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--bp-ink-dim);
+}
+
+.bp-iso-car {
+  font: 700 22px/1 var(--display);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  color: var(--bp-ink);
+}
+
+.bp-legend {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 12px;
+  margin-top: 4px;
+  font: 500 11.5px/1 var(--body);
+  color: var(--bp-ink-dim);
+}
+
+.bp-legend .mono {
+  font-size: 11px;
+  color: var(--bp-ink);
+}
+
+.bp-legend-ramp {
+  width: 72px;
+  height: 6px;
+  border-radius: 1px;
+}
+
+.bp-health {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  color: #8fc3ff;
+  font: 600 11.5px/1 var(--body);
+}
+
+.bp-health svg {
+  flex: none;
+}
+
+.bp-health .mono {
+  font-size: 11.5px;
+  font-weight: 600;
+}
+
+.bp-health--watch {
+  color: var(--hold);
+}
+
+.bp-health--damaged {
+  color: var(--alert);
+}
+
+.bp-health--unknown {
+  color: #8d9cbb;
+}
+
+.bp-hints {
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  font: 500 11px/1 var(--body);
+  color: var(--bp-ink-faint);
+}
+
+.bp-hints span + span::before {
+  content: '';
+  display: inline-block;
+  width: 3px;
+  height: 3px;
+  margin: 0 10px 2px 0;
+  border-radius: 50%;
+  background: var(--bp-ink-faint);
+  vertical-align: middle;
+}
+
+.bp-reset {
+  display: inline-grid;
+  place-items: center;
+  width: 26px;
+  height: 26px;
+  border: 1px solid var(--bp-rule-strong);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--bp-ink-dim);
+  cursor: pointer;
+}
+
+.bp-reset:hover {
+  color: var(--bp-ink);
+  border-color: var(--bp-ink-faint);
+}
+
+/* ---------------------------------------------------------------- callout card */
+
+.bp-co {
+  display: grid;
+  gap: 6px;
+}
+
+.bp-co-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  font: 600 10.5px/1 var(--display);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bp-ink-faint);
+}
+
+.bp-basis {
+  font: 600 10.5px/1 var(--body);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--bp-ink-dim);
+}
+
+.bp-stage .bp-co h4 {
+  margin: 0;
+  font: 700 19px/1.05 var(--display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+  color: #eef7ff;
+}
+
+.bp-co-line {
+  margin: 0;
+  font-size: 12.5px;
+  color: var(--bp-ink-dim);
+}
+
+.bp-co-price {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+  margin: 2px 0 0;
+}
+
+.bp-co-price b {
+  font-size: 20px;
+  color: #f2f8ff;
+}
+
+.bp-co-price .mono.muted {
+  font-size: 12px;
+  color: var(--bp-ink-dim);
+}
+
+.bp-co-cond {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  padding-top: 7px;
+  border-top: 1px solid var(--bp-rule);
+  font-size: 11.5px;
+}
+
+.bp-co-cond .muted {
+  color: var(--bp-ink-faint);
+}
+
+.bp-co-kv {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+}
+
+.bp-co-kv div {
+  display: flex;
+  gap: 6px;
+  align-items: baseline;
+}
+
+.bp-co-kv dt {
+  font-size: 11px;
+  color: var(--bp-ink-faint);
+}
+
+.bp-co-kv dd {
+  margin: 0;
+  font-size: 12px;
+  color: var(--bp-ink);
+}
+
+.bp-co-kv .mono {
+  font-size: 11.5px;
+}
+
+/* ---------------------------------------------------------------- title block */
+
+.bp-tb {
+  display: grid;
+  grid-template-columns: auto auto minmax(0, 1fr) auto auto;
+  margin: 0;
+  height: 100%;
+}
+
+.bp-tb div {
+  display: grid;
+  align-content: center;
+  gap: 3px;
+  padding: 7px 14px;
+  border-right: 1px solid var(--bp-rule);
+}
+
+.bp-tb div:last-child {
+  border-right: 0;
+}
+
+.bp-tb dt {
+  font: 600 9.5px/1 var(--display);
+  letter-spacing: 0.16em;
+  text-transform: uppercase;
+  color: var(--bp-ink-faint);
+}
+
+.bp-tb dd {
+  margin: 0;
+  font-size: 11.5px;
+  color: var(--bp-ink);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bp-tb .mono {
+  font-size: 11px;
+}
+
+/* ---------------------------------------------------------------- inspector */
+
+.bp-inspector {
+  min-width: 0;
+}
+
+.bp-inspector-in {
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.bp-inspector-in > section {
+  padding: 14px 16px;
+  background: var(--panel);
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-lg, 2px);
+}
+
+.bp-stage .bp-inspector h3 {
+  margin: 0;
+  display: block;
+  font: 700 15px/1.1 var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.bp-car-card {
+  display: grid;
+  gap: 12px;
+}
+
+.bp-car-card-top {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.bp-stage .bp-car-card h3 {
+  font-size: 19px;
+  color: var(--ink);
+}
+
+.bp-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+}
+
+.bp-facts dt,
+.bp-sum-kv dt,
+.bp-row-kv dt {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.bp-facts dd {
+  margin: 2px 0 0;
+  font-size: 13px;
+}
+
+.bp-tyre {
+  display: grid;
+  gap: 6px;
+}
+
+.bp-tyre-label {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  font-size: 12.5px;
+}
+
+.bp-tyre-label .mono {
+  margin-left: auto;
+  font-size: 11.5px;
+}
+
+.bp-tyre-bar,
+.bp-row-bar {
+  display: block;
+  height: 3px;
+  background: var(--line-soft);
+  border-radius: 1px;
+  overflow: hidden;
+}
+
+.bp-tyre-bar i,
+.bp-row-bar i {
+  display: block;
+  height: 100%;
+  background: var(--steel);
+  transform-origin: left;
+  transition: transform 420ms var(--ease);
+}
+
+.bp-tyre-bar i.is-late {
+  background: var(--hold);
+}
+
+.bp-sum {
+  display: grid;
+  gap: 8px;
+}
+
+.bp-sum-head,
+.bp-parts-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 10px;
+}
+
+.bp-sum-line {
+  margin: 0;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.bp-sum-kv {
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  gap: 10px;
+  margin: 2px 0 0;
+}
+
+.bp-sum-kv dd {
+  display: grid;
+  gap: 2px;
+  margin: 3px 0 0;
+}
+
+.bp-sum-kv dd b {
+  font-size: 17px;
+}
+
+.bp-sum-kv dd .mono.muted {
+  font-size: 11px;
+}
+
+.bp-parts {
+  display: grid;
+  gap: 8px;
+}
+
+.bp-rows {
+  display: grid;
+  margin: 0 -8px;
+  padding: 0;
+  list-style: none;
+}
+
+.bp-row-main {
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto auto;
+  grid-template-areas:
+    'glyph label p value'
+    'glyph bar bar bar';
+  align-items: center;
+  gap: 4px 10px;
+  width: 100%;
+  padding: 7px 8px 6px;
+  border: 0;
+  border-radius: 2px;
+  background: transparent;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+  transition: background 120ms var(--ease);
+}
+
+.bp-row-main:hover,
+.bp-row.is-lit .bp-row-main {
+  background: var(--panel-2);
+}
+
+.bp-row.is-open .bp-row-main {
+  background: var(--raise);
+}
+
+.bp-row-glyph {
+  grid-area: glyph;
+  align-self: start;
+  margin-top: 2px;
+}
+
+.bp-row-label {
+  grid-area: label;
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  min-width: 0;
+  font-size: 13px;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.bp-row-units {
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.bp-row-p {
+  grid-area: p;
+  font-size: 11.5px;
+  color: var(--muted);
+}
+
+.bp-row--watch .bp-row-p {
+  color: var(--hold);
+}
+
+.bp-row--damaged .bp-row-p {
+  color: var(--alert);
+}
+
+.bp-row-value {
+  grid-area: value;
+  min-width: 52px;
+  text-align: right;
+  font-size: 12.5px;
+}
+
+.bp-row-bar {
+  grid-area: bar;
+  height: 2px;
+}
+
+.bp-row--watch .bp-row-bar i {
+  background: var(--hold);
+}
+
+.bp-row--damaged .bp-row-bar i {
+  background: var(--alert);
+}
+
+.bp-row.is-lit .bp-row-bar i,
+.bp-row.is-open .bp-row-bar i {
+  background: #9fd8ff;
+}
+
+.bp-row-more {
+  display: grid;
+  grid-template-rows: 0fr;
+  transition: grid-template-rows 220ms var(--ease);
+}
+
+.bp-row-more > div {
+  overflow: hidden;
+  min-height: 0;
+}
+
+.bp-row.is-open .bp-row-more {
+  grid-template-rows: 1fr;
+}
+
+.bp-row-kv {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding: 10px 8px 4px 34px;
+}
+
+.bp-row-kv div {
+  display: grid;
+  grid-template-columns: 74px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.bp-row-kv dd {
+  margin: 0;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.bp-row-kv .mono {
+  font-size: 11.5px;
+}
+
+.bp-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 5px;
+  padding: 6px 8px 10px 34px;
+}
+
+.bp-chip {
+  padding: 3px 8px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  background: transparent;
+  color: var(--steel);
+  font: 500 11.5px/1.3 var(--body);
+  cursor: default;
+}
+
+.bp-chip:hover,
+.bp-chip:focus-visible {
+  color: var(--ink);
+  border-color: #6fb7f0;
+  background: rgba(102, 196, 255, 0.08);
+}
+
+.bp-total {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  margin: 2px 0 0;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+  font-size: 12.5px;
+}
+
+.bp-total b {
+  margin-left: auto;
+  font-size: 14px;
+}
+
+.bp-total .mono.muted {
+  font-size: 11px;
+}
+
+/* beside the sheet, the inspector is exactly as tall as the drawing and the parts list scrolls */
+@media (min-width: 1181px) {
+  .bp-body {
+    align-items: stretch;
+  }
+
+  .bp-inspector {
+    position: relative;
+  }
+
+  .bp-inspector-in {
+    position: absolute;
+    inset: 0;
+  }
+
+  .bp-parts {
+    display: flex;
+    flex-direction: column;
+    flex: 1;
+    min-height: 0;
+  }
+
+  .bp-rows {
+    flex: 1;
+    min-height: 0;
+    overflow-y: auto;
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--line) transparent;
+  }
+}
+
+.bp-hero:focus-visible {
+  outline: 2px solid var(--lime);
+  outline-offset: -2px;
+}
+
+/* ---------------------------------------------------------------- narrow screens */
+
+@media (max-width: 1180px) {
+  .bp-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+/* under the sheet, two columns: the car and its condition beside the parts list */
+@media (min-width: 761px) and (max-width: 1180px) {
+  .bp-inspector-in {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1.25fr);
+    grid-template-rows: auto 1fr;
+    align-items: start;
+  }
+
+  .bp-inspector-in > .bp-parts {
+    grid-column: 2;
+    grid-row: 1 / span 2;
+  }
+}
+
+@media (max-width: 760px) {
+  .bp-stage,
+  .bp-head,
+  .bp-body {
+    min-width: 0;
+  }
+
+  .bp-cars {
+    flex-wrap: wrap;
+    width: 100%;
+  }
+
+  .bp-car {
+    flex: 1 1 140px;
+    min-width: 0;
+  }
+
+  .bp-car-pos {
+    display: none;
+  }
+
+  .bp-tools {
+    width: 100%;
+  }
+
+  .bp-tools .seg-ctl {
+    flex: 1;
+  }
+
+  .bp-tools .seg-btn {
+    flex: 1;
+  }
+
+  .bp-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
+  .bp-views {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-rows: 170px 190px 170px 190px auto;
+  }
+
+  .bp-view--side,
+  .bp-view--bottom {
+    border-right: 0;
+  }
+
+  .bp-hints span {
+    display: none;
+  }
+
+  .bp-tb {
+    grid-template-columns: 1fr 1fr;
+  }
+
+  .bp-tb .bp-tb-wide {
+    grid-column: 1 / -1;
+    order: 9;
+  }
+
+  .bp-callout {
+    width: calc(100% - 32px);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .bp-row-more,
+  .bp-callout,
+  .bp-canvas,
+  .bp-row-bar i,
+  .bp-tyre-bar i {
+    transition: none;
+  }
+}
+
+/* ---------------------------------------------------------------- compact sheet (the replay's car stage) */
+
+.bp-sheet--compact .bp-hero {
+  height: clamp(300px, 27vw, 390px);
+}
+
+.bp-sheet--compact .bp-views {
+  grid-template-columns: minmax(0, 2fr) minmax(0, 1fr) minmax(0, 1fr) minmax(0, 2fr);
+  grid-template-rows: 128px;
+}
+
+.bp-sheet--compact .bp-view {
+  border-bottom: 0;
+  border-right: 1px solid var(--bp-rule);
+}
+
+.bp-sheet--compact .bp-view--side {
+  grid-column: 1;
+  grid-row: 1;
+}
+
+.bp-sheet--compact .bp-view--front {
+  grid-column: 2;
+  grid-row: 1;
+}
+
+.bp-sheet--compact .bp-view--rear {
+  grid-column: 3;
+  grid-row: 1;
+}
+
+.bp-sheet--compact .bp-view--bottom {
+  grid-column: 4;
+  grid-row: 1;
+  border-right: 0;
+}
+
+.bp-sheet--compact .bp-view figcaption {
+  top: 8px;
+  left: 10px;
+  gap: 5px;
+  font-size: 10px;
+}
+
+.bp-sheet--compact .bp-view figcaption b {
+  width: 14px;
+  height: 14px;
+  font-size: 9px;
+}
+
+.bp-sheet--compact .bp-iso-car {
+  font-size: 19px;
+}
+
+.bp-sheet--compact.bp-sheet--wait {
+  min-height: calc(clamp(300px, 27vw, 390px) + 128px);
+}
+
+.bp-replay-tools {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.bp-replay-tools .seg-btn,
+.bp-replay-tools .btn {
+  min-height: 32px;
+  font-size: 12px;
+}
+
+.bp-replay-tools .bp-explode {
+  min-width: 0;
+  padding: 0 12px;
+}
+
+.bp-replay-damage {
+  margin-top: 4px;
+  font-size: 11px;
+  color: var(--alert);
+}
+
+.bp-co-sponsor {
+  margin: 0 0 4px;
+  font: 600 10.5px/1 var(--display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lime);
+}
+
+.bp-replay-off {
+  padding: 40px 0;
+  text-align: center;
+}
+
+/* sponsor zones riding on the car */
+.bp-markers {
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  z-index: 2;
+}
+
+.bp-marker {
+  position: absolute;
+  left: 0;
+  top: 0;
+  width: 30px;
+  height: 30px;
+  margin: -15px 0 0 -15px;
+  padding: 0;
+  border: 1.5px solid rgba(169, 220, 255, 0.55);
+  border-radius: 50%;
+  background: rgba(4, 12, 30, 0.72);
+  pointer-events: auto;
+  cursor: pointer;
+  will-change: transform;
+  transition:
+    border-color 160ms var(--ease),
+    background 160ms var(--ease),
+    box-shadow 160ms var(--ease);
+}
+
+.bp-marker span {
+  position: absolute;
+  inset: 0;
+}
+
+.bp-marker span::before,
+.bp-marker span::after {
+  content: '';
+  position: absolute;
+  left: 50%;
+  top: 50%;
+  width: 11px;
+  height: 1.6px;
+  margin: -0.8px 0 0 -5.5px;
+  background: #eaf7ff;
+}
+
+.bp-marker span::after {
+  transform: rotate(90deg);
+}
+
+.bp-marker:hover {
+  border-color: #eaf7ff;
+  box-shadow: 0 0 0 4px rgba(169, 220, 255, 0.12);
+}
+
+.bp-marker.is-live {
+  border-color: var(--lime);
+  box-shadow: 0 0 0 3px rgba(201, 255, 75, 0.14);
+}
+
+.bp-marker.is-on {
+  background: var(--lime);
+  border-color: var(--lime);
+}
+
+.bp-marker.is-on span::before,
+.bp-marker.is-on span::after {
+  background: #06080a;
+}
+
+/* inside the replay's stage the sheet replaces the side-on drawing */
+.stage-canvas--blueprint {
+  padding: 4px 0 0;
+}
+
+@media (max-width: 760px) {
+  .bp-sheet--compact .bp-views {
+    grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+    grid-template-rows: 120px 120px;
+  }
+
+  .bp-sheet--compact .bp-view--rear {
+    grid-column: 2;
+    grid-row: 1;
+    border-right: 0;
+  }
+
+  .bp-sheet--compact .bp-view--front {
+    grid-column: 1;
+    grid-row: 1;
+  }
+
+  .bp-sheet--compact .bp-view--side {
+    grid-column: 1;
+    grid-row: 2;
+  }
+
+  .bp-sheet--compact .bp-view--bottom {
+    grid-column: 2;
+    grid-row: 2;
+  }
+
+  .bp-replay-tools .bp-explode {
+    display: none;
+  }
+}

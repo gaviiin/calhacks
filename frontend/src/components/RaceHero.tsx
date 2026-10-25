@@ -11,6 +11,7 @@ import {
   type Replay,
   type SpeedEvent,
 } from '../lib/racedesk';
+import { ReplayBlueprint } from '../blueprint/ReplayBlueprint';
 import { F1Car, ZONES, type CarState } from './F1Car';
 import { IconArrow, IconFlag, IconShield, IconWaiting } from './icons';
 
@@ -160,21 +161,19 @@ export function CarStage({ r, lap, car, setCar, sponsor, setSponsor, playing, of
           <button type="button" className="stage-arrow stage-arrow--l" onClick={() => setCar(cars[(idx + cars.length - 1) % cars.length])} aria-label="Previous car">
             ‹
           </button>
-          <div className="stage-canvas">
-            <span className="stage-dim mono">
-              width {spec.width} · wheelbase {spec.wheelbase}
-            </span>
-            <F1Car
-              number={car}
+          <div className="stage-canvas stage-canvas--blueprint">
+            <ReplayBlueprint
+              car={car}
+              code={r.field?.[car]?.code ?? r.team_cars[car]}
+              team={r.team}
+              position={now?.position ?? null}
+              lap={lap.lap || null}
               state={state}
-              spinning={playing && state === 'running'}
-              hotspots={(r.sponsors ?? []).filter((s) => ZONES[s.id]).map((s) => ({ id: s.id, label: s.name, earning: earning(s.id) }))}
-              selected={sponsor}
-              onSelect={setSponsor}
-              damage={crash?.damage_estimate ? `Damage est. ${usdShort(crash.damage_estimate)} · cap` : null}
-              title={`Meridian car ${car}, ${driver}`}
+              crash={crash ?? null}
+              sponsors={(r.sponsors ?? []).map((s) => ({ id: s.id, name: s.name, earning: earning(s.id) }))}
+              sponsor={sponsor}
+              onSponsor={setSponsor}
             />
-            <div className="stage-track" aria-hidden />
           </div>
           <button type="button" className="stage-arrow stage-arrow--r" onClick={() => setCar(cars[(idx + 1) % cars.length])} aria-label="Next car">
             ›

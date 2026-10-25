@@ -327,6 +327,9 @@ Each waiting item is a full-width button on the one-step-up slate: a kind column
 ### Brandmark
 A 38 by 26px lime block, skewed -12deg and clipped to a parallelogram, holding "PW" in Barlow 800 13px near-black. Beside it the wordmark "PIT WALL" in Barlow 800 19px at 0.08em tracking, "WALL" in lime, over the lockup line "MERIDIAN RACING · FINANCE DESK". The favicon is the same lime parallelogram.
 
+### Car Blueprint (signature)
+The race desk draws its cars as an engineering sheet: navy paper (#040a19, lifted to #0b1b3b behind the 3D view) under a fine grid locked to car metres, blue construction lines, and white-blue edges and silhouettes. The angled 3D view is the hero: dragging turns it, the part under the pointer slides out along its own axis while the rest of the car dims, and a glass callout gives the part's price-book band, lead time and condition. Four rigid drawings sit below it (side, front, rear, underside) with hidden-line removal, dash-dot centrelines and dimensions in mono millimetres; a lit part lights in all five views, its hidden edges showing through as dashes. The Condition lens uses the desk's own lamps (amber for possible damage, coral for likely damage, each with its glyph and probability); the Cost lens brightens a part with its price. Its motion is the system's second exception: springs on pull-out, highlight and camera, a staggered 1.15s explode, and a slow idle drift that settles after 30s, all near-instant under reduced motion.
+
 ## Do's and Don'ts
 
 ### Do:

@@ -1,7 +1,8 @@
 import { useMemo, useState, type FormEvent } from 'react';
 import { LineChart, type Marker } from '../charts/LineChart';
 import { F1Car } from '../components/F1Car';
-import { IconApproved, IconDenied, IconLive, IconWaiting } from '../components/icons';
+import { IconApproved, IconDenied, IconWaiting } from '../components/icons';
+import { RaceBlueprint } from '../blueprint/RaceBlueprint';
 import { usdShort } from '../lib/format';
 import { useRace } from '../lib/race';
 import {
@@ -12,7 +13,6 @@ import {
   carLabel,
   carVisual,
   costByLap,
-  damageLabel,
   eventDetail,
   involvesTeam,
   isTeamCar,
@@ -40,13 +40,6 @@ import { useSeat } from '../lib/seat';
 // policies that decided them learn from the correction.
 
 type Filter = 'all' | 'team' | 'money';
-
-const CAR_STATUS: Record<string, { label: string; tone: string }> = {
-  running: { label: 'running', tone: 'flag--ok' },
-  pit: { label: 'in pit', tone: 'flag--hold' },
-  retired_suspected: { label: 'stopped?', tone: 'flag--hold' },
-  retired: { label: 'OUT', tone: 'flag--alert' },
-};
 
 // ---------------------------------------------------------------- header + live figures
 
@@ -114,80 +107,6 @@ function LiveStrip({ events, effects, led, status }: { events: readonly RaceEven
         </li>
       ))}
     </ul>
-  );
-}
-
-// ---------------------------------------------------------------- the team's cars
-
-/** What the race did to the car, from Jev's part probabilities on its latest cost booking. */
-function carDamage(car: CarState, effects: readonly RaceEffects[]): string | null {
-  const cost = effects
-    .filter((e) => e.driverNumber === car.driverNumber && e.kind === 'cost' && e.bucket === '6050' && live(e))
-    .sort((a, b) => sortTime(b.at) - sortTime(a.at));
-  for (const e of cost) {
-    const label = damageLabel(readJev(e.jevJson)?.parts ?? {});
-    if (label) return label;
-  }
-  if (cost.length) return 'damage booked';
-  return carVisual(car.status) === 'running' ? null : 'assessing';
-}
-
-function CarCard({ car, effects }: { car: CarState; effects: readonly RaceEffects[] }) {
-  const st = CAR_STATUS[car.status] ?? { label: car.status.replace(/_/g, ' '), tone: '' };
-  const code = DRIVERS[car.driverNumber] ?? '';
-  const visual = carVisual(car.status);
-  const damage = carDamage(car, effects);
-  return (
-    <article className={`car car--${car.status}`} aria-label={`Car ${car.driverNumber} ${code}`}>
-      <div className="car-stage">
-        <F1Car number={String(car.driverNumber)} state={visual} spinning={car.status === 'running'} damage={damage} title={`${TEAM} car ${car.driverNumber}${code ? `, ${code}` : ''}`} />
-      </div>
-      <div className="car-pos">
-        <b className="mono">P{car.position || '—'}</b>
-        <span className="car-id">
-          <span className="mono">#{car.driverNumber}</span> {code}
-        </span>
-        <span className={`flag ${st.tone}`}>
-          {car.status === 'retired' ? <IconDenied size={12} /> : car.status === 'running' ? <IconLive size={12} /> : <IconWaiting size={12} />}
-          {st.label}
-        </span>
-      </div>
-      <dl className="car-facts">
-        <div>
-          <dt>Tyre</dt>
-          <dd>
-            {car.compound ? car.compound.toUpperCase() : '—'} <span className="muted">age {car.tyreAge}</span>
-          </dd>
-        </div>
-        <div>
-          <dt>Gap</dt>
-          <dd className="mono">{car.gapToLeader || '—'}</dd>
-        </div>
-        <div>
-          <dt>Lap</dt>
-          <dd className="mono">{car.lap}</dd>
-        </div>
-        <div>
-          <dt>Last pit</dt>
-          <dd className="mono">{car.lastPitLap ? `L${car.lastPitLap}` : '—'}</dd>
-        </div>
-        {damage && visual !== 'crashed' && (
-          <div>
-            <dt>Damage</dt>
-            <dd className="tone-alert">{damage}</dd>
-          </div>
-        )}
-      </dl>
-    </article>
-  );
-}
-
-function Timing({ cars, effects }: { cars: readonly CarState[]; effects: readonly RaceEffects[] }) {
-  const team = cars.filter((c) => c.teamName === TEAM || isTeamCar(c.driverNumber)).sort((a, b) => a.driverNumber - b.driverNumber);
-  return (
-    <section className="race-timing" aria-label="Team cars">
-      {team.length ? team.map((c) => <CarCard key={c.driverNumber} car={c} effects={effects} />) : <p className="muted empty">No car state yet.</p>}
-    </section>
   );
 }
 
@@ -795,7 +714,7 @@ export function RaceView() {
     <div className="race race--live">
       <Header events={events} />
       <LiveStrip events={events} effects={race.effects} led={led} status={status} />
-      <Timing cars={race.cars} effects={race.effects} />
+      <RaceBlueprint />
       <RunningOrder cars={race.cars} events={events} />
       {!race.connected && (
         <p className="muted loading race-span">Connecting to pit-wall on SpacetimeDB…</p>
