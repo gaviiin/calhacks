@@ -81,7 +81,7 @@
 
 .fl-steps {
   display: grid;
-  grid-template-columns: repeat(6, minmax(0, 1fr));
+  grid-template-columns: repeat(7, minmax(0, 1fr));
   margin: 0;
   padding: 0;
   list-style: none;
@@ -174,7 +174,7 @@
 .fl-value {
   overflow: hidden;
   color: var(--navy);
-  font: 600 17px/1.2 var(--mono);
+  font: 600 16px/1.2 var(--mono);
   font-variant-numeric: tabular-nums;
   letter-spacing: -0.01em;
   text-overflow: ellipsis;
@@ -246,16 +246,16 @@
   }
 
   .fl-steps {
-    grid-template-columns: repeat(3, minmax(0, 1fr));
+    grid-template-columns: repeat(4, minmax(0, 1fr));
     row-gap: 4px;
   }
 
-  .fl-step:nth-child(3n)::after {
+  .fl-step:nth-child(4n)::after {
     display: none;
   }
 
   .fl-value {
-    font-size: 15px;
+    font-size: 13px;
   }
 }
 

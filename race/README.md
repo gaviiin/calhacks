@@ -23,6 +23,7 @@ after every event, each its own module writing its own pit-wall table:
 |---|---|---|---|
 | 1 Detect | `telemetry.py` (in `normalize.py`) | `race_events` (`car_stopped`) | code: 100+ km/h to under 25 with the brake on, or telemetry frozen on OpenF1's sentinel values |
 | 2 Log | `incidents.py` | `race_incidents`, `race_beliefs` | code; a person's answer assesses |
+| 2b Hardware | `life.py` | `race_part_life` | code counts each part's wear from laps; Jev classifies stress events (contacts, trips off the track, crashes) and the parts they hit; a garage assessment replaces the damaged parts. Wear is forecast, never booked |
 | 3 Respond | `logistics.py` | `race_actions` | the playbook; outward or irreversible actions wait for their owner (the module refuses anything else) |
 | 4 Account | `ledger.py` | `race_entries`, `race_entry_lines` | code; balanced, with when the cap counts each line |
 | 5 Ask | `questions.py` | `race_questions` | a person, when expected loss tops `RACE_ASK_PRICE_USD` or Jev is below `RACE_ASK_FLOOR` |

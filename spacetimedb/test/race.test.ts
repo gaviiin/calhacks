@@ -382,6 +382,20 @@ describe('the money gate', () => {
     expect(d.posting('big').status).toBe('held');
   });
 
+  it('in a demo replay, the desk records the team\'s documented approval of held books, tagged replayed', () => {
+    const d = desk();
+    d.as('race', ctx => mod.recordRaceEffects(ctx, { eventKey: KEY_A, effects: [d.effect(0, { decidedBy: 'policy:p1', status: 'autonomous' })] }));
+    d.entry('big', `${KEY_A}:0`, 40_000_000n);
+    d.as('race', ctx => mod.requestRacePosting(ctx, { entryKey: 'big', at: AT }));
+    d.as('race', ctx => mod.decideRacePosting(ctx, { entryKey: 'big', status: 'approved', by: 'CFO (replayed)', at: AT }));
+    expect(d.posting('big').status).toBe('held'); // replay mode is off
+    d.as('owner', ctx => mod.setReplayDecisions(ctx, { allowed: true }));
+    d.as('race', ctx => mod.decideRacePosting(ctx, { entryKey: 'big', status: 'approved', by: 'CFO', at: AT }));
+    expect(d.posting('big').status).toBe('held'); // not tagged replayed
+    d.as('race', ctx => mod.decideRacePosting(ctx, { entryKey: 'big', status: 'approved', by: 'CFO (replayed)', at: AT }));
+    expect(d.posting('big')).toMatchObject({ status: 'approved', by: 'CFO (replayed)' });
+  });
+
   it('holds an adjustment until the entry it adjusts is in the ERP, for the same person', () => {
     const d = desk();
     d.as('race', ctx => mod.recordRaceEffects(ctx, { eventKey: KEY_A, effects: [d.effect(0, { decidedBy: 'policy:p1', status: 'autonomous' })] }));

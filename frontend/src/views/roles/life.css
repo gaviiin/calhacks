@@ -1,0 +1,123 @@
+/* Part life: each part's life on the car, by how soon it needs replacing. */
+
+.pl {
+  display: grid;
+  gap: 8px;
+}
+
+.pl-rows {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pl-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(60px, 1fr) 40px auto 54px;
+  gap: 10px;
+  align-items: center;
+  padding: 5px 0;
+  border-bottom: 1px solid var(--line-soft);
+}
+
+.pl-name {
+  overflow: hidden;
+  color: var(--navy);
+  font: 600 13px var(--body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pl-bar .k-meter {
+  gap: 0;
+}
+
+.pl-pct {
+  color: var(--steel);
+  font: 600 12px var(--mono);
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.pl-row--due .pl-pct,
+.pl-row--damaged .pl-pct {
+  color: var(--alert);
+}
+
+.pl-due {
+  justify-self: start;
+}
+
+.pl-dots {
+  display: flex;
+  gap: 3px;
+  justify-content: flex-end;
+}
+
+.pl-dot {
+  width: 7px;
+  height: 7px;
+  border-radius: 50%;
+  background: #b9c4d3;
+}
+
+.pl-dot--light {
+  background: var(--sky);
+}
+
+.pl-dot--moderate {
+  background: var(--hold);
+}
+
+.pl-dot--heavy {
+  background: var(--alert);
+}
+
+.pl-new {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  align-items: center;
+  margin: 2px 0 0;
+  color: var(--muted);
+  font: 500 12px var(--body);
+}
+
+.pl-figs {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 14px;
+}
+
+.pl-pens {
+  display: grid;
+  gap: 6px;
+  margin: 14px 0 0;
+  padding: 12px 0 0;
+  border-top: 1px solid var(--line-soft);
+  list-style: none;
+  font: 500 13px var(--body);
+}
+
+.pl-pens li {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+@media (max-width: 720px) {
+  .pl-row {
+    grid-template-columns: minmax(0, 1fr) 52px 34px auto;
+    gap: 8px;
+  }
+
+  .pl-dots {
+    display: none;
+  }
+
+  .pl-figs {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}

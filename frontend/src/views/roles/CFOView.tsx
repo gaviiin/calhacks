@@ -7,6 +7,7 @@ import { ClosePanel } from '../raceday/ClosePanel';
 import { latestSim } from '../raceday/ReplanPanel';
 import { ActButton, clock, parse, roleLabel } from '../raceday/shared';
 import { Figure, Meter, Odds, Panel, Pill, Stack } from './kit';
+import { HardwarePanel } from './PartLife';
 import './cfo.css';
 
 // The CFO's view of the weekend: what it cost and where that went in the books, what the season now looks like as
@@ -130,6 +131,25 @@ export function CFOView() {
   const entryOf = useMemo(() => new Map(race.entries.map((e) => [e.entryKey, e])), [race.entries]);
   const posted = race.postings.filter((x) => x.status === 'posted');
   const held = race.postings.filter((x) => x.status === 'held').sort((a, b) => n(b.amountCents) - n(a.amountCents));
+  // One approval per incident: the desk prepared every entry; the person signs off the crash's books in one click.
+  const heldByIncident = useMemo(() => {
+    const lines = new Map<string, (typeof race.entryLines)[number][]>();
+    for (const l of race.entryLines) lines.set(l.entryKey, [...(lines.get(l.entryKey) ?? []), l]);
+    const groups = new Map<string, typeof held>();
+    for (const h of held) groups.set(h.incidentKey, [...(groups.get(h.incidentKey) ?? []), h]);
+    return [...groups.entries()]
+      .map(([key, rows]) => {
+        const inc = race.incidents.find((i) => i.incidentKey === key);
+        const net = rows.reduce((t, h) => {
+          const e = entryOf.get(h.entryKey);
+          return t + (e ? n(signedCents(e, lines.get(h.entryKey))) : n(h.amountCents));
+        }, 0);
+        const label = inc ? `${carLabel(inc.driverNumber)} · ${inc.sessionKey === 9627 ? 'qualifying' : 'race'} crash books` : 'FIA fines';
+        return { key, rows, net, label, at: inc?.firstSeenAt ?? '' };
+      })
+      .sort((a, b) => sortTime(b.at || '1970-01-01T00:00:00Z') - sortTime(a.at || '1970-01-01T00:00:00Z'));
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [held.map((h) => h.entryKey + h.status).join(), race.entryLines, race.incidents, entryOf]);
   const unsure = race.effects.filter((e) => e.status === 'needs_person');
   const decisions = race.actions.filter((a) => a.status === 'awaiting_approval' && (a.kind === 'withdraw_car' || a.outward));
   const openQs = race.questions.filter((q) => q.status === 'open');
@@ -169,7 +189,7 @@ export function CFOView() {
   const capFacet = facets.find((f) => /cost cap/i.test(f.facet));
   const overRows = (capFacet?.outcomes ?? []).filter((o) => /over by more than/i.test(o.label)).map((o) => ({ label: o.label.replace(/^over by more than /i, '> '), p: o.p }));
 
-  const mine = held.length + unsure.length + (close?.status === 'draft' ? 1 : 0);
+  const mine = heldByIncident.length + unsure.length + (close?.status === 'draft' ? 1 : 0);
   const others = decisions.length + openQs.length;
   const bases = [p.prize?.basis, cap.cap_basis, cap.relevant_before_basis, cap.context, ...facets.map((f) => f.basis && `${f.facet}: ${f.basis}`)].filter(Boolean) as string[];
 
@@ -299,6 +319,8 @@ export function CFOView() {
         </Panel>
       </div>
 
+      <HardwarePanel />
+
       <Panel title="Waiting for you" aside={mine ? <Pill tone="wait">{mine} to decide</Pill> : <Pill tone="ok">Clear</Pill>} className="cfo-queue">
         <ul className="cfo-rows">
           {close?.status === 'draft' && (
@@ -315,20 +337,24 @@ export function CFOView() {
               </span>
             </li>
           )}
-          {held.map((h) => {
-            const memo = entryOf.get(h.entryKey)?.memo ?? h.entryKey;
+          {heldByIncident.map((g) => {
+            const decideAll = (status: string) => async (by: string, at: string) => {
+              for (const h of g.rows) await race.decidePosting({ entryKey: h.entryKey, status, by, at });
+            };
             return (
-              <li key={h.entryKey}>
+              <li key={g.key} className="cfo-group">
                 <Pill tone="wait">Held</Pill>
-                <span className="cfo-what" title={`${memo}\n\n${h.reason}`}>
-                  <b>{shortMemo(memo)}</b>
-                  <span className="cfo-meta">{reasonTags(h.reason).join(' · ')}</span>
+                <span className="cfo-what" title={g.rows.map((h) => `${shortMemo(entryOf.get(h.entryKey)?.memo ?? h.entryKey)}: ${usdShort(h.amountCents)}`).join('\n')}>
+                  <b>{g.label}</b>
+                  <span className="cfo-meta">
+                    {g.rows.length} {g.rows.length === 1 ? 'entry' : 'entries'} prepared by the desk · {[...new Set(g.rows.map((h) => reasonTags(h.reason)[0]).filter(Boolean))].join(' · ')}
+                  </span>
                 </span>
-                <span className="cfo-who">{roleLabel(h.reviewRole)}</span>
-                <span className="cfo-amt mono">{usdShort(h.amountCents)}</span>
+                <span className="cfo-who">{[...new Set(g.rows.map((h) => roleLabel(h.reviewRole)))].join(', ')}</span>
+                <span className="cfo-amt mono">{usdShort(g.net)}</span>
                 <span className="cfo-act">
-                  <ActButton label="Approve" busyLabel="Approving…" primary title={`Approve as ${roleLabel(h.reviewRole)}: the desk posts it to the ERP`} run={(by, at) => race.decidePosting({ entryKey: h.entryKey, status: 'approved', by, at })} />
-                  <ActButton label="Reject" busyLabel="Rejecting…" title="Keep it out of the ERP" run={(by, at) => race.decidePosting({ entryKey: h.entryKey, status: 'rejected', by, at })} />
+                  <ActButton label={g.rows.length > 1 ? 'Approve all' : 'Approve'} busyLabel="Approving…" primary title="Approve the incident's books: the desk posts every entry to the ERP" run={decideAll('approved')} />
+                  <ActButton label="Reject" busyLabel="Rejecting…" title="Keep them out of the ERP" run={decideAll('rejected')} />
                 </span>
               </li>
             );

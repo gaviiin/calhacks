@@ -58,6 +58,7 @@ import RecordRaceEffectsReducer from "./record_race_effects_reducer";
 import RecordRaceEventReducer from "./record_race_event_reducer";
 import RecordRaceHealthReducer from "./record_race_health_reducer";
 import RecordRaceOptionsReducer from "./record_race_options_reducer";
+import RecordRacePartLifeReducer from "./record_race_part_life_reducer";
 import RecordRacePostingReducer from "./record_race_posting_reducer";
 import RecordRaceSimReducer from "./record_race_sim_reducer";
 import RequestRacePostingReducer from "./request_race_posting_reducer";
@@ -94,6 +95,7 @@ import RaceIncidentsRow from "./race_incidents_table";
 import RaceLatencyRow from "./race_latency_table";
 import RaceOnlineRow from "./race_online_table";
 import RaceOptionsRow from "./race_options_table";
+import RacePartLifeRow from "./race_part_life_table";
 import RacePoliciesRow from "./race_policies_table";
 import RacePostingsRow from "./race_postings_table";
 import RacePrecedentsRow from "./race_precedents_table";
@@ -371,6 +373,20 @@ const tablesSchema = __schema({
       { name: 'race_options_option_key_key', constraint: 'unique', columns: ['optionKey'] },
     ],
   }, RaceOptionsRow),
+  racePartLife: __table({
+    name: 'race_part_life',
+    indexes: [
+      { accessor: 'meetingKey', name: 'race_part_life_meeting_key_idx_btree', algorithm: 'btree', columns: [
+        'meetingKey',
+      ] },
+      { accessor: 'partKey', name: 'race_part_life_part_key_idx_btree', algorithm: 'btree', columns: [
+        'partKey',
+      ] },
+    ],
+    constraints: [
+      { name: 'race_part_life_part_key_key', constraint: 'unique', columns: ['partKey'] },
+    ],
+  }, RacePartLifeRow),
   racePolicies: __table({
     name: 'race_policies',
     indexes: [
@@ -513,6 +529,7 @@ const reducersSchema = __reducers(
   __reducerSchema("record_race_event", RecordRaceEventReducer),
   __reducerSchema("record_race_health", RecordRaceHealthReducer),
   __reducerSchema("record_race_options", RecordRaceOptionsReducer),
+  __reducerSchema("record_race_part_life", RecordRacePartLifeReducer),
   __reducerSchema("record_race_posting", RecordRacePostingReducer),
   __reducerSchema("record_race_sim", RecordRaceSimReducer),
   __reducerSchema("request_race_posting", RequestRacePostingReducer),

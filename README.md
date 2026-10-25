@@ -1,25 +1,34 @@
 # Pit Wall
 
-Race-weekend finance that keeps up with the race, for a Formula 1 team. Built for the Hyphenate track at Cal Hacks 13.0.
+An autonomous race accountant for a Formula 1 team. Built for the Hyphenate track at Cal Hacks 13.0.
 
-**Know what a crash costs, and what it costs the season, before the car is back in the garage.** The engineers and the CFO decide on the same numbers that night instead of the following week, and every figure is booked, flagged for review where it needs a person, and traceable to its evidence.
+**It keeps the books in step with the car.** Every lap, every trip off the track and every crash changes what each part of the car has left. The agent turns that into entries, cost cap timing, spares and a cap forecast within milliseconds of the data, and people approve only what is material.
 
-Today a crash reaches finance as parts invoices weeks later, and reaches the season picture at the year-end forecast. The calls those numbers should inform are made that night without them: repair the car, build the spare tub or withdraw it; what to fly to the next race; how much development to defer to stay under the cost cap. The demo replays Williams at the 2024 São Paulo Grand Prix: three crashes on one Sunday, a car that did not start, no points, and P8 lost to Alpine in the constructors' championship. Afterwards Vowles said the team would "take a little bit away from next year's cost cap". Pit Wall shows how much, that night.
+Every team has this job, and crashes are its biggest swing in the season. Williams in 2024: crash damage squeezed their cost cap, the FIA refused relief, and Vowles said the team would "take a little bit away from next year's cost cap". Today that picture arrives with the parts invoices, weeks later. The demo replays Williams at the 2024 São Paulo Grand Prix: three crashes on one Sunday, a car that did not start, no points.
+
+## Three twists
+
+| | On São Paulo 2024 |
+|---|---|
+| **The car is the ledger** | Each part on each car has a life. Laps use it; stress events use it (Jev classifies a contact or a trip off the track and the parts it hit); crashes destroy it. Wear is never booked (the cap excludes depreciation, Art. 3.1(o)): it sets when each replacement is fitted, which is when its cost counts. After Albon's crash, 9 parts are replaced and his power unit now runs out by Las Vegas, past its allocation: a grid penalty |
+| **The books keep themselves** | Balanced entries saying when the cap counts each line, inventory moves, accruals, adjustments once the garage confirms, ERP postings, the evidence pack, the Sunday-night seal and the true-up. People answer one damage question, make the Team Principal's call, and approve each crash's books in one click ($250k and up for the Head of Cost Cap, $1m and up for the CFO) |
+| **Milliseconds** | 2,549 events, each committed in about 1 ms (11 ms at worst); 10,000 seasons re-run in about 80 ms; crashes seen in telemetry 9–26 s before the red flag. Not speed for its own sake: the numbers are never stale when someone decides |
 
 ## One crash, through the team
 
-Albon's qualifying crash at 315 km/h, the way the dashboard follows it. A strip on every view walks the incident through these steps, and each step opens the view of the person who owns it.
+Albon's qualifying crash at 315 km/h, the way the dashboard follows it. A strip on every view walks the incident through these steps; each step opens the view of the person who owns it.
 
 | Step | Who | On Albon's crash |
 |---|---|---|
-| Seen | the desk | Telemetry sees car 23 go from 315 to 0 km/h at 11:57:19, 9 s before the red flag |
-| Engineering call | Chief Mechanic, Team Principal | The garage confirms heavy damage in one click (two crashes the team has lived through). The Team Principal sees three priced options side by side, with no recommendation: repair, the spare tub (about 13 h against 3.5 h to the start), or withdraw. Withdraw is chosen |
-| Race call | Head of Strategy | No race call: the car does not start. On Colapinto's race the strategist gets stay out, pit now and other compounds, each priced in positions, points, prize and cap, never recommended |
-| Next steps | owners by role | Execution follows the choice: the withdrawal notice to the Stewards waits for the Sporting Director to send it, the parc fermé list is no longer needed, spares are reserved, Grove's work orders and air freight are raised against the Las Vegas cut-off |
-| Books | Controller, Head of Cost Cap, CFO | Balanced provisional entries, each saying when the cap counts it. Posted to the ERP journal, or held for a person: $250k and up for the Head of Cost Cap, $1m and up for the CFO |
-| Season | CFO | 10,000 seasons re-run after every change: the chance of holding P8 falls from 72% to 54% on Albon's withdrawal and to 0% by the flag; expected prize money falls $6.1m (most of it from Alpine's double podium); the chance of a cap overspend; the development to defer |
+| Seen | the agent | Telemetry sees car 23 go from 315 to 0 km/h at 11:57:19, 9 s before the red flag |
+| Hardware | the agent, Jev | Jev reads the impact and the parts it hit; the likely ones are marked damaged at once and replaced once the garage confirms. His power unit, not replaced, now runs out by Las Vegas: a grid penalty |
+| Engineering call | Chief Mechanic, Team Principal | The garage confirms heavy damage in one click. The Team Principal sees repair, the spare tub (about 13 h against 3.5 h to the start) or withdraw, priced side by side with no recommendation, and withdraws |
+| Race call | Head of Strategy | None: the car does not start. On Colapinto's race the strategist gets stay out, pit now and other compounds, each priced in positions, points, prize and cap |
+| Next steps | owners by role | Execution follows the choice: the notice to the Stewards waits for the Sporting Director, the parc fermé list is no longer needed, spares are reserved, the factory's work orders and air freight are raised against the Las Vegas cut-off |
+| Books | CFO, Head of Cost Cap | Entries prepared by the agent. The morning's crash books were approved between the sessions and are in the ERP; the race crash waits for one click |
+| Season | CFO | 10,000 seasons after every change: the chance of holding P8 falls from 72% to 54% on Albon's withdrawal and to 0% by the flag; expected prize money falls $6.1m; the chance of a cap overspend; the development to defer |
 
-Race-day finance is provisional, and Pit Wall says so. The weekend is sealed on Sunday night under one Merkle root, with a brief for each role that cites the row behind every figure. Nothing goes out until the CFO approves. Weeks later the true-up compares the sealed $3.92m with the "nearly $4 million" the press reported.
+Race-day finance is provisional, and Pit Wall says so. The weekend is sealed on Sunday night under one Merkle root, with a brief for each role that cites the row behind every figure; nothing goes out until the CFO approves. Weeks later the true-up compares the sealed $3.92m with the "nearly $4 million" the press reported.
 
 ## A view for each person
 
@@ -27,12 +36,12 @@ The views follow an incident in the order it reaches each person. They read the 
 
 | View | For | What it shows |
 |---|---|---|
-| Garage | pit crew, engineers, Team Principal | Each Williams car as the blueprint drawing, lit by part from what the desk believes. Beside it: the belief's history, the spares for each part, the damage question, the start-or-withdraw options, and the next steps with their owners and deadlines |
-| Strategy | head of strategy | Varun Sanjeev's decision cockpit, ported. Stay out, pit now, the other compound, or the same stop under green, each with positions, time lost (measured from this race's stops), points, prize and cap effects. The season as chances |
-| Accounting | Controller, accountants | A live feed of events, beliefs, decisions and entries beside the books: entries posted to the ERP journal with its id, or held for review |
-| CFO | CFO, Head of Cost Cap | Cost so far, what is booked and what is held, the chance of holding the place and of a cap overspend, everything waiting for a person, the sealed weekend and its briefs |
+| Garage | pit crew, engineers, Team Principal | Each Williams car as the blueprint drawing, lit by part. Beside it: each part's life (used, due, stress events Jev classified), the spares, the damage question, the start-or-withdraw options, and the next steps with their owners and deadlines |
+| Strategy | head of strategy | Varun Sanjeev's decision cockpit, ported. Stay out, pit now, the other compound, or the same stop under green, each with positions, time lost, points, prize and cap effects |
+| Accounting | Controller, accountants | A live feed of events, beliefs, decisions and entries beside the books: posted to the ERP journal with its id, or held for review |
+| CFO | CFO, Head of Cost Cap | Cost so far, the hardware (parts replaced, replacements due this season and what they bring into the cap, grid penalty risk), the chances of holding the place and of a cap overspend, one approval per crash, the sealed weekend and its briefs |
 
-The pitch deck's seven-stage view is at `#/day/flow`, off the switcher. The 3-minute demo script is [docs/DEMO.md](docs/DEMO.md).
+The pitch deck's seven-stage view is at `#/day/flow`, off the switcher. The 3-minute demo script is [docs/DEMO.md](docs/DEMO.md). Every part-life figure is an assumption stated in `race/life.py`; the laps, race-control messages and crashes it reads are real.
 
 Under each view, pit-wall's own rows show who is watching, how long an event takes from read to commit to screen, and every decision on the record, allowed or refused (the money rules are enforced in the module). The bar above every view says which services the run really used. On the last demo run: OpenF1 live (the REST API, responses cached), SpacetimeDB live (2,927 reducer calls, 0 refused), Jev live (117 decisions, mean 114 ms), Claude live (4 repair plans, 4 of 4 briefs), the ERP live (3 entries posted through the gateway, 7 held for review); notifications are not configured until Slack, email, Teams or SMS credentials are added in Connect (then dry run until `PITWALL_NOTIFY=live`). OpenF1's live MQTT feed needs its paid tier (`race/live.py`).
 

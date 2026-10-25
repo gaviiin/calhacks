@@ -83,6 +83,10 @@ class RaceSink:
     def default_question(self, question_key: str, at: str) -> bool:
         return self.call("default_race_question", [question_key, at])
 
+    def part_life(self, rows: list) -> bool:
+        """Each part's life on our cars (race/life.py), replaced row by row."""
+        return self.call("record_race_part_life", [[r.wire() for r in rows]]) if rows else True
+
     def sim(self, run: SimRun) -> bool:
         w = run.wire()
         return self.call("record_race_sim", [w["sim_key"], w["meeting_key"], w["trigger"], w["at"], w["payload_json"], w["runtime_ms"]])

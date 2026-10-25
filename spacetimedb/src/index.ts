@@ -342,6 +342,30 @@ const raceQuestions = table(
 );
 
 // The season re-run after each change in the evidence.
+// Each part's life on each car, from the way it is actually raced (race/life.py): laps run, stress events Jev
+// classified, crashes. One row per car and part, replaced as the weekend runs. Wear is never booked (the cap excludes
+// depreciation, Art. 3.1(o)); it says when each replacement is due, which is when its cost counts against the cap.
+const racePartLife = table(
+  { name: 'race_part_life', public: true },
+  {
+    partKey: t.string().primaryKey(),
+    meetingKey: t.u32().index('btree'),
+    driverNumber: t.u32(),
+    part: t.string(),
+    usedPct: t.f64(), // share of the part's life used, 0..100 (over 100: running past its life)
+    lifeKm: t.u32(),
+    remainingKm: t.i32(),
+    status: t.string(), // ok | watch | due | damaged | replaced
+    dueEvent: t.string(),
+    dueAt: t.string(),
+    costCents: t.i64(),
+    capNote: t.string(),
+    broughtForwardCents: t.i64(), // replacement cost this weekend's running moved into this year's cap
+    stressJson: t.string(),
+    updatedAt: t.string(),
+  }
+);
+
 const raceSims = table(
   { name: 'race_sims', public: true },
   {
@@ -521,6 +545,7 @@ const spacetimedb = schema({
   raceEntryLines,
   raceQuestions,
   raceSims,
+  racePartLife,
   raceCloses,
   raceOptions,
   racePostings,
@@ -1461,6 +1486,25 @@ export const recordRaceSim = spacetimedb.reducer(
   }
 );
 
+const PartLifeInput = t.object('RacePartLifeInput', {
+  partKey: t.string(), meetingKey: t.u32(), driverNumber: t.u32(), part: t.string(), usedPct: t.f64(), lifeKm: t.u32(),
+  remainingKm: t.i32(), status: t.string(), dueEvent: t.string(), dueAt: t.string(), costCents: t.i64(), capNote: t.string(),
+  broughtForwardCents: t.i64(), stressJson: t.string(), updatedAt: t.string(),
+});
+
+export const recordRacePartLife = spacetimedb.reducer(
+  { rows: t.array(PartLifeInput) },
+  (ctx, { rows }) => {
+    requireRole(ctx, 'race');
+    for (const row of rows) {
+      requireIso('updatedAt', row.updatedAt);
+      requireLen('stressJson', row.stressJson, 4096);
+      if (ctx.db.racePartLife.partKey.find(row.partKey)) ctx.db.racePartLife.partKey.update(row);
+      else ctx.db.racePartLife.insert(row);
+    }
+  }
+);
+
 const CloseInput = t.object('RaceCloseInput', {
   closeKey: t.string(), meetingKey: t.u32(), closedAt: t.string(), rootHash: t.string(), totalsJson: t.string(), briefsJson: t.string(),
   status: t.string(), approvedBy: t.string(), leaves: t.u32(),
@@ -1664,7 +1708,7 @@ export const recordRacePosting = spacetimedb.reducer(
 // not also approve its posting (two people, every time).
 export const decideRacePosting = spacetimedb.reducer(
   { entryKey: t.string(), status: t.string(), by: t.string(), at: t.string() },
-  (ctx, { entryKey, status, at }) => {
+  (ctx, { entryKey, status, by, at }) => {
     if (!['approved', 'rejected'].includes(status)) throw new SenderError('invalid decision');
     requireIso('at', at);
     const cur = ctx.db.racePostings.entryKey.find(entryKey);
@@ -1673,16 +1717,19 @@ export const decideRacePosting = spacetimedb.reducer(
     const signed = entry?.effectKey ? ctx.db.raceSignoffs.effectKey.find(entry.effectKey) : undefined;
     gate(ctx, `posting_${status}`, entryKey,
       (c) => {
-        const p = personOnly(c);
+        // A person, or in a demo replay the team's documented approval, tagged '(replayed)' and audited as one.
+        const p = personOrReplay(ctx, c, by);
         if (p) return p;
         if (cur.status !== 'held') return `the entry is ${cur.status}, not held for review`;
-        if ((SEAT_RANK[c.role] ?? 0) < (REVIEW_RANK[cur.reviewRole] ?? 0)) return `held for the ${cur.reviewRole.replace(/_/g, ' ')}; a ${c.role.replace(/_/g, ' ')} cannot decide it`;
-        if (status === 'approved' && signed && signed.who === c.who) return `${c.name} signed off the estimate behind this entry; a second person must approve its posting`;
+        if (c.person && (SEAT_RANK[c.role] ?? 0) < (REVIEW_RANK[cur.reviewRole] ?? 0)) return `held for the ${cur.reviewRole.replace(/_/g, ' ')}; a ${c.role.replace(/_/g, ' ')} cannot decide it`;
+        const same = c.person ? signed?.who === c.who : signed?.name === by;
+        if (status === 'approved' && signed && same) return `${c.person ? c.name : by} signed off the estimate behind this entry; a second person must approve its posting`;
         return null;
       },
       (c) => {
-        ctx.db.racePostings.entryKey.update({ ...cur, status, by: c.name, at, reason: `${status} by ${c.name}: ${cur.reason}`.slice(0, 512) });
-        return `${status} by ${c.name} (${c.role})`;
+        const who = c.person ? c.name : by;
+        ctx.db.racePostings.entryKey.update({ ...cur, status, by: who, at, reason: `${status} by ${who}: ${cur.reason}`.slice(0, 512) });
+        return `${status} by ${who} (${c.person ? c.role : 'replayed'})`;
       });
   }
 );

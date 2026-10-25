@@ -14,6 +14,7 @@ import { ActButton, clock, parse, roleLabel } from '../raceday/shared';
 import { SEVERITIES, incidentCondition, readBelief, repairedCondition, sparesFor, topSeverity, type Belief, type IncidentInput, type SpareReading } from './incidentCondition';
 import { Axis, Figure, Meter, Panel, Pill, Stack, type Tone } from './kit';
 import { NextSteps } from './NextSteps';
+import { PartLifePanel } from './PartLife';
 import './pitwall.css';
 
 // The pit wall: for the pit crew and the race engineers. Three questions, per Williams car: what is its condition now
@@ -489,6 +490,7 @@ function CarCard({ car }: { car: CarRead }) {
               <GarageCheck actions={actions} />
             </>
           )}
+          <PartLifePanel car={car.number} />
         </div>
       </div>
 

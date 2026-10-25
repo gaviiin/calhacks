@@ -32,6 +32,8 @@ def apply_due(state, sink, script: dict | None, now: str) -> list[str]:
             ok = _answer(state, sink, d)
         elif d["kind"] == "choose":
             ok = _choose(state, sink, d)
+        elif d["kind"] == "approve_books":
+            ok = _approve_books(state, sink, d)
         else:
             ok = True
         if ok:
@@ -77,3 +79,15 @@ def _choose(state, sink, d: dict) -> bool:
         a.status = "approved"
         a.detail = {**a.detail, "chosen": d["pick"], "chosen_by": d["by"], "chosen_at": d["at"]}
     return ok
+
+
+def _approve_books(state, sink, d: dict) -> bool:
+    """The incident's entries held for review, approved the way the team signed them off; the desk then posts them."""
+    held = [p for p in (getattr(state, "postings", {}) or {}).values() if p.incident_key == d["incident"] and p.status == "held"]
+    if not held:
+        return d["at"] < (state.now or "")  # nothing held yet: try again on a later event, give up once the books are clear
+    if sink is None or getattr(sink, "disabled", True):
+        for p in held:
+            p.status, p.by = "approved", d["by"]
+        return True
+    return all(sink.call("decide_race_posting", [p.entry_key, "approved", d["by"], d["at"]]) for p in held)

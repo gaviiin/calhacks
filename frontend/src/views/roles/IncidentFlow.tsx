@@ -94,6 +94,30 @@ export function flowSteps(race: RaceData, inc: RaceIncidents): Step[] {
     damage = { id: 'damage', label: 'Engineering call', tab: 'garage', state: 'open', value: top ? cap(top[0]) : '—', sub: top ? `machine read ${pct(top[1])}` : 'no read yet' };
   }
 
+  // the hardware: which parts this incident used up, and what of the car runs out before the season ends
+  const parts = race.partLife.filter((r) => r.driverNumber === inc.driverNumber);
+  let replaced = 0;
+  let worn = 0;
+  let taken = 0;
+  for (const r of parts) {
+    const xs = parse<{ at: string; kind: string; note: string; taken: number }[]>(r.stressJson, []);
+    if (xs.some((x) => x.kind === 'replaced' && x.note.includes(inc.incidentKey))) replaced++;
+    const near = xs.filter((x) => x.kind !== 'replaced' && Math.abs(sortTime(x.at) - seenAt) < 120_000);
+    if (near.length) {
+      worn++;
+      taken += near.reduce((t, x) => t + x.taken, 0);
+    }
+  }
+  const pen = parts.find((r) => /grid penalty/.test(r.capNote));
+  const damaged = parts.filter((r) => r.status === 'damaged').length;
+  const hardware: Step = {
+    id: 'hardware', label: 'Hardware', tab: 'garage',
+    state: damaged ? 'wait' : replaced || worn ? 'done' : 'open',
+    value: replaced ? `${replaced} replaced` : damaged ? `${damaged} damaged` : worn ? `${worn} parts worn` : '—',
+    sub: pen ? `${pen.part === 'power_unit' ? 'PU' : pen.part} penalty ${pen.dueEvent.replace(/ Grand Prix$/, '')}` : worn ? `−${taken.toFixed(taken < 10 ? 1 : 0)}% life` : 'no part hit',
+    title: 'Parts the incident used up (Jev classifies how hard it hit each one), and any part that now runs out before the season ends',
+  };
+
   // 3 the strategist's call: priced options for the car after the incident (none if the car is out)
   const out = !!b.dns || !!b.out_of_session || b.assessed_as === 'heavy' || ev.some((e) => e.kind.startsWith('retirement')) || /did not start|never ran again|retir/i.test(inc.cause);
   const sets = race.options.filter((o) => o.driverNumber === inc.driverNumber && o.sessionKey === inc.sessionKey && sortTime(o.at) >= seenAt);
@@ -151,7 +175,7 @@ export function flowSteps(race: RaceData, inc: RaceIncidents): Step[] {
       title: `Chance of P${after.target_position ?? 8} or better in the constructors’ championship, from the season run before this incident to the latest run it triggered`,
     };
   }
-  return [seen, damage, raceCall, steps, books, season];
+  return [seen, hardware, damage, raceCall, steps, books, season];
 }
 
 const cap = (s: string) => s.charAt(0).toUpperCase() + s.slice(1);

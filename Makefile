@@ -170,7 +170,7 @@ race-snapshot:    ## the demo's frozen moment: a clean pit-wall, then São Paulo
 race-reset:       ## a clean pit-wall for the demo: wipe it, reload the FIA evidence, grant roles, relearn 2024 (BROWSER_ID=<hex> seats the dashboard)
 	$(MAKE) evidence-publish evidence-replay
 	uv run python scripts/race_grant.py
-	$(if $(BROWSER_ID),uv run python scripts/race_grant.py --role race_head --identity $(BROWSER_ID),@echo "  (pass BROWSER_ID=<hex> to let the dashboard decide: the hex is in the error a refused click shows)")
+	$(if $(BROWSER_ID),uv run python scripts/race_grant.py --role cfo --name CFO --identity $(BROWSER_ID),@echo "  (pass BROWSER_ID=<hex> to let the dashboard decide: the hex is in the error a refused click shows)")
 	$(ENV) uv run python -m race.policy_learner --onboard --era 2024 --offline
 
 race-test:        ## race desk tests: pytest race/tests + the module's vitest

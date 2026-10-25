@@ -501,6 +501,44 @@ export const RaceOptionsInput = __t.object("RaceOptionsInput", {
 });
 export type RaceOptionsInput = __Infer<typeof RaceOptionsInput>;
 
+export const RacePartLife = __t.object("RacePartLife", {
+  partKey: __t.string(),
+  meetingKey: __t.u32(),
+  driverNumber: __t.u32(),
+  part: __t.string(),
+  usedPct: __t.f64(),
+  lifeKm: __t.u32(),
+  remainingKm: __t.i32(),
+  status: __t.string(),
+  dueEvent: __t.string(),
+  dueAt: __t.string(),
+  costCents: __t.i64(),
+  capNote: __t.string(),
+  broughtForwardCents: __t.i64(),
+  stressJson: __t.string(),
+  updatedAt: __t.string(),
+});
+export type RacePartLife = __Infer<typeof RacePartLife>;
+
+export const RacePartLifeInput = __t.object("RacePartLifeInput", {
+  partKey: __t.string(),
+  meetingKey: __t.u32(),
+  driverNumber: __t.u32(),
+  part: __t.string(),
+  usedPct: __t.f64(),
+  lifeKm: __t.u32(),
+  remainingKm: __t.i32(),
+  status: __t.string(),
+  dueEvent: __t.string(),
+  dueAt: __t.string(),
+  costCents: __t.i64(),
+  capNote: __t.string(),
+  broughtForwardCents: __t.i64(),
+  stressJson: __t.string(),
+  updatedAt: __t.string(),
+});
+export type RacePartLifeInput = __Infer<typeof RacePartLifeInput>;
+
 export const RacePolicies = __t.object("RacePolicies", {
   policyId: __t.string(),
   parentPolicyId: __t.string(),

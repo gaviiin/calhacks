@@ -26,7 +26,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from race import cap_forecast, close as close_mod, erp, incidents, ledger, logistics, people, questions, season_sim, strategy
+from race import cap_forecast, close as close_mod, erp, incidents, ledger, life, logistics, people, questions, season_sim, strategy
 from race.events import Action, Close, Effect, Entry, Incident, OptionSet, Posting, Question, RaceEvent, SimRun, now_iso
 from race.replay import Replay
 from race.sink import RaceSink
@@ -116,6 +116,11 @@ class Weekend:
             if self.sink:
                 self.sink.options(o)
         self._time("strategy", t0)
+        t0 = time.perf_counter()
+        worn = life.update(st, ev, jev, replay)  # the hardware: each part's life from laps, stress events and crashes
+        if worn and self.sink:
+            self.sink.part_life(worn)
+        self._time("hardware", t0)
         t0 = time.perf_counter()
         inc = self.book.observe(ev, effects, jev)
         self._time("log", t0)
@@ -361,6 +366,12 @@ class Weekend:
                 self.follow_decisions()
                 self.state._last_poll = 0.0
                 self.apply_answers()
+                if self.until:  # the garage's last answer reaches the parts too
+                    from race.events import RaceEvent as _E
+
+                    worn = life.update(self.state, _E(kind="notice", at=self.until, session_key=0, meeting_key=self.state.meeting_key, lap=0, driver_number=0, team_name=""))
+                    if worn and self.sink:
+                        self.sink.part_life(worn)
             booked_before += r.ctx.race_cost_mid
             done = stats[key]
             self._done["jev_calls"] += done.get("jev_calls", 0)

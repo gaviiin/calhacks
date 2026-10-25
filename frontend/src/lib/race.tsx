@@ -13,6 +13,7 @@ import type {
   RaceForecasts,
   RaceIncidents,
   RaceOptions,
+  RacePartLife,
   RacePolicies,
   RacePostings,
   RaceHealth,
@@ -73,6 +74,8 @@ export interface RaceData {
   closes: readonly RaceCloses[];
   options: readonly RaceOptions[];
   postings: readonly RacePostings[];
+  /** Each part's life on our cars, from laps, stress events and crashes (race/life.py). */
+  partLife: readonly RacePartLife[];
   health: readonly RaceHealth[];
   // pit-wall as the backend: every decision's audit row, who holds a seat, who is watching, the rules, the latency
   audit: readonly RaceAudit[];
@@ -120,6 +123,7 @@ const Ctx = createContext<RaceData>({
   closes: [],
   options: [],
   postings: [],
+  partLife: [],
   health: [],
   audit: [],
   seats: [],
@@ -166,6 +170,7 @@ export function RaceBridge({ children }: { children: ReactNode }) {
   const [closes] = useTable(tables.raceCloses);
   const [options] = useTable(tables.raceOptions);
   const [postings] = useTable(tables.racePostings);
+  const [partLife] = useTable(tables.racePartLife);
   const [health] = useTable(tables.raceHealth);
   const [audit] = useTable(tables.raceAudit);
   const [seats] = useTable(tables.raceSeats);
@@ -241,11 +246,11 @@ export function RaceBridge({ children }: { children: ReactNode }) {
   const value = useMemo<RaceData>(
     () => ({
       connected: conn.isActive, identityHex, events, cars, effects, forecasts, policies, precedents, correct, confirm,
-      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, options, postings, health, decidePosting, decideAction, chooseOption, answer, approveClose,
+      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, options, postings, partLife, health, decidePosting, decideAction, chooseOption, answer, approveClose,
       audit, seats, rules, signoffs, online, latency, mySeat,
     }),
     [conn.isActive, identityHex, events, cars, effects, forecasts, policies, precedents, correct, confirm,
-      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, options, postings, health, decidePosting, decideAction, chooseOption, answer, approveClose,
+      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, options, postings, partLife, health, decidePosting, decideAction, chooseOption, answer, approveClose,
       audit, seats, rules, signoffs, online, latency, mySeat]
   );
   // A replay at full speed writes thousands of rows a second, and each one re-renders the tables above. The views
@@ -307,6 +312,7 @@ export function scopeToMeeting(race: RaceData, meeting: number | null): RaceData
     closes: race.closes.filter((c) => c.meetingKey === meeting),
     options: race.options.filter((o) => o.meetingKey === meeting),
     postings: race.postings.filter((p) => entryKeys.has(p.entryKey)),
+    partLife: race.partLife.filter((p) => p.meetingKey === meeting),
   };
 }
 

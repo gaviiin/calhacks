@@ -20,22 +20,19 @@ Race day is the product; the desks behind it are where its entries land.
 
 ## Product Purpose
 
-Pit Wall is race-weekend finance that keeps up with the race. **Know what a crash costs, and what it costs the season, before the car is back in the garage**; the engineers and the CFO decide on the same numbers that night instead of the following week; every figure is booked, flagged for review where it needs a person, and traceable.
+Pit Wall is an autonomous race accountant for a Formula 1 team: **it keeps the books in step with the car.** Every lap, every trip off the track and every crash changes what each part has left; the agent turns that into entries, cost cap timing, spares and a cap forecast within milliseconds of the data, and people approve only what is material.
 
-Today a crash reaches finance as parts invoices weeks later, and reaches the season picture at the year-end forecast, while the calls those numbers should inform (repair, spare tub or withdraw; what to fly to the next race; how much development to defer under the cap) are made that night. The demo is Williams at the 2024 São Paulo Grand Prix: three crashes in one Sunday, a car that did not start, no points, P8 lost to Alpine. It leads with Albon's 315 km/h qualifying crash.
+The job exists at every team, and crashes are its biggest swing in the season (Williams 2024: crash damage squeezed the cap, the FIA refused relief, development moved into the next year). The demo is Williams at the 2024 São Paulo Grand Prix, led by Albon's 315 km/h qualifying crash.
 
-After an incident, two calls run side by side and the rest follows them:
+Three twists, in this order:
 
-1. **Seen**: a telemetry tripwire sees our car stop seconds before the red flag, and minutes before race control (which sometimes never names the car). One incident per crash; its belief evolves as evidence arrives, versioned as what we believed when.
-2. **Engineering call**: the garage confirms the damage in one click (a choice between two crashes the team has lived through, asked only when a wrong call would cost more than the question); when the car must start soon, the Team Principal sees repair, spare tub and withdraw priced side by side and chooses. No recommendation.
-3. **Race call**: the strategist sees each option for the car on track priced in positions, points, prize and cap. No recommendation.
-4. **Next steps**: execution follows the choice. The desk does the reversible work (spares, work orders, inventory moves, the evidence pack); anything outward or irreversible (an FIA notice, air freight) waits for its owner with a deadline.
-5. **Books**: balanced provisional entries, each saying when the cost cap counts it, posted to the ERP or held for the person materiality names.
-6. **Season**: 10,000 seasons after every change: the chance of holding the place, the prize money at stake and how much of it our crashes cost versus rivals' results, the cap overspend risk and the development to defer.
+1. **The car is the ledger.** Each part on each car has a life: laps use it, stress events use it (Jev classifies how hard a contact or a trip off the track hit and which parts), crashes destroy it. Wear is never booked (the cap excludes depreciation); it sets when each replacement is fitted, which is when its cost counts, and flags a power unit or gearbox past its allocation as a grid penalty.
+2. **The books keep themselves.** Balanced entries with when the cap counts each line, inventory moves, accruals, adjustments once the garage confirms, ERP postings, the evidence pack, the seal and the true-up. People answer a damage question when Jev is unsure, make the racing calls (priced, never recommended) and approve each crash's books in one click.
+3. **Milliseconds.** Every event is costed in about a millisecond, so the numbers are never stale when someone decides; telemetry sees a crash seconds before race control.
 
-Race-day numbers are provisional: the weekend is sealed on Sunday night and briefed to each role once the CFO approves, and the true-up against actuals weeks later recalibrates the price book.
+After an incident the dashboard follows it in seven steps: seen, hardware, engineering call, race call, next steps, books, season. Race-day numbers are provisional: the weekend is sealed on Sunday night and briefed once the CFO approves, and the true-up against actuals weeks later recalibrates the price book.
 
-Success: on race day a reviewer can see, for any number, which step produced it, from what evidence, under which learned rule or which person's answer; people spend their time only on the calls that are theirs.
+Success: a judge sees the car change, the books follow without a person, and one click where a person is needed; any number traces to the event, the part and the rule or person behind it.
 
 The two desks behind Books keep their own story: the **revenue accountant** books sponsor fees, bonuses and prize money through one write path a deterministic kernel re-checks (K1 to K12), and the **cost cap analyst** classifies every cost line under the FIA Financial Regulations, under house policies a Policy Learner drafted from last year's books.
 

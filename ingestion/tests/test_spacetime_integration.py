@@ -202,6 +202,7 @@ def test_module_tables_are_the_evidence_and_finance_mirror(owner_db):
         "raceEntryLines",
         "raceQuestions",
         "raceSims",
+        "racePartLife",
         "raceCloses",
         "raceOptions",
         "racePostings",
