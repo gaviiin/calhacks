@@ -14,7 +14,7 @@ Race-day finance for a Formula 1 team, built for the Hyphenate track at Cal Hack
 
 ## A view for each person
 
-Race day opens on a switcher; every view reads the same live SpacetimeDB rows and none of them recommends.
+Race day opens on a switcher; every view reads the same live SpacetimeDB rows and none of them recommends. The seven stages in order (for the pitch deck) are at `#/day/flow`, off the switcher.
 
 | View | For | What it shows |
 |---|---|---|
@@ -22,7 +22,6 @@ Race day opens on a switcher; every view reads the same live SpacetimeDB rows an
 | Strategy | head of strategy | Varun Sanjeev's decision cockpit, ported: stay out, pit now, other compound, the same stop under green, each with positions, time lost (measured from this race's stops), points, prize and cap effects; the season as chances; priced, never recommended |
 | CFO | CFO, Head of Cost Cap | cost so far, what is in the books and what is held, expected prize, the chance of holding the place and of a cap overspend, every item waiting for a person with its decision in reach, the sealed weekend and its briefs |
 | Accounting | Controller, accountants | a live feed of events, beliefs, decisions and entries beside the books: entries posted to the ERP journal with its id, or held for review (at or above $250k for the Head of Cost Cap, $1m for the CFO, behind a line Jev was unsure of for the Controller) |
-| The flow | everyone | the seven stages in order |
 
 A strip on every view says which services the run really used. On the last demo run: OpenF1 live (the REST API, responses cached), SpacetimeDB live (2,927 reducer calls, 0 refused), Jev live (117 decisions, mean 114 ms), Claude live (4 repair plans, 4 of 4 briefs), the ERP live (3 entries posted through the gateway, 7 held for review); notifications are not configured until Slack, email, Teams or SMS credentials are added in Connect (then dry run until `PITWALL_NOTIFY=live`). OpenF1's live MQTT feed needs its paid tier (`race/live.py`).
 
@@ -31,8 +30,11 @@ make stdb-start                  # SpacetimeDB on :3000 (another terminal)
 make api                         # the ERP and systems of record on :8010 (another terminal)
 make race-reset BROWSER_ID=<hex> # a clean pit-wall: evidence, roles, 2024 history; the hex seats your browser
 make dashboard                   # :5173, Race day is the home page
-make race-demo                   # São Paulo 2024 with Jev, Claude, OpenF1 and the ERP live (OFFLINE=1 for none)
+make race-snapshot BROWSER_ID=<hex>  # the demo's frozen moment: a few minutes after Colapinto's lap-32 crash, earlier decisions replayed
+make race-demo                   # or watch it happen: São Paulo 2024 live, Jev, Claude, OpenF1 and the ERP (OFFLINE=1 for none)
 ```
+
+The same three runs sit in the Race day bar as buttons (Replay São Paulo, Lap 32, Reset): the dashboard's dev server runs the make target on this machine and seats the browser that asked.
 
 The dashboard has four tabs: **Race day** (the views above), **Inbox** (what waits for a person), **Books** (where the entries land: race entries, the cost cap desk, the revenue desk), **Audit** (the log and the FIA evidence). Not affiliated with Williams Racing: timing, telemetry and results are real (OpenF1, Jolpica); money is press estimates and stated assumptions, each with its source in `race/data/`. The race desk's details are in [race/README.md](race/README.md).
 

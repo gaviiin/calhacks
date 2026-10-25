@@ -819,7 +819,7 @@
 
   .pw-rail {
     position: static;
-    order: 0;
+    order: 2; /* on a narrow screen the cars lead; the track and running order follow */
     grid-template-columns: minmax(0, 1fr) minmax(0, 1.6fr);
     align-items: start;
   }
