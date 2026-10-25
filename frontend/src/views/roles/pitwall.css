@@ -1,0 +1,702 @@
+/* The pit wall view: one card per car, the track beside them. Status is always a word and a mark, never colour alone. */
+
+.pw {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) 248px;
+  gap: 16px;
+  align-items: start;
+  margin-top: 12px;
+}
+
+.pw-cars {
+  display: grid;
+  gap: 16px;
+  min-width: 0;
+}
+
+.pw-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.pw-h {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 8px;
+  margin: 0 0 6px;
+  font: 600 12px/1.2 var(--display);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--steel, var(--muted));
+}
+
+.pw-owner {
+  font: 400 12px/1.2 var(--body, inherit);
+  letter-spacing: 0;
+  text-transform: none;
+  color: var(--muted);
+}
+
+.pw-tone--ok {
+  color: var(--lime);
+}
+.pw-tone--hold {
+  color: var(--hold);
+}
+.pw-tone--alert {
+  color: var(--alert);
+}
+.pw-tone--muted {
+  color: var(--muted);
+}
+
+.pw-chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 1px 7px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 11px;
+  line-height: 1.5;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- track */
+
+.pw-track {
+  position: sticky;
+  top: 12px;
+  order: 2;
+  padding: 12px;
+  border: 1px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.pw-flag {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-left-width: 4px;
+  border-radius: 6px;
+  font: 700 20px/1 var(--display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.pw-flag--ok {
+  border-left-color: var(--lime);
+  color: var(--lime);
+}
+.pw-flag--hold {
+  border-left-color: var(--hold);
+  color: var(--hold);
+  background: var(--hold-wash, transparent);
+}
+.pw-flag--alert {
+  border-left-color: var(--alert);
+  color: var(--alert);
+  background: var(--alert-wash, transparent);
+}
+.pw-flag--muted {
+  color: var(--muted);
+}
+
+.pw-track-meta {
+  margin: 6px 0 12px;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+.pw-order {
+  display: grid;
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12px;
+}
+
+.pw-order li {
+  display: grid;
+  grid-template-columns: 30px 64px minmax(0, 1fr);
+  gap: 6px;
+  align-items: baseline;
+  padding: 2px 4px;
+  border-left: 2px solid transparent;
+}
+
+.pw-order-pos {
+  text-align: right;
+  color: var(--muted);
+}
+
+.pw-order-team {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--muted);
+}
+
+.pw-order--ours {
+  border-left-color: var(--lime) !important;
+  background: var(--lime-wash, transparent);
+  font-weight: 600;
+}
+
+.pw-order--ours .pw-order-team,
+.pw-order--ours .pw-order-pos {
+  color: var(--ink, inherit);
+}
+
+.pw-order--out {
+  opacity: 0.6;
+}
+
+.pw-dns {
+  margin: 8px 0 0;
+}
+
+/* ---------------------------------------------------------------- car card */
+
+.pw-car {
+  min-width: 0;
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--line);
+  border-radius: 10px;
+  background: var(--panel);
+}
+
+.pw-car--ok {
+  border-top-color: var(--lime);
+}
+.pw-car--hold {
+  border-top-color: var(--hold);
+}
+.pw-car--alert {
+  border-top-color: var(--alert);
+}
+
+.pw-car-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 16px;
+  margin-bottom: 12px;
+}
+
+.pw-car-id {
+  display: flex;
+  align-items: center;
+  gap: 12px;
+  min-width: 0;
+}
+
+.pw-car-num {
+  display: grid;
+  place-items: center;
+  min-width: 46px;
+  height: 46px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  font-size: 22px;
+  font-weight: 600;
+}
+
+.pw-car-id h2 {
+  margin: 0;
+  font: 700 26px/1 var(--display);
+  letter-spacing: 0.03em;
+}
+
+.pw-car-name {
+  font: 500 15px/1 var(--display);
+  letter-spacing: 0.02em;
+  color: var(--muted);
+}
+
+.pw-timing {
+  margin: 4px 0 0;
+  font-size: 13px;
+  color: var(--ink, inherit);
+}
+
+.pw-status {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  padding: 6px 12px;
+  border: 1px solid var(--line);
+  border-radius: 999px;
+  font-size: 13px;
+}
+
+.pw-status b {
+  font: 700 15px/1 var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pw-status-note {
+  color: var(--muted);
+}
+
+.pw-status--ok {
+  border-color: color-mix(in srgb, var(--lime) 45%, var(--line));
+  color: var(--lime);
+}
+.pw-status--hold {
+  border-color: color-mix(in srgb, var(--hold) 45%, var(--line));
+  color: var(--hold);
+}
+.pw-status--alert {
+  border-color: color-mix(in srgb, var(--alert) 50%, var(--line));
+  background: var(--alert-wash, transparent);
+  color: var(--alert);
+}
+.pw-status--muted {
+  color: var(--muted);
+}
+
+.pw-car-body {
+  display: grid;
+  grid-template-columns: minmax(0, 1.35fr) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.pw-car-sheet {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.pw-stage .bp-iso {
+  max-width: 100%;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pw-nogl {
+  padding: 32px 12px;
+  border: 1px dashed var(--line);
+  border-radius: 8px;
+  text-align: center;
+}
+
+.pw-replaying {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  font-size: 12px;
+  color: var(--hold);
+}
+
+.pw-linkbtn {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--lime);
+  font: inherit;
+  text-decoration: underline;
+  cursor: pointer;
+}
+
+.pw-car-side {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.pw-quiet {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: 0;
+  color: var(--muted);
+}
+
+/* what we believe now */
+
+.pw-now {
+  padding: 10px 12px;
+  border: 1px solid var(--line);
+  border-radius: 8px;
+  background: var(--panel-2, var(--panel));
+}
+
+.pw-now--live {
+  animation: pw-flash 1.2s var(--ease, ease-out);
+}
+
+@keyframes pw-flash {
+  from {
+    box-shadow: 0 0 0 2px color-mix(in srgb, var(--hold) 70%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 2px transparent;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .pw-now--live {
+    animation: none;
+  }
+}
+
+.pw-now-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px 10px;
+  margin: 0 0 6px;
+  font-size: 12px;
+}
+
+.pw-livechip {
+  padding: 0 6px;
+  border: 1px solid var(--lime);
+  border-radius: 4px;
+  font: 600 10px/1.6 var(--display);
+  letter-spacing: 0.14em;
+  text-transform: uppercase;
+  color: var(--lime);
+}
+
+.pw-now-what {
+  margin: 0;
+  font-size: 14px;
+}
+
+.pw-cause {
+  margin: 6px 0 0;
+}
+
+.pw-sev {
+  margin-top: 8px;
+}
+
+.pw-sev-bar {
+  display: flex;
+  height: 6px;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--line-soft, var(--line));
+}
+
+.pw-sev-bar i {
+  display: block;
+  min-width: 2px;
+  transition: flex-grow 0.6s var(--ease, ease-out);
+}
+
+.pw-sev--alert {
+  background: var(--alert);
+}
+.pw-sev--hold {
+  background: var(--hold);
+}
+.pw-sev--steel {
+  background: var(--steel, var(--muted));
+}
+.pw-sev--line {
+  background: var(--line);
+}
+
+.pw-sev-keys {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 12px;
+  margin: 4px 0 0;
+  font-size: 11px;
+  color: var(--muted);
+}
+
+/* parts */
+
+.pw-parts {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pw-part {
+  position: relative;
+  display: grid;
+  grid-template-columns: 16px minmax(0, 1fr) auto;
+  grid-template-areas:
+    'mark name p'
+    'mark spare spare';
+  gap: 0 8px;
+  padding: 5px 8px 7px;
+  border-radius: 4px;
+  font-size: 13px;
+  outline: none;
+  cursor: default;
+}
+
+.pw-part:hover,
+.pw-part:focus-visible {
+  background: var(--raise, var(--panel-2));
+}
+
+.pw-part:focus-visible {
+  box-shadow: 0 0 0 1px var(--lime);
+}
+
+.pw-part-mark {
+  grid-area: mark;
+  font-size: 12px;
+  line-height: 1.5;
+}
+
+.pw-part-name {
+  grid-area: name;
+}
+
+.pw-part-p {
+  grid-area: p;
+  font-size: 12px;
+}
+
+.pw-part-spare {
+  grid-area: spare;
+  font-size: 12px;
+}
+
+.pw-part-bar {
+  position: absolute;
+  left: 32px;
+  bottom: 2px;
+  height: 2px;
+  max-width: calc(100% - 40px);
+  border-radius: 1px;
+  background: var(--line);
+}
+
+.pw-part--damaged .pw-part-mark,
+.pw-part--damaged .pw-part-p {
+  color: var(--alert);
+}
+.pw-part--damaged .pw-part-bar {
+  background: var(--alert);
+}
+.pw-part--watch .pw-part-mark,
+.pw-part--watch .pw-part-p {
+  color: var(--hold);
+}
+.pw-part--watch .pw-part-bar {
+  background: var(--hold);
+}
+.pw-part--ok .pw-part-mark {
+  color: var(--muted);
+}
+
+/* garage, question, decision */
+
+.pw-box {
+  padding: 10px 12px;
+  border-left: 3px solid var(--line);
+  border-radius: 0 6px 6px 0;
+  background: var(--panel-2, var(--panel));
+}
+
+.pw-box p {
+  margin: 0 0 6px;
+}
+
+.pw-box--hold {
+  border-left-color: var(--hold);
+}
+.pw-box--ok {
+  border-left-color: var(--lime);
+}
+
+.pw-questions {
+  margin: 0 0 6px;
+}
+
+.pw-options {
+  display: grid;
+  gap: 6px;
+  margin: 6px 0 8px;
+  padding: 0;
+  list-style: none;
+}
+
+.pw-option {
+  padding: 8px 10px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+}
+
+.pw-option p {
+  margin: 0 0 3px;
+}
+
+.pw-option-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 4px 8px;
+}
+
+.pw-option--no {
+  opacity: 0.72;
+}
+
+.pw-option--chosen {
+  border-color: var(--lime);
+}
+
+/* history */
+
+.pw-history {
+  display: grid;
+  gap: 2px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.pw-history button {
+  display: grid;
+  grid-template-columns: 26px 62px 92px minmax(0, 1fr);
+  grid-template-areas:
+    'v at status cause'
+    '. . . read';
+  gap: 1px 8px;
+  width: 100%;
+  padding: 5px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: inherit;
+  font: inherit;
+  font-size: 12px;
+  text-align: left;
+  cursor: pointer;
+}
+
+.pw-history button:hover {
+  background: var(--raise, var(--panel-2));
+}
+
+.pw-history button:focus-visible {
+  outline: 1px solid var(--lime);
+}
+
+.pw-history--on button {
+  border-color: var(--line);
+  background: var(--panel-2, var(--panel));
+}
+
+.pw-history-v {
+  grid-area: v;
+  color: var(--muted);
+}
+
+.pw-history--on .pw-history-v {
+  color: var(--lime);
+}
+
+.pw-history-at {
+  grid-area: at;
+}
+
+.pw-history-status {
+  grid-area: status;
+  color: var(--muted);
+}
+
+.pw-history-cause {
+  grid-area: cause;
+}
+
+.pw-history-read {
+  grid-area: read;
+  font-size: 11px;
+}
+
+/* ---------------------------------------------------------------- narrow */
+
+@media (max-width: 1180px) {
+  .pw-car-body {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+@media (max-width: 900px) {
+  .pw {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .pw-track {
+    position: static;
+    order: 0;
+  }
+
+  .pw-order {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+    column-gap: 10px;
+  }
+}
+
+@media (max-width: 520px) {
+  .pw-car {
+    padding: 12px 10px;
+  }
+
+  .pw-car-head {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .pw-order li {
+    grid-template-columns: 28px minmax(0, 1fr);
+  }
+
+  .pw-order-team {
+    display: none;
+  }
+
+  .pw-order--ours .pw-order-team {
+    display: block;
+    grid-column: 2;
+    font-size: 11px;
+  }
+
+  .pw-history button {
+    grid-template-columns: 26px 62px minmax(0, 1fr);
+    grid-template-areas:
+      'v at status'
+      '. cause cause'
+      '. read read';
+  }
+}
+
+/* the drawing and the belief history stay in view while the side column scrolls */
+@media (min-width: 1181px) {
+  .pw-car-sheet {
+    position: sticky;
+    top: 12px;
+    display: grid;
+    gap: 12px;
+  }
+}
