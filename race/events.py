@@ -107,7 +107,7 @@ class RaceEvent:
         elif self.kind == "standings":
             detail = f"{p.get('team')}: P{p.get('position_start')} -> P{p.get('position_current')}, {p.get('points_start')} -> {p.get('points_current')} pts"
         elif self.kind == "retirement_confirmed":
-            detail = f"classified DNF after {p.get('number_of_laps')} laps"
+            detail = p.get("summary") or "did not start" if p.get("dns") else f"classified DNF after {p.get('number_of_laps')} laps"
         return f"{self.at[11:19]} L{self.lap:>2} {who:>6} {self.kind:<21} {detail}"
 
 

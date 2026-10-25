@@ -1,0 +1,223 @@
+/* Stages 1 and 2 of the race-day flow: the speed story (detect) and the incident cards (log). */
+
+.detect {
+  display: grid;
+  grid-template-columns: minmax(0, 3fr) minmax(0, 2fr);
+  gap: 18px;
+}
+
+.speed-story {
+  display: grid;
+  gap: 12px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.speed-row {
+  padding: 10px 12px;
+  border-left: 3px solid var(--alert);
+  background: var(--panel-2);
+}
+
+.speed-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+}
+
+.speed-signals {
+  display: grid;
+  gap: 4px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.speed-signal {
+  display: grid;
+  grid-template-columns: minmax(150px, 1.3fr) minmax(120px, 1fr) minmax(60px, 1.2fr);
+  align-items: center;
+  gap: 10px;
+  font-size: 13px;
+}
+
+.speed-label {
+  color: var(--steel);
+}
+
+.speed-lag {
+  white-space: nowrap;
+}
+
+.speed-signal--never .speed-lag {
+  color: var(--hold);
+  font-weight: 600;
+}
+
+.speed-bar {
+  position: relative;
+  height: 6px;
+  background: var(--line-soft);
+}
+
+.speed-bar > span {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--steel);
+}
+
+.speed-signal--first .speed-bar > span {
+  background: var(--lime);
+}
+
+.detect-tape .eyebrow {
+  margin: 10px 0 0;
+}
+
+.tape-row {
+  display: grid;
+  grid-template-columns: 64px 64px 78px minmax(0, 1fr);
+  gap: 8px;
+  align-items: baseline;
+}
+
+.tape-row--stop .tape-kind {
+  color: var(--alert);
+  font-weight: 600;
+}
+
+.tape-detail {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* ---------------------------------------------------------------- log */
+
+.incident--confirmed {
+  border-left-color: var(--alert);
+}
+
+.incident--suspected,
+.incident--corroborated {
+  border-left-color: var(--hold);
+}
+
+.incident--assessed {
+  border-left-color: var(--lime);
+}
+
+.incident-chip {
+  padding: 1px 6px;
+  border: 1px solid currentColor;
+  border-radius: 2px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.incident-key {
+  margin-left: auto;
+}
+
+.incident-facts {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 8px 14px;
+  margin: 10px 0 0;
+}
+
+.incident-facts dt {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.incident-facts dd {
+  margin: 2px 0 0;
+  font-size: 13px;
+}
+
+.incident-steps {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.incident-steps .step--reached {
+  color: var(--ink);
+}
+
+.incident-steps [aria-current='step'] {
+  font-weight: 700;
+}
+
+.beliefs-head {
+  margin: 12px 0 0;
+}
+
+.belief-history {
+  margin-top: 4px;
+  padding-left: 10px;
+  border-left: 1px solid var(--line);
+}
+
+.belief-history li {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 10px;
+}
+
+.belief-history .state {
+  justify-self: auto;
+  min-width: 88px;
+}
+
+.belief-chips {
+  display: inline-flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.belief-chip {
+  padding: 0 5px;
+  border: 1px solid var(--line);
+  color: var(--steel);
+  font-size: 11.5px;
+}
+
+@media (max-width: 900px) {
+  .detect {
+    grid-template-columns: 1fr;
+  }
+  .incident-facts {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 560px) {
+  .speed-signal {
+    grid-template-columns: 1fr auto;
+  }
+  .speed-bar {
+    grid-column: 1 / -1;
+  }
+  .tape-row {
+    grid-template-columns: 58px 58px minmax(0, 1fr);
+  }
+  .tape-detail {
+    grid-column: 1 / -1;
+  }
+  .incident-key {
+    margin-left: 0;
+  }
+}

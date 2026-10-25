@@ -9,7 +9,10 @@
 
 What OpenF1 does and does not say (verified on 2025-26 sessions):
 - race_control never announces a retirement. We infer one when a car's laps stop (`retirement_suspected`)
-  and confirm from session_result.dnf at the end (`retirement_confirmed`).
+  and confirm from session_result.dnf at the end (`retirement_confirmed`). Outside a race, cars sit in the
+  garage for most of the session, so a silent car is only suspect when telemetry saw it stop.
+- A team car that did not start is a `retirement_confirmed` with dns=true (other teams' DNS change no order).
+- A red flag is lifted by the track-wide clear or green, never by a sector clear posted the same second.
 - Incidents are category "Other" free text that lags the incident by minutes; the clock in brackets at the
   end of the message is the real time. Penalties are free text too.
 - Stints carry no timestamp; we stamp them with the start of their first lap.
@@ -84,6 +87,7 @@ class _Driver:
     gap: str = ""
     last_pit_lap: int = 0
     status: str = "running"
+    stopped: bool = False  # telemetry saw it stop this session
     recent_laps: list = field(default_factory=list)  # lap_duration of completed laps
 
 
@@ -95,6 +99,7 @@ class Normalizer:
         self.meeting_key = int(session.get("meeting_key") or 0)
         self.session_start = session.get("date_start", "")
         self.session_end = session.get("date_end", "")
+        self.session_type = session.get("session_type") or "Race"
         self.drivers: dict[int, _Driver] = {}
         self.track_status = "green"  # green | sc | vsc | red | finished
         self.field_lap = 0
@@ -244,6 +249,8 @@ class Normalizer:
         if cat == "SessionStatus":
             if "FINISH" in msg or "ENDS" in msg:
                 self.finished = True
+            elif "STARTED" in msg and self.session_type != "Race":
+                self.finished = False  # qualifying is three sessions, each with its own chequered flag
             return [self._ev("session_status", at, 0, lap, base)]
         if cat == "Flag":
             if flag == "RED":
@@ -252,7 +259,7 @@ class Normalizer:
             if flag == "CHEQUERED":
                 self.finished = True
                 self.track_status = "finished"
-            elif flag in ("GREEN", "CLEAR") and self.track_status == "red":
+            elif flag in ("GREEN", "CLEAR") and self.track_status == "red" and row.get("scope") in ("Track", None):
                 self.track_status = "green"
             return [self._ev("flag", at, driver, lap, base)]
 
@@ -274,6 +281,7 @@ class Normalizer:
         if not self.is_team_car(n):
             return []
         d = self._driver(n)
+        d.stopped = True
         g = f", {row['decel_g']}g" if row.get("decel_g") else ""
         summary = (f"telemetry: {row['peak_kph']} to 0 km/h in {row['seconds']}s{g}" if row["signature"] == "stop"
                    else f"telemetry froze at {row['impact_kph']} km/h after {row['peak_kph']} km/h")
@@ -288,18 +296,22 @@ class Normalizer:
         return [self._ev("standings", at, 0, self.field_lap, payload, extra_key=str(row.get("team_name")))]
 
     def _on_session_result(self, row: dict) -> list[RaceEvent]:
-        if not row.get("dnf"):
-            return []
         n = int(row["driver_number"])
+        dns = bool(row.get("dns")) and self.is_team_car(n)
+        if not row.get("dnf") and not dns:
+            return []
         d = self._driver(n)
         d.status = "retired"
         at = row.get("_t") or self.session_end or self.session_start
-        payload = {"number_of_laps": row.get("number_of_laps"), "dnf": True, "dns": row.get("dns"), "dsq": row.get("dsq")}
+        payload = {"number_of_laps": row.get("number_of_laps"), "dnf": bool(row.get("dnf")), "dns": bool(row.get("dns")), "dsq": row.get("dsq")}
+        if dns:
+            payload["summary"] = f"did not start the {self.session_type.lower()}"
         return [self._ev("retirement_confirmed", at, n, int(row.get("number_of_laps") or d.lap), payload)]
 
     # ------------------------------------------------------------------ clock
     def tick(self, now: str) -> list[RaceEvent]:
-        """Retirement detection: a running car with no new lap for 2.5 median laps while the track is not red."""
+        """Retirement detection: a running car with no new lap for 2.5 median laps while the track is not red.
+        Outside a race only a car telemetry saw stop: the rest are in the garage between runs."""
         if self.finished or self.track_status == "red" or now <= self._last_tick:
             return []
         self._last_tick = now
@@ -308,6 +320,8 @@ class Normalizer:
         limit = self.median_lap() * SUSPECT_AFTER_MEDIAN_LAPS
         for d in self.drivers.values():
             if d.status != "running" or not d.last_lap_start or d.lap == 0:
+                continue
+            if self.session_type != "Race" and not d.stopped:
                 continue
             silent = (t_now - parse_iso(d.last_lap_start)).total_seconds()
             if silent > limit and self.field_lap >= d.lap + 2:

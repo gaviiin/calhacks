@@ -155,11 +155,19 @@ class Weekend:
             st.incidents[inc.incident_key] = inc
             if self.sink:
                 self.sink.incident(inc)
+            self.say(f"[log] {inc.incident_key} v{inc.version} {inc.status}: {inc.cause}")
             for a in logistics.plan(inc, st):
                 if st.actions.get(a.action_key) != a:
                     st.actions[a.action_key] = a
                     if self.sink:
                         self.sink.actions([a])
+                    self.say(f"[respond] {a.kind}: {a.title} ({a.status})")
+            for q in questions.questions_for(inc, [], st):
+                if q.question_key not in st.questions:
+                    st.questions[q.question_key] = q
+                    if self.sink:
+                        self.sink.ask(q)
+                    self.say(f"[ask] {q.route_role}: {q.prompt}")
         self.replan(f"result:{replay.session.get('session_key')}")
 
     # ------------------------------------------------------------------ stages that run on their own clock
