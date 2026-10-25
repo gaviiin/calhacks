@@ -142,7 +142,7 @@ const FEATURES: Feature[] = [
     ],
     why: [
       'Race-day numbers are provisional. Saying so, and sealing them, is what makes them usable on Monday morning.',
-      'São Paulo sealed at $3.92m; the press reported "nearly $4m" weeks later.',
+      'São Paulo sealed at $3.77m; the press reported "nearly $4m" weeks later.',
       'The true-up is how the price book stops being an assumption.',
     ],
   },

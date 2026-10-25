@@ -29,7 +29,7 @@ Albon's qualifying crash at 315 km/h, the way the dashboard follows it. A strip 
 | Books | Head of Cost Cap | Entries prepared by the agent post on precedent once the plan is approved; a line the team has never booked (a familiar part at an unfamiliar price, a part never made mid-season) waits for the Head of Cost Cap, and the decision becomes the precedent |
 | Season | CFO | 10,000 seasons after every change: the chance of holding P8 falls from 72% to 54% on Albon's withdrawal and to 0% by the flag; expected prize money falls $6.1m; the chance of a cap overspend; the development to defer |
 
-Race-day finance is provisional, and Pit Wall says so. The weekend is sealed on Sunday night under one Merkle root, with a brief for each role that cites the row behind every figure; nothing goes out until the CFO approves. Weeks later the true-up compares the sealed $3.92m with the "nearly $4 million" the press reported.
+Race-day finance is provisional, and Pit Wall says so. The weekend is sealed on Sunday night under one Merkle root, with a brief for each role that cites the row behind every figure; nothing goes out until the CFO approves. Weeks later the true-up compares the sealed $3.77m with the "nearly $4 million" the press reported.
 
 ## A view for each person
 
