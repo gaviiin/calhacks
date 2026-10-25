@@ -3,18 +3,26 @@ import type { SeatStatus } from '../components/Shell';
 import { AccountPanel } from './raceday/AccountPanel';
 import { CostCapView } from './CostCapView';
 import { RevenueView } from './RevenueView';
+import { RaceScope, latestMeeting, useRace } from '../lib/race';
+import { AccountingView } from './roles/AccountingView';
+import { CFOView } from './roles/CFOView';
+import { useMemo } from 'react';
 
 // Books: where the race day's entries land. The race entries first, then the two desks behind them
 // (cost cap classification and the revenue ledger), each as it was.
 
 const TABS = [
+  { id: 'entries', label: 'Entries' },
+  { id: 'cap', label: 'Cap' },
   { id: 'race', label: 'Race entries' },
   { id: 'cost-cap', label: 'Cost cap' },
   { id: 'revenue', label: 'Revenue' },
 ] as const;
 
 export function BooksView({ tab, nav, status, inbox, costCapReady }: { tab: string | null; nav: (h: string) => void; status: SeatStatus; inbox: InboxItem[]; costCapReady: boolean }) {
-  const t = TABS.find((x) => x.id === tab)?.id ?? 'race';
+  const t = TABS.find((x) => x.id === tab)?.id ?? 'entries';
+  const all = useRace();
+  const meeting = useMemo(() => latestMeeting(all), [all]);
   return (
     <div className="books">
       <nav className="subtabs" aria-label="Books">
@@ -24,7 +32,15 @@ export function BooksView({ tab, nav, status, inbox, costCapReady }: { tab: stri
           </a>
         ))}
       </nav>
-      {t === 'race' ? (
+      {t === 'entries' ? (
+        <RaceScope meeting={meeting}>
+          <AccountingView />
+        </RaceScope>
+      ) : t === 'cap' ? (
+        <RaceScope meeting={meeting}>
+          <CFOView />
+        </RaceScope>
+      ) : t === 'race' ? (
         <section className="panel">
           <div className="sec-head">
             <h2>Race entries</h2>

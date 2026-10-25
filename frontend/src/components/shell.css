@@ -1,0 +1,204 @@
+/* The bar, on glass. Overrides the shell rules in styles.css. */
+
+.shell.glass--bar {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 24px;
+  min-height: var(--g-bar-h);
+  height: auto;
+  padding: 0 var(--g-gutter);
+  border-bottom: 1px solid var(--g-hair);
+}
+
+.shell .brand {
+  gap: 10px;
+}
+
+.shell .brandmark {
+  display: inline-grid;
+  grid-auto-flow: column;
+  gap: 2px;
+  width: auto;
+  height: auto;
+  background: transparent;
+  transform: none;
+  clip-path: none;
+}
+
+/* the glyph: a short bar in three temper colours, the oxide tints steel takes when heated */
+.shell .brandmark i {
+  width: 7px;
+  height: 7px;
+  border-radius: 1.5px;
+}
+
+.shell .brandmark i:nth-child(1) {
+  background: #e8b84a;
+}
+
+.shell .brandmark i:nth-child(2) {
+  background: #c8773a;
+}
+
+.shell .brandmark i:nth-child(3) {
+  background: #0a5bd8;
+}
+
+.shell .brandword {
+  color: var(--navy);
+  font: 800 18px/1 var(--display);
+  letter-spacing: 0.06em;
+}
+
+.brand-div {
+  width: 1px;
+  height: 16px;
+  background: var(--g-hair);
+  box-shadow: 1px 0 0 var(--g-hair-hi);
+}
+
+.shell .brand small {
+  margin: 0;
+  color: var(--muted);
+  font: 600 10.5px var(--body);
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.shell .nav-item {
+  padding: 18px 12px 16px;
+}
+
+.shell .shell-right {
+  gap: 14px;
+}
+
+.lamps {
+  display: inline-flex;
+  gap: 5px;
+  align-items: center;
+  padding: 0 6px;
+}
+
+.lamps .lamp {
+  width: 7px;
+  height: 7px;
+}
+
+.lamps-sep {
+  width: 1px;
+  height: 10px;
+  margin: 0 3px;
+  background: var(--g-hair);
+}
+
+.inbox-btn {
+  display: inline-flex;
+  gap: 6px;
+  align-items: center;
+  height: 32px;
+  padding: 0 12px;
+  border: 1px solid var(--g-hair);
+  border-radius: var(--r-pill);
+  background: rgba(255, 255, 255, 0.6);
+  color: var(--steel);
+  font: var(--fs-ui);
+  text-decoration: none;
+  box-shadow: inset 0 1px 0 #ffffff;
+}
+
+.inbox-btn:hover,
+.inbox-btn.is-on {
+  color: var(--navy);
+  border-color: var(--line);
+}
+
+.inbox-btn .nav-count {
+  border-radius: var(--r-pill);
+}
+
+.shell .seat {
+  grid-template-columns: auto auto;
+  align-items: center;
+  gap: 6px;
+}
+
+.shell .seat .avatar {
+  width: 26px;
+  height: 26px;
+  font-size: 10px;
+  box-shadow: 0 0 0 2px rgba(10, 91, 216, 0.15);
+}
+
+.shell .seat .avatar--readonly,
+.shell .seat .avatar--connecting {
+  background: var(--s1);
+  box-shadow: none;
+}
+
+.shell .seat .avatar--claiming,
+.shell .seat .avatar--no-code {
+  background: var(--g-wait-fill);
+}
+
+.shell .seat select {
+  min-height: 30px;
+  max-width: 160px;
+  padding-left: 8px;
+  border-color: var(--g-hair);
+  border-radius: var(--r-sm);
+  background-color: rgba(255, 255, 255, 0.6);
+  overflow: hidden;
+  font-size: 12px;
+  text-overflow: ellipsis;
+}
+
+.shell .gear {
+  border-color: var(--g-hair);
+  border-radius: var(--r-sm);
+}
+
+.shell .replay-ctl .btn {
+  border-radius: var(--r-sm);
+}
+
+@media (max-width: 1100px) {
+  .shell .brand small,
+  .brand-div {
+    display: none;
+  }
+
+  .shell .seat select {
+    max-width: 120px;
+  }
+}
+
+@media (max-width: 720px) {
+  .shell.glass--bar {
+    grid-template-columns: auto 1fr;
+    gap: 10px;
+    padding: 6px 12px;
+  }
+
+  .shell .nav {
+    grid-column: 1 / -1;
+    grid-row: 2;
+    gap: 0;
+  }
+
+  .shell .nav-item {
+    padding: 8px 10px;
+  }
+
+  .shell .shell-right {
+    justify-self: end;
+    gap: 8px;
+  }
+
+  .shell .replay-ctl,
+  .lamps,
+  .shell .gear {
+    display: none;
+  }
+}

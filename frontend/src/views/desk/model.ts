@@ -92,11 +92,12 @@ const penaltyOf = (r: RacePartLife | null) => !!r && /grid penalty/.test(r.capNo
 const RANK: Record<LifeStatus, number> = { damaged: 0, due: 1, watch: 2, ok: 3, replaced: 4, none: 5 };
 
 function readPart(car: number, cost: CostId, life: RacePartLife | null, condition: CarCondition, spares: Partial<Record<CostId, SpareReading>>): DeskPart {
-  const reading = condition.parts[cost];
-  const p = reading ? reading.p : null;
-  const assessing = condition.source === 'none' && (condition.status === 'stopped' || condition.status === 'out');
-  const health: Health | 'unknown' = assessing ? 'unknown' : healthOf(p ?? undefined);
   const lifeStatus: LifeStatus = life ? ((life.status in RANK ? life.status : 'ok') as LifeStatus) : 'none';
+  // a part replaced after the crash is new: the belief's damage reading belonged to the part that came off
+  const reading = lifeStatus === 'replaced' ? undefined : condition.parts[cost];
+  const p = reading ? reading.p : null;
+  const assessing = lifeStatus !== 'replaced' && condition.source === 'none' && (condition.status === 'stopped' || condition.status === 'out');
+  const health: Health | 'unknown' = assessing ? 'unknown' : healthOf(p ?? undefined);
   const dueEvent = life?.dueEvent ?? '';
   const lastsSeason = !life || dueEvent === '2025' || dueEvent === '';
   const penalty = penaltyOf(life);

@@ -17,8 +17,9 @@ import { RevenueView } from './views/RevenueView';
 import { AuditTabsView } from './views/AuditTabsView';
 import { BooksView } from './views/BooksView';
 import { RaceDayView } from './views/RaceDayView';
+import { HomeView } from './views/desk/HomeView';
 
-// #/ race day (the flow) · #/inbox/<key> · #/books/<race|cost-cap|revenue> · #/audit[/evidence|/<from>-<to>]
+// #/ the car (home) · #/day/<garage|strategy|accounting|cfo> the role views · #/inbox/<key> · #/books/<race|cost-cap|revenue> · #/audit[/evidence|/<from>-<to>]
 // still routable, off the nav: #/race (the full live desk) · #/replay/<season>-<round> · #/risk · #/pitwall (old overview)
 // · #/cost-cap · #/revenue · #/evidence · #/connect (the gear)
 
@@ -62,13 +63,15 @@ export default function App() {
   }, [route]);
 
   return (
-    <>
+    <div className="g-ground">
       <a className="skip-link" href="#main">
         Skip to content
       </a>
-      <Shell view={route.view} go={(v) => nav(v === 'overview' ? '/' : `/${v}`)} inboxCount={inbox.length} status={status} />
+      <Shell view={route.view} arg={route.arg} inboxCount={inbox.length} status={status} />
       <main id="main" className="page">
-        {route.view === 'overview' ? (
+        {route.view === 'overview' && !route.arg ? (
+          <HomeView nav={nav} />
+        ) : route.view === 'overview' ? (
           <RaceDayView role={route.arg} nav={nav} />
         ) : route.view === 'replay' ? (
           <RaceReplayView arg={route.arg} nav={nav} inbox={inbox} status={status} />
@@ -104,6 +107,6 @@ export default function App() {
           estimates and stated assumptions; the cost cap and revenue desks behind Books run on Meridian Racing, a synthetic team with its own ledgers, sponsors and people.
         </p>
       </footer>
-    </>
+    </div>
   );
 }

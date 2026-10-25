@@ -1,0 +1,1072 @@
+/* Liquid glass on the Williams garage theme.
+   Import AFTER styles.css (it reads --bg, --panel, --ink, --navy, --lime, --hold, --alert, --sky, --s1, --s2,
+   --display, --body, --mono, --ease and adds --g-* tokens; it redefines none of them).
+
+   Surface hierarchy:  .g-ground (page) > .glass (panel, fake glass, no backdrop-filter)
+                       > .glass--raised (peek, sheet, toast, bar: real backdrop-filter)
+                       .glass-well (inset)   .glass--dark (the stage)   .glass-chip--dark (stage overlays)
+   Rule: backdrop-filter only on things that float (bar, stage chips, peek, sheet, toast). Never on grid panels. */
+
+/* Registered so life bars and meters can transition their fill without layout. */
+@property --used {
+  syntax: '<percentage>';
+  inherits: true;
+  initial-value: 0%;
+}
+
+:root {
+  /* ---------------------------------------------------------------- ground */
+  --g-ground: #e9eef5;
+  --g-mesh-a: rgba(10, 91, 216, 0.09); /* Williams blue, top left */
+  --g-mesh-b: rgba(0, 163, 224, 0.1); /* sky, top right */
+  --g-mesh-c: rgba(4, 30, 66, 0.06); /* navy, behind the stage */
+
+  /* ---------------------------------------------------------------- light glass */
+  --g-glass-top: rgba(255, 255, 255, 0.8);
+  --g-glass-bot: rgba(255, 255, 255, 0.64);
+  --g-glass-edge: rgba(255, 255, 255, 0.72);
+  --g-glass-ring: rgba(4, 30, 66, 0.07);
+  --g-glass-hi: rgba(255, 255, 255, 0.95);
+  --g-raised: rgba(255, 255, 255, 0.7);
+  --g-raised-solid: rgba(255, 255, 255, 0.96);
+  --g-raised-lite: rgba(255, 255, 255, 0.86);
+  --g-well: rgba(4, 30, 66, 0.045);
+  --g-hair: rgba(4, 30, 66, 0.08);
+  --g-hair-hi: rgba(255, 255, 255, 0.75);
+  --g-lit: rgba(10, 91, 216, 0.06);
+  --g-focus: #0a5bd8;
+  --g-ink-hi: #0a5bd8;
+  --g-scrim: rgba(4, 30, 66, 0.18);
+
+  /* specular edge (gradient border) strength */
+  --g-spec-1: rgba(255, 255, 255, 0.95);
+  --g-spec-2: rgba(255, 255, 255, 0.18);
+  --g-spec-3: rgba(255, 255, 255, 0.45);
+
+  /* ---------------------------------------------------------------- dark stage (matches blueprint palette.ts heroBg) */
+  --g-stage-0: #0f2350;
+  --g-stage-1: #0b1b3b;
+  --g-stage-2: #050d20;
+  --g-stage-3: #030817;
+  --g-stage-edge: rgba(112, 162, 255, 0.24);
+  --g-stage-hi: rgba(170, 205, 255, 0.2);
+  --g-stage-rim: rgba(20, 44, 96, 0.55);
+  --g-stage-spill: rgba(10, 91, 216, 0.45);
+  --g-dark-chip: rgba(7, 18, 44, 0.62);
+  --g-dark-chip-on: rgba(22, 48, 104, 0.78);
+  --g-dark-chip-solid: rgba(7, 18, 44, 0.94);
+  --g-dark-edge: rgba(140, 180, 255, 0.22);
+  --g-dark-edge-hi: rgba(200, 225, 255, 0.55);
+  --g-dark-hi: rgba(200, 225, 255, 0.14);
+  --g-dark-hair: rgba(112, 162, 255, 0.16);
+  --g-dark-ink: #c4d9ff;
+  --g-dark-ink-dim: #7fa3e0;
+  --g-dark-lit: rgba(102, 196, 255, 0.1);
+  --g-dark-focus: #8cc0ff;
+
+  /* ---------------------------------------------------------------- status (light / on dark) */
+  --g-person: var(--lime); /* #0a5bd8 a person acted, primary */
+  --g-person-d: #5b9dff;
+  --g-auto: var(--steel); /* the agent did it itself */
+  --g-auto-fill: #8fa3bf;
+  --g-auto-d: #9fb4d8;
+  --g-wait: var(--hold); /* #b45309 text */
+  --g-wait-fill: #e09a2b;
+  --g-wait-d: #ffb547;
+  --g-bad: var(--alert); /* #c62828 */
+  --g-bad-d: #ff7360;
+  --g-live: #00658c;
+  --g-live-fill: var(--sky); /* #00a3e0 */
+  --g-live-d: #66c4ff;
+
+  /* ---------------------------------------------------------------- life ramp (used share 0 -> 100%) */
+  --g-life-0: #00a3e0;
+  --g-life-55: #6f8fb8;
+  --g-life-75: #e09a2b;
+  --g-life-90: #e0662b;
+  --g-life-100: #c62828;
+  --g-life-grad: linear-gradient(90deg, var(--g-life-0) 0%, var(--g-life-55) 55%, var(--g-life-75) 75%, var(--g-life-90) 90%, var(--g-life-100) 100%);
+  --g-life-d-0: #66c4ff;
+  --g-life-d-60: #8aa6d6;
+  --g-life-d-75: #ffb547;
+  --g-life-d-90: #ff8f4f;
+  --g-life-d-100: #ff7360;
+  --g-life-grad-d: linear-gradient(90deg, var(--g-life-d-0) 0%, var(--g-life-d-60) 60%, var(--g-life-d-75) 75%, var(--g-life-d-90) 90%, var(--g-life-d-100) 100%);
+  --g-overrun: repeating-linear-gradient(135deg, #c62828 0 3px, #e35d5d 3px 6px);
+
+  /* ---------------------------------------------------------------- chart series */
+  --g-s-23: var(--navy); /* car 23 */
+  --g-s-43: var(--sky); /* car 43 */
+  --g-s-23-d: #c4d9ff;
+  --g-s-43-d: #66c4ff;
+  --g-s-rival: var(--s1); /* rivals, baseline */
+  --g-band: rgba(4, 30, 66, 0.1);
+  --g-flag-sc: rgba(224, 154, 43, 0.35);
+  --g-flag-red: rgba(198, 40, 40, 0.18);
+
+  /* ---------------------------------------------------------------- radii */
+  --r-xs: 2px; /* data bars, tracks, swatches */
+  --r-sm: 6px; /* buttons, inputs, segmented controls, rows */
+  --r-md: 10px; /* chips, cards inside panels, peeks */
+  --r-lg: 16px; /* panels, the drawing sheet (bp-sheet reads var(--r-lg)) */
+  --r-stage: 20px; /* stage, side sheet */
+  --r-pill: 999px;
+
+  /* ---------------------------------------------------------------- shadows */
+  --g-shadow-1: 0 1px 2px rgba(4, 30, 66, 0.05), 0 8px 24px -8px rgba(4, 30, 66, 0.12), 0 24px 48px -28px rgba(4, 30, 66, 0.16);
+  --g-shadow-2: 0 2px 6px rgba(4, 30, 66, 0.08), 0 18px 44px -12px rgba(4, 30, 66, 0.28);
+  --g-shadow-card: 0 2px 8px -2px rgba(4, 30, 66, 0.1);
+  --g-shadow-stage: 0 2px 4px rgba(3, 8, 23, 0.25), 0 30px 60px -24px rgba(3, 8, 23, 0.55), 0 48px 90px -40px var(--g-stage-spill);
+  --g-inset-well: inset 0 1px 2px rgba(4, 30, 66, 0.1), inset 0 0 0 1px rgba(4, 30, 66, 0.06), 0 1px 0 rgba(255, 255, 255, 0.8);
+
+  /* ---------------------------------------------------------------- blur (never animate these) */
+  --g-blur-chip: 12px;
+  --g-blur-bar: 16px;
+  --g-blur-raised: 20px;
+  --g-sat: 170%;
+  --g-sat-dark: 140%;
+
+  /* ---------------------------------------------------------------- type */
+  --fs-car: 800 30px/1 var(--display);
+  --fs-display: 700 28px/1.05 var(--display);
+  --fs-title: 700 14px/1.2 var(--display);
+  --fs-fig-xl: 600 32px/1 var(--mono);
+  --fs-fig-lg: 600 22px/1.1 var(--mono);
+  --fs-fig: 500 12.5px/1.3 var(--mono);
+  --fs-ui: 600 13px/1.3 var(--body);
+  --fs-body: 400 14px/1.5 var(--body);
+  --fs-label: 600 11px/1.2 var(--body);
+  --fs-axis: 500 10.5px/1 var(--mono);
+
+  /* ---------------------------------------------------------------- spacing (4px base) */
+  --sp-1: 4px;
+  --sp-2: 8px;
+  --sp-3: 12px;
+  --sp-4: 16px;
+  --sp-5: 20px;
+  --sp-6: 24px;
+  --sp-8: 32px;
+  --sp-10: 40px;
+  --g-gutter: 24px;
+  --g-gap: 16px;
+  --g-bar-h: 56px;
+
+  /* ---------------------------------------------------------------- motion */
+  --t-fast: 120ms;
+  --t-base: 220ms;
+  --t-slow: 360ms;
+  --t-sheet: 280ms;
+  --ease-io: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-pop: cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+@media (max-width: 1100px) {
+  :root {
+    --g-gutter: 20px;
+  }
+}
+
+@media (max-width: 640px) {
+  :root {
+    --g-gutter: 16px;
+    --g-gap: 12px;
+    --g-bar-h: 52px;
+  }
+}
+
+/* ==================================================================== ground */
+
+.g-ground {
+  position: relative;
+  min-height: 100vh;
+  background: var(--g-ground);
+  isolation: isolate;
+}
+
+/* A fixed, static mesh: smooth already, so translucent panels over it read as frosted glass without a blur. */
+.g-ground::before {
+  content: '';
+  position: fixed;
+  inset: 0;
+  z-index: -1;
+  pointer-events: none;
+  background:
+    radial-gradient(60vw 50vh at 8% 0%, var(--g-mesh-a), transparent 70%),
+    radial-gradient(50vw 45vh at 100% 6%, var(--g-mesh-b), transparent 70%),
+    radial-gradient(70vw 60vh at 34% 48%, var(--g-mesh-c), transparent 72%),
+    var(--g-ground);
+}
+
+/* ==================================================================== the 12-col home grid */
+
+.g-grid {
+  display: grid;
+  grid-template-columns: repeat(12, minmax(0, 1fr));
+  gap: var(--g-gap);
+  max-width: 1440px;
+  margin: 0 auto;
+  padding: var(--sp-4) var(--g-gutter) var(--sp-10);
+}
+
+.g-grid > * {
+  min-width: 0;
+}
+
+.g-span-4 { grid-column: span 4; }
+.g-span-6 { grid-column: span 6; }
+.g-span-8 { grid-column: span 8; }
+.g-span-12 { grid-column: 1 / -1; }
+
+@media (max-width: 640px) {
+  .g-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+  .g-grid > * {
+    grid-column: 1 / -1;
+  }
+}
+
+/* ==================================================================== glass panel (fake glass) */
+
+.glass {
+  position: relative;
+  padding: 16px 18px;
+  border: 1px solid var(--g-glass-edge);
+  border-radius: var(--r-lg);
+  background: linear-gradient(180deg, var(--g-glass-top), var(--g-glass-bot));
+  box-shadow: 0 0 0 1px var(--g-glass-ring), inset 0 1px 0 var(--g-glass-hi), var(--g-shadow-1);
+  contain: layout paint; /* clips overflow: render peeks and menus in a portal on <body> */
+}
+
+/* Specular edge: a gradient border drawn by a masked pseudo-element. Add .specular to any glass surface.
+   The light comes from the top left; the far corner catches a softer return. The pseudo-elements sit at
+   z-index -1 inside the surface's own stacking context (isolation), so they paint over its background and
+   under its content, and absolutely positioned children keep working. */
+.specular {
+  isolation: isolate;
+}
+
+.specular::before {
+  content: '';
+  position: absolute;
+  inset: 0;
+  z-index: -1;
+  padding: 1px;
+  border-radius: inherit;
+  pointer-events: none;
+  background: linear-gradient(135deg, var(--g-spec-1) 0%, var(--g-spec-2) 32%, rgba(255, 255, 255, 0) 55%, var(--g-spec-3) 100%);
+  -webkit-mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  -webkit-mask-composite: xor;
+  mask: linear-gradient(#000 0 0) content-box, linear-gradient(#000 0 0);
+  mask-composite: exclude;
+}
+
+/* A soft sheen across the top quarter, the "liquid" in the glass. Cheap: one gradient, no blur. */
+.specular::after {
+  content: '';
+  position: absolute;
+  inset: 0 0 auto 0;
+  height: 48px;
+  z-index: -1;
+  border-radius: inherit;
+  border-bottom-left-radius: 0;
+  border-bottom-right-radius: 0;
+  pointer-events: none;
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.45), rgba(255, 255, 255, 0));
+}
+
+.g-panel-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: var(--sp-3);
+  min-height: 24px;
+  margin-bottom: var(--sp-3);
+}
+
+.g-title {
+  margin: 0;
+  color: var(--navy);
+  font: var(--fs-title);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.g-aside {
+  margin-left: auto;
+  color: var(--muted);
+  font: var(--fs-fig);
+  font-variant-numeric: tabular-nums;
+}
+
+.g-open {
+  display: inline-grid;
+  place-items: center;
+  width: 24px;
+  height: 24px;
+  border: 0;
+  border-radius: var(--r-sm);
+  background: transparent;
+  color: var(--muted);
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+
+.g-open:hover {
+  background: var(--g-lit);
+  color: var(--lime);
+}
+
+/* Below the fold: skip paint until scrolled near. */
+.g-defer {
+  content-visibility: auto;
+  contain-intrinsic-size: auto 320px;
+}
+
+/* ==================================================================== raised glass (real backdrop blur) */
+
+.glass--raised {
+  position: relative;
+  border: 1px solid var(--g-glass-edge);
+  border-radius: var(--r-md);
+  background: var(--g-raised);
+  -webkit-backdrop-filter: blur(var(--g-blur-raised)) saturate(var(--g-sat));
+  backdrop-filter: blur(var(--g-blur-raised)) saturate(var(--g-sat));
+  box-shadow: 0 0 0 1px var(--g-glass-ring), inset 0 1px 0 var(--g-glass-hi), var(--g-shadow-2);
+}
+
+.glass--raised-lite {
+  position: relative;
+  border: 1px solid var(--line-soft);
+  border-radius: var(--r-md);
+  background: var(--g-raised-lite);
+  box-shadow: inset 0 1px 0 var(--g-glass-hi), var(--g-shadow-card);
+}
+
+/* The sticky top bar. */
+.glass--bar {
+  position: sticky;
+  top: 0;
+  z-index: 50;
+  height: var(--g-bar-h);
+  background: rgba(255, 255, 255, 0.72);
+  -webkit-backdrop-filter: blur(var(--g-blur-bar)) saturate(var(--g-sat));
+  backdrop-filter: blur(var(--g-blur-bar)) saturate(var(--g-sat));
+  border-bottom: 1px solid var(--g-hair);
+  box-shadow: 0 1px 0 var(--g-hair-hi), 0 8px 24px -16px rgba(4, 30, 66, 0.18);
+}
+
+@supports not ((backdrop-filter: blur(1px)) or (-webkit-backdrop-filter: blur(1px))) {
+  .glass--raised,
+  .glass--bar {
+    background: var(--g-raised-solid);
+  }
+  .glass-chip--dark {
+    background: var(--g-dark-chip-solid);
+  }
+}
+
+/* ==================================================================== inset well */
+
+.glass-well {
+  border-radius: var(--r-sm);
+  background: var(--g-well);
+  box-shadow: var(--g-inset-well);
+}
+
+/* ==================================================================== the dark stage */
+
+.glass--dark {
+  --r-lg: 16px; /* the blueprint sheet inside rounds to match: 20 outer - 4 rim */
+  position: relative;
+  padding: 4px;
+  border: 1px solid var(--g-stage-edge);
+  border-radius: var(--r-stage);
+  background: radial-gradient(120% 90% at 28% 0%, var(--g-stage-0) 0%, var(--g-stage-1) 30%, var(--g-stage-2) 70%, var(--g-stage-3) 100%);
+  box-shadow: inset 0 1px 0 var(--g-stage-hi), inset 0 0 0 4px var(--g-stage-rim), var(--g-shadow-stage);
+  color: var(--g-dark-ink);
+  color-scheme: dark;
+  isolation: isolate;
+}
+
+/* The stage's own specular edge: cooler and fainter than on white. */
+.glass--dark.specular::before {
+  background: linear-gradient(135deg, rgba(190, 220, 255, 0.55) 0%, rgba(190, 220, 255, 0.08) 30%, rgba(190, 220, 255, 0) 55%, rgba(190, 220, 255, 0.22) 100%);
+}
+
+.glass--dark.specular::after {
+  display: none;
+}
+
+.glass--dark :focus-visible {
+  outline-color: var(--g-dark-focus);
+}
+
+/* Overlays on the canvas: small, few, real blur. */
+.glass-chip--dark {
+  display: inline-flex;
+  align-items: center;
+  gap: var(--sp-2);
+  min-height: 28px;
+  padding: 4px 10px;
+  border: 1px solid var(--g-dark-edge);
+  border-radius: var(--r-md);
+  background: var(--g-dark-chip);
+  -webkit-backdrop-filter: blur(var(--g-blur-chip)) saturate(var(--g-sat-dark));
+  backdrop-filter: blur(var(--g-blur-chip)) saturate(var(--g-sat-dark));
+  box-shadow: inset 0 1px 0 var(--g-dark-hi), 0 8px 20px -10px rgba(0, 0, 0, 0.6);
+  color: var(--g-dark-ink);
+  font: var(--fs-ui);
+}
+
+.glass-chip--dark.is-on {
+  background: var(--g-dark-chip-on);
+  border-color: var(--g-dark-edge-hi);
+}
+
+/* ==================================================================== hairlines */
+
+.hairline {
+  height: 1px;
+  border: 0;
+  margin: var(--sp-3) 0;
+  background: var(--g-hair);
+  box-shadow: 0 1px 0 var(--g-hair-hi);
+}
+
+.hairline--v {
+  width: 1px;
+  height: auto;
+  align-self: stretch;
+  margin: 0 var(--sp-3);
+  box-shadow: 1px 0 0 var(--g-hair-hi);
+}
+
+.glass--dark .hairline,
+.hairline--dark {
+  background: var(--g-dark-hair);
+  box-shadow: 0 1px 0 rgba(200, 225, 255, 0.06);
+}
+
+/* Rows separated by a hairline, no outer borders. */
+.g-rows > * + * {
+  border-top: 1px solid var(--g-hair);
+}
+
+/* ==================================================================== lamp: the status dot, always beside a word */
+
+.lamp {
+  --lamp: var(--g-auto-fill);
+  display: inline-block;
+  flex: none;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--lamp);
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--lamp) 18%, transparent), inset 0 1px 0 rgba(255, 255, 255, 0.45);
+  vertical-align: middle;
+  transition: transform var(--t-fast) var(--ease);
+}
+
+.lamp--ok { --lamp: var(--g-person); }
+.lamp--auto { --lamp: var(--g-auto-fill); }
+.lamp--wait { --lamp: var(--g-wait-fill); }
+.lamp--bad { --lamp: var(--g-bad); }
+.lamp--live { --lamp: var(--g-live-fill); }
+.lamp--off { --lamp: transparent; box-shadow: inset 0 0 0 1.5px var(--muted); }
+.lamp--none { --lamp: transparent; box-shadow: none; border: 1.5px dashed var(--muted); }
+.lamp--lg { width: 10px; height: 10px; }
+
+.glass--dark .lamp--ok { --lamp: var(--g-person-d); }
+.glass--dark .lamp--auto { --lamp: var(--g-auto-d); }
+.glass--dark .lamp--wait { --lamp: var(--g-wait-d); }
+.glass--dark .lamp--bad { --lamp: var(--g-bad-d); }
+.glass--dark .lamp--live { --lamp: var(--g-live-d); }
+
+.lamp--live {
+  animation: g-breathe 2.4s var(--ease-io) infinite;
+}
+
+.is-lit .lamp {
+  transform: scale(1.25);
+}
+
+@keyframes g-breathe {
+  0%,
+  100% {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--lamp) 40%, transparent);
+  }
+  50% {
+    box-shadow: 0 0 0 4px color-mix(in srgb, var(--lamp) 0%, transparent);
+  }
+}
+
+/* ==================================================================== life bar
+   <span class="life-bar" style="--used: 86%" data-over="0"><i></i></span>
+   --used is the share of life used mapped onto the track (the track spans 0-120%: pass used/1.2).
+   The fill is a clip of a full-width gradient, so the colour at its end is the condition. */
+
+.life-bar {
+  --used: 0%;
+  --limit: 83.333%; /* 100% of life on a 0-120% track */
+  position: relative;
+  display: block;
+  height: 6px;
+  min-width: 48px;
+  border-radius: var(--r-xs);
+  background: var(--g-well);
+  box-shadow: inset 0 0 0 1px rgba(4, 30, 66, 0.06);
+  overflow: hidden;
+  transition: --used var(--t-slow) var(--ease);
+}
+
+.life-bar > i {
+  position: absolute;
+  inset: 0;
+  background: var(--g-life-grad);
+  background-size: calc(100% / 0.83333) 100%; /* the ramp reaches red at the 100%-of-life tick */
+  background-repeat: no-repeat;
+  clip-path: inset(0 calc(100% - var(--used)) 0 0 round var(--r-xs));
+}
+
+/* Past 100% of life: the overrun hatches red. */
+.life-bar[data-over='1']::before {
+  content: '';
+  position: absolute;
+  inset: 0 auto 0 var(--limit);
+  width: calc(var(--used) - var(--limit));
+  z-index: 1;
+  background: var(--g-overrun);
+}
+
+/* The 100%-of-life tick. */
+.life-bar::after {
+  content: '';
+  position: absolute;
+  top: -1px;
+  bottom: -1px;
+  left: var(--limit);
+  width: 1px;
+  z-index: 2;
+  background: var(--ink);
+  opacity: 0.55;
+}
+
+.life-bar--sm { height: 4px; }
+.life-bar--lg { height: 8px; }
+
+.glass--dark .life-bar,
+.life-bar--dark {
+  background: rgba(112, 162, 255, 0.12);
+  box-shadow: inset 0 0 0 1px rgba(112, 162, 255, 0.12);
+}
+
+.glass--dark .life-bar > i,
+.life-bar--dark > i {
+  background-image: var(--g-life-grad-d);
+}
+
+.glass--dark .life-bar::after,
+.life-bar--dark::after {
+  background: var(--g-dark-ink);
+}
+
+/* ==================================================================== heat strip (car tabs: 11 cells) */
+
+.heat-strip {
+  display: grid;
+  grid-auto-flow: column;
+  grid-auto-columns: 14px;
+  gap: 2px;
+}
+
+.heat-strip > i {
+  height: 5px;
+  border-radius: 1px;
+  background: var(--cell, rgba(112, 162, 255, 0.3));
+}
+
+.heat-strip > i.is-lit {
+  box-shadow: 0 0 0 1px #ffffff;
+}
+
+/* ==================================================================== pips (spares: track / Grove / make) */
+
+.pips {
+  display: inline-flex;
+  gap: 3px;
+  align-items: center;
+}
+
+.pip {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--navy);
+}
+
+.pip--ring { background: transparent; box-shadow: inset 0 0 0 1.5px var(--navy); }
+.pip--make { background: transparent; outline: 1.5px dashed var(--steel); outline-offset: -1.5px; }
+.pip--used { background: transparent; box-shadow: inset 0 0 0 1.5px var(--muted); background-image: linear-gradient(135deg, transparent 45%, var(--muted) 45% 55%, transparent 55%); }
+
+/* ==================================================================== segmented control (light and dark) */
+
+.gseg {
+  display: inline-flex;
+  padding: 2px;
+  gap: 2px;
+  border-radius: var(--r-sm);
+  background: var(--g-well);
+  box-shadow: var(--g-inset-well);
+}
+
+.gseg > button {
+  height: 26px;
+  padding: 0 10px;
+  border: 0;
+  border-radius: 4px;
+  background: transparent;
+  color: var(--steel);
+  font: var(--fs-ui);
+  font-size: 12px;
+  cursor: pointer;
+  transition: background var(--t-fast) var(--ease), color var(--t-fast) var(--ease);
+}
+
+.gseg > button[aria-pressed='true'],
+.gseg > button[aria-checked='true'] {
+  background: #ffffff;
+  color: var(--navy);
+  box-shadow: 0 1px 2px rgba(4, 30, 66, 0.12), inset 0 1px 0 #ffffff;
+}
+
+.gseg--dark {
+  background: var(--g-dark-chip);
+  -webkit-backdrop-filter: blur(var(--g-blur-chip)) saturate(var(--g-sat-dark));
+  backdrop-filter: blur(var(--g-blur-chip)) saturate(var(--g-sat-dark));
+  box-shadow: inset 0 0 0 1px var(--g-dark-edge), inset 0 1px 0 var(--g-dark-hi);
+}
+
+.gseg--dark > button {
+  color: var(--g-dark-ink-dim);
+}
+
+.gseg--dark > button[aria-pressed='true'],
+.gseg--dark > button[aria-checked='true'] {
+  background: rgba(140, 180, 255, 0.2);
+  color: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.18), inset 0 0 0 1px rgba(200, 225, 255, 0.28);
+}
+
+/* ==================================================================== buttons */
+
+.g-btn {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 14px;
+  border: 1px solid var(--line);
+  border-radius: var(--r-sm);
+  background: linear-gradient(180deg, #ffffff, #f3f6fa);
+  color: var(--ink);
+  font: var(--fs-ui);
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 #ffffff, 0 1px 2px rgba(4, 30, 66, 0.08);
+  transition: background var(--t-fast) var(--ease), transform var(--t-fast) var(--ease), box-shadow var(--t-fast) var(--ease);
+}
+
+.g-btn:hover {
+  background: #ffffff;
+}
+
+.g-btn:active {
+  transform: translateY(1px);
+  box-shadow: inset 0 1px 2px rgba(4, 30, 66, 0.12);
+}
+
+.g-btn--primary {
+  border-color: #0848ad;
+  background: linear-gradient(180deg, #2a73e6, #0a5bd8);
+  color: #ffffff;
+  box-shadow: inset 0 1px 0 rgba(255, 255, 255, 0.28), 0 1px 2px rgba(4, 30, 66, 0.25), 0 4px 12px -4px rgba(10, 91, 216, 0.5);
+}
+
+.g-btn--primary:hover {
+  background: linear-gradient(180deg, #1f68d9, #0b52c2);
+}
+
+.g-btn[disabled] {
+  opacity: 0.45;
+  cursor: not-allowed;
+}
+
+@media (pointer: coarse) {
+  .g-btn {
+    height: 44px;
+  }
+}
+
+/* ==================================================================== alert chips (the rail) */
+
+.g-alerts {
+  display: flex;
+  gap: var(--sp-2);
+  align-items: center;
+  min-height: 40px;
+  overflow-x: auto;
+  scroll-snap-type: x proximity;
+  scrollbar-width: none;
+}
+
+.g-alert {
+  --tone: var(--g-bad);
+  --wash: var(--alert-wash);
+  display: inline-flex;
+  flex: none;
+  align-items: center;
+  gap: 6px;
+  height: 32px;
+  padding: 0 12px 0 10px;
+  border: 1px solid color-mix(in srgb, var(--tone) 22%, transparent);
+  border-radius: var(--r-pill);
+  background: linear-gradient(180deg, rgba(255, 255, 255, 0.85), rgba(255, 255, 255, 0.6)), var(--wash);
+  color: var(--tone);
+  font: var(--fs-ui);
+  scroll-snap-align: start;
+  cursor: pointer;
+  box-shadow: inset 0 1px 0 #ffffff, 0 2px 6px -2px rgba(4, 30, 66, 0.1);
+}
+
+.g-alert b {
+  font: 600 13px var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.g-alert--wait { --tone: var(--hold); --wash: var(--hold-wash); }
+.g-alert--ok { --tone: var(--lime); --wash: var(--lime-wash); }
+.g-alert--info { --tone: var(--g-live); --wash: rgba(0, 163, 224, 0.1); }
+
+/* ==================================================================== figures */
+
+.g-fig-xl { font: var(--fs-fig-xl); letter-spacing: -0.02em; color: var(--navy); font-variant-numeric: tabular-nums; }
+.g-fig-lg { font: var(--fs-fig-lg); letter-spacing: -0.01em; color: var(--navy); font-variant-numeric: tabular-nums; }
+.g-fig { font: var(--fs-fig); color: var(--ink); font-variant-numeric: tabular-nums; }
+.g-label { font: var(--fs-label); letter-spacing: 0.06em; text-transform: uppercase; color: var(--muted); }
+.g-axis { font: var(--fs-axis); color: var(--muted); font-variant-numeric: tabular-nums; }
+.g-car { font: var(--fs-car); letter-spacing: 0.01em; }
+
+/* A live value changed: flash the ink, never move it. */
+.flash {
+  animation: g-flash 600ms var(--ease);
+}
+
+@keyframes g-flash {
+  0% {
+    color: var(--g-ink-hi);
+  }
+  100% {
+    color: inherit;
+  }
+}
+
+/* ==================================================================== rows (lists, the parts ledger, the stream) */
+
+.g-row {
+  display: grid;
+  align-items: center;
+  gap: var(--sp-3);
+  min-height: 34px;
+  padding: 0 var(--sp-2);
+  border-radius: var(--r-sm);
+  transition: background var(--t-fast) var(--ease);
+}
+
+.g-row:hover,
+.g-row.is-lit {
+  background: var(--g-lit);
+}
+
+.g-row.is-pinned {
+  box-shadow: inset 0 0 0 2px var(--g-focus);
+}
+
+.g-row:focus-visible {
+  outline: 0;
+  box-shadow: inset 0 0 0 2px var(--g-focus);
+}
+
+.glass--dark .g-row:hover,
+.glass--dark .g-row.is-lit {
+  background: var(--g-dark-lit);
+}
+
+/* Parts ledger row: lamp | name | life bar | % | due | spare | cap $ */
+.g-row--part {
+  grid-template-columns: 10px minmax(84px, 1fr) minmax(72px, 1.2fr) 36px 40px 52px 56px;
+}
+
+@media (max-width: 1100px) {
+  .g-row--part {
+    grid-template-columns: 10px minmax(72px, 1fr) minmax(64px, 1.2fr) 40px;
+  }
+  .g-row--part > .g-col-wide {
+    display: none;
+  }
+}
+
+/* Stream row: actor | verb + object | amount | outcome | time */
+.g-row--stream {
+  grid-template-columns: 20px minmax(0, 1fr) 72px auto 56px;
+  min-height: 36px;
+}
+
+/* Arrival of a new row: grow from nothing at the top of the list. */
+.g-grow {
+  display: grid;
+  grid-template-rows: 1fr;
+  animation: g-grow var(--t-base) var(--ease);
+}
+
+.g-grow > * {
+  overflow: hidden;
+}
+
+.g-collapse {
+  grid-template-rows: 0fr;
+  opacity: 0;
+  transition: grid-template-rows var(--t-base) var(--ease-io), opacity var(--t-base) var(--ease-io);
+}
+
+@keyframes g-grow {
+  from {
+    grid-template-rows: 0fr;
+    opacity: 0;
+  }
+  to {
+    grid-template-rows: 1fr;
+    opacity: 1;
+  }
+}
+
+/* A new alert chip or marker arrives. */
+.arrive {
+  animation: g-arrive 240ms var(--ease-pop), g-ring 900ms var(--ease) 240ms;
+}
+
+@keyframes g-arrive {
+  from {
+    opacity: 0;
+    transform: scale(0.94);
+  }
+  to {
+    opacity: 1;
+    transform: scale(1);
+  }
+}
+
+@keyframes g-ring {
+  from {
+    box-shadow: 0 0 0 0 color-mix(in srgb, var(--tone, var(--lime)) 45%, transparent);
+  }
+  to {
+    box-shadow: 0 0 0 8px color-mix(in srgb, var(--tone, var(--lime)) 0%, transparent);
+  }
+}
+
+/* ==================================================================== peek (hover detail) */
+
+.peek {
+  position: absolute;
+  z-index: 60;
+  max-width: 280px;
+  padding: 10px 12px;
+  border-radius: var(--r-md);
+  pointer-events: none;
+  opacity: 0;
+  transform: translateY(4px);
+  transition: opacity var(--t-fast) var(--ease) 80ms, transform var(--t-fast) var(--ease) 80ms;
+}
+
+.peek.is-open {
+  opacity: 1;
+  transform: translateY(0);
+  transition-delay: 250ms;
+}
+
+.peek dl {
+  display: grid;
+  grid-template-columns: auto auto;
+  gap: 4px 14px;
+  margin: 0;
+}
+
+.peek dt {
+  font: var(--fs-label);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  color: var(--muted);
+}
+
+.peek dd {
+  margin: 0;
+  font: var(--fs-fig);
+  text-align: right;
+  color: var(--navy);
+}
+
+/* ==================================================================== side sheet */
+
+.g-scrim {
+  position: fixed;
+  inset: var(--g-bar-h) 0 0 0;
+  z-index: 70;
+  background: var(--g-scrim);
+  opacity: 0;
+  transition: opacity var(--t-sheet) var(--ease);
+}
+
+.g-scrim.is-open {
+  opacity: 1;
+}
+
+.g-sheet {
+  position: fixed;
+  top: var(--g-bar-h);
+  right: 0;
+  bottom: 0;
+  z-index: 80;
+  display: grid;
+  grid-template-rows: auto minmax(0, 1fr) auto;
+  width: min(480px, 100vw);
+  border-radius: var(--r-stage) 0 0 var(--r-stage);
+  opacity: 0;
+  transform: translateX(24px);
+  visibility: hidden;
+  transition: opacity 180ms var(--ease-io), transform 180ms var(--ease-io), visibility 0s linear 180ms;
+}
+
+.g-sheet.is-open {
+  opacity: 1;
+  transform: translateX(0);
+  visibility: visible;
+  transition: opacity var(--t-sheet) var(--ease), transform var(--t-sheet) var(--ease), visibility 0s;
+}
+
+.g-sheet-head,
+.g-sheet-foot {
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.g-sheet-head {
+  border-bottom: 1px solid var(--g-hair);
+}
+
+.g-sheet-body {
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  padding: var(--sp-4) var(--sp-5);
+}
+
+.g-sheet-foot {
+  justify-content: flex-end;
+  border-top: 1px solid var(--g-hair);
+}
+
+@media (max-width: 1100px) {
+  .g-sheet {
+    width: min(440px, 100vw);
+  }
+}
+
+@media (max-width: 640px) {
+  .g-sheet {
+    top: auto;
+    left: 0;
+    height: 88vh;
+    width: 100vw;
+    border-radius: var(--r-stage) var(--r-stage) 0 0;
+    transform: translateY(32px);
+    padding-bottom: env(safe-area-inset-bottom);
+  }
+  .g-sheet.is-open {
+    transform: translateY(0);
+  }
+  .g-sheet-head::before {
+    content: '';
+    position: absolute;
+    top: 6px;
+    left: 50%;
+    width: 36px;
+    height: 4px;
+    margin-left: -18px;
+    border-radius: 2px;
+    background: var(--line);
+  }
+}
+
+/* Phone: the decision bar that follows the approver. */
+.g-decide-bar {
+  position: fixed;
+  left: var(--g-gutter);
+  right: var(--g-gutter);
+  bottom: calc(12px + env(safe-area-inset-bottom));
+  z-index: 65;
+  display: flex;
+  align-items: center;
+  gap: var(--sp-3);
+  height: 64px;
+  padding: 0 var(--sp-3) 0 var(--sp-4);
+  border-radius: var(--r-md);
+}
+
+/* ==================================================================== reduced motion */
+
+@media (prefers-reduced-motion: reduce) {
+  .lamp--live,
+  .flash,
+  .arrive,
+  .g-grow {
+    animation: none;
+  }
+  .peek,
+  .g-sheet,
+  .g-sheet.is-open {
+    transform: none;
+    transition: opacity var(--t-fast) linear, visibility 0s;
+  }
+  .life-bar > i,
+  .g-collapse {
+    transition: none;
+  }
+  .g-btn:active {
+    transform: none;
+  }
+}
+
+/* ==================================================================== forced colours: keep edges, drop glass */
+
+@media (forced-colors: active) {
+  .glass,
+  .glass--raised,
+  .glass--raised-lite,
+  .glass--dark,
+  .glass-chip--dark {
+    border: 1px solid CanvasText;
+    background: Canvas;
+    box-shadow: none;
+    -webkit-backdrop-filter: none;
+    backdrop-filter: none;
+  }
+  .specular::before,
+  .specular::after {
+    display: none;
+  }
+  .lamp {
+    forced-color-adjust: none;
+  }
+}

@@ -11,6 +11,7 @@ import { RevenueProvider } from './lib/revenue';
 import { COST_CAP_DB, EVIDENCE_DB, HOST, SeatProvider, readToken, saveToken } from './lib/seat';
 import { SeatConnectionProvider } from './lib/seatConnection';
 import './styles.css';
+import './glass.css';
 
 // Two SpacetimeDB databases on one server, both read with this browser's read-only identity. The
 // cost cap desk is written through the seat's own connection (lib/seatConnection.tsx).
