@@ -35,9 +35,9 @@ export function ReplayControl() {
     return () => clearInterval(t);
   }, [poll, running]);
 
-  const start = async (target: 'race-demo' | 'race-reset') => {
+  const start = async (target: 'race-demo' | 'race-reset' | 'race-snapshot') => {
     setError(null);
-    if (target === 'race-reset' && !window.confirm('Wipe pit-wall and reload the evidence and the 2024 history? The current replay is cleared.')) return;
+    if (target !== 'race-demo' && !window.confirm('Wipe pit-wall and reload the evidence and the 2024 history? The current replay is cleared.')) return;
     const r = await fetch(`/local/sim/${target}`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ browserId: race.identityHex }) });
     if (!r.ok) setError(((await r.json().catch(() => ({}))) as { error?: string }).error ?? `HTTP ${r.status}`);
     void poll();
@@ -50,12 +50,15 @@ export function ReplayControl() {
       {running ? (
         <span className="replay-live" role="status">
           <span className="replay-dot" aria-hidden />
-          {running.target === 'race-reset' ? 'Resetting…' : 'Replaying live'}
+          {running.target === 'race-reset' ? 'Resetting…' : running.target === 'race-snapshot' ? 'Building lap 32…' : 'Replaying live'}
         </span>
       ) : (
         <>
           <button type="button" className="btn btn--small btn--primary" onClick={() => start('race-demo')}>
             <IconPlay size={13} /> Replay São Paulo
+          </button>
+          <button type="button" className="btn btn--small" onClick={() => start('race-snapshot')} title="A clean pit-wall, then the weekend up to a few minutes after Colapinto's lap-32 crash">
+            Lap 32
           </button>
           <button type="button" className="btn btn--small" onClick={() => start('race-reset')} title="Wipe pit-wall and start clean">
             <IconRestart size={13} /> Reset

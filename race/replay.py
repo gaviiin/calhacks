@@ -228,6 +228,8 @@ class Replay:
         for i, ev in enumerate(events):
             if max_events is not None and i >= max_events:
                 break
+            if self.hooks and getattr(self.hooks, "stop", None) and self.hooks.stop(ev):
+                break  # the snapshot's end
             live = ev.lap >= self.from_lap and (not self.from_at or ev.at >= self.from_at)
             if live and prev_at is not None and self.pace > 0:
                 gap = (parse_iso(ev.at) - parse_iso(prev_at)).total_seconds() / self.pace

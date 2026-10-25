@@ -26,7 +26,7 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from race import cap_forecast, close as close_mod, erp, incidents, ledger, logistics, questions, season_sim, strategy
+from race import cap_forecast, close as close_mod, erp, incidents, ledger, logistics, people, questions, season_sim, strategy
 from race.events import Action, Close, Effect, Entry, Incident, OptionSet, Posting, Question, RaceEvent, SimRun, now_iso
 from race.replay import Replay
 from race.sink import RaceSink
@@ -79,7 +79,7 @@ class WeekendState:
 class Weekend:
     def __init__(self, meeting_key: int, *, pace: float, sink: RaceSink | None, offline: bool, forecast: bool,
                  fixtures_only: bool = True, max_sleep: float = 5.0, quiet: bool = False, from_at: dict[int, str] | None = None,
-                 sessions: list[int] | None = None, linger: float = 0.0):
+                 sessions: list[int] | None = None, linger: float = 0.0, until: str = "", script: dict | None = None):
         self.info = weekend_info(meeting_key)
         self.state = WeekendState(meeting_key=meeting_key, info=self.info, team=self.info.get("team", "Williams"), offline=offline)
         self.state.spares = logistics.load_manifest(self.state)
@@ -88,6 +88,8 @@ class Weekend:
         self.fixtures_only, self.max_sleep, self.quiet = fixtures_only, max_sleep, quiet
         self.from_at = from_at or {}
         self.linger = linger  # seconds to wait after the last session for people to answer open questions
+        self.until = until  # stop here (race time): a snapshot, not sealed
+        self.script = script  # people's decisions replayed into a demo (race/people.py)
         self.book = incidents.IncidentBook(self.state)
         self.timings: dict[str, list[float]] = {}
 
@@ -103,6 +105,8 @@ class Weekend:
     def after_event(self, replay: Replay, ev: RaceEvent, effects: list[Effect], jev, policy, precedent) -> None:
         st = self.state
         st.now = ev.at
+        for line in people.apply_due(st, self.sink, self.script, ev.at):
+            self.say(f"[people] {line}")
         if effects:
             st.effects.append((ev, effects))
         t0 = time.perf_counter()
@@ -151,6 +155,10 @@ class Weekend:
 
         self.replan(f"incident:{inc.incident_key}@v{inc.version}")
         self.apply_answers()
+
+    def stop(self, ev: RaceEvent) -> bool:
+        """The snapshot's end: events after `until` are not played."""
+        return bool(self.until) and ev.at > self.until
 
     def after_session(self, replay: Replay) -> None:
         st = self.state
@@ -229,6 +237,12 @@ class Weekend:
             self.replan(f"answer:{inc.incident_key}@v{inc.version}")
 
     # ------------------------------------------------------------------ run
+    def _session_start(self, key: int) -> str:
+        try:
+            return json.loads((Path(__file__).resolve().parent / "fixtures" / str(key) / "session.json").read_text())["date_start"].replace("+00:00", "Z")
+        except (OSError, ValueError, KeyError):
+            return ""
+
     def report_health(self, final: bool = False) -> None:
         """What each outside service did on this run, written so every view can say what is live and what is not."""
         if not self.sink:
@@ -279,6 +293,8 @@ class Weekend:
         self._done = {"jev_calls": 0, "jev_ms_sum": 0.0, "jev_errors": 0, "forecasts": 0}  # totals of the finished sessions
         booked_before = 0
         for key in self.sessions:
+            if self.until and self._session_start(key) > self.until:
+                break
             r = Replay(key, self.state.team, pace=self.pace, from_lap=0, sink=self.sink, offline=self.offline, forecast=self.forecast,
                        fixtures_only=self.fixtures_only, max_sleep=self.max_sleep, quiet=self.quiet, hooks=self,
                        from_at=self.from_at.get(key, ""), era=self.info.get("era", "2025-26"))
@@ -293,6 +309,12 @@ class Weekend:
                 self.replan("baseline")
                 self.report_health()
             stats[key] = r.run()
+            if self.until and self.script:
+                # The snapshot's end can fall in a quiet spell (a red flag): decisions due by then still land.
+                for line in people.apply_due(self.state, self.sink, self.script, self.until):
+                    self.say(f"[people] {line}")
+                self.state._last_poll = 0.0
+                self.apply_answers()
             booked_before += r.ctx.race_cost_mid
             done = stats[key]
             self._done["jev_calls"] += done.get("jev_calls", 0)
@@ -307,7 +329,7 @@ class Weekend:
             waited += 1.0
             self.apply_answers()
         t0 = time.perf_counter()
-        c = close_mod.close_weekend(self.state, offline=self.offline)
+        c = None if self.until else close_mod.close_weekend(self.state, offline=self.offline)  # a snapshot is not sealed
         self._time("close", t0)
         if c is not None:
             self.state.close = c
@@ -335,14 +357,18 @@ def main() -> None:
     ap.add_argument("--no-forecast", action="store_true")
     ap.add_argument("--quiet", action="store_true")
     ap.add_argument("--linger", type=float, default=0.0, help="seconds to wait for answers to open questions before the close")
+    ap.add_argument("--until", default="", help="stop at this race time (ISO UTC): a snapshot, not sealed")
+    ap.add_argument("--snapshot", action="store_true", help="the meeting's demo snapshot: stop time and people's decisions from race/data/snapshot_<meeting>.json")
     ap.add_argument("--fixtures", action="store_true", default=os.environ.get("RACE_SOURCE", "openf1") == "fixtures",
                     help="read the checked-in fixtures instead of the OpenF1 API (no network)")
     args = ap.parse_args()
     from_at = {int(k): v for k, v in (x.split("=", 1) for x in args.from_at)}
+    script = people.load_script(args.meeting) if args.snapshot else None
+    until = args.until or ((script or {}).get("until") or "")
     sink = None if args.no_sink else RaceSink()
     Weekend(args.meeting, pace=args.pace, sink=sink, offline=args.offline, forecast=not args.no_forecast, max_sleep=args.max_sleep,
             quiet=args.quiet, from_at=from_at, sessions=[int(s) for s in args.sessions.split(",")] if args.sessions else None,
-            linger=args.linger, fixtures_only=args.fixtures).run()
+            linger=args.linger, fixtures_only=args.fixtures, until=until, script=script).run()
 
 
 if __name__ == "__main__":

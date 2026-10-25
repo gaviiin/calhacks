@@ -16,7 +16,7 @@ AGENT_MODE := $(if $(OFFLINE),--offline,)
         analyst standing review-items gateway redteam score cost-cap-run \
         revenue-api revenue-sim revenue-demo evidence-publish evidence-replay \
         race-publish race-grant race-fixtures race-replay race-tape race-live race-onboard race-learn race-review-policies race-test \
-        race-weekend race-demo race-onboard-2024 race-reset
+        race-weekend race-demo race-onboard-2024 race-reset race-snapshot
 
 # ---------------------------------------------------------------- shared
 
@@ -162,6 +162,10 @@ race-demo:        ## the demo: São Paulo 2024 from just before Colapinto's qual
 
 race-onboard-2024: ## learn Williams' 2024 races before São Paulo (its own precedent store and race-y2024- policies; no hindsight)
 	$(ENV) uv run python -m race.policy_learner --onboard --era 2024 $(if $(OFFLINE),--offline,)
+
+race-snapshot:    ## the demo's frozen moment: a clean pit-wall, then São Paulo up to a few minutes after Colapinto's lap-32 crash, the team's earlier decisions replayed
+	$(MAKE) race-reset
+	$(ENV) uv run python -m race.weekend --meeting 1249 --pace 0 --snapshot $(if $(OFFLINE),--offline,)
 
 race-reset:       ## a clean pit-wall for the demo: wipe it, reload the FIA evidence, grant roles, relearn 2024 (BROWSER_ID=<hex> seats the dashboard)
 	$(MAKE) evidence-publish evidence-replay
