@@ -13,6 +13,7 @@ Race day is the product; the desks behind it are where its entries land.
 - **CFO**: reads the Sunday-night brief, approves the sealed weekend before any brief goes out, second approver for revenue entries at or above $1M.
 - **Head of Cost Cap**: owns the cap position and the FIA submission; sees every race-day entry with when the cap counts it; approves house policies and material adjustments.
 - **Team Principal**: decides what is outward-facing or irreversible on race day (withdrawing a car, FIA notices).
+- **Chief of Staff**: approves the team's reaction to an incident as a whole (the response plan: spares, work orders, freight, the entries) in one click; after that the agent executes every line the team has a precedent for and brings only novel lines to a person.
 - **Chief Mechanic**: answers the damage question in one click (two cases the team has lived through), which settles the crash lines and teaches the desk.
 - **Technical Director / Head of Logistics**: work orders, spares and freight against the next event.
 - **Financial Controller**: approves proposals below materiality on the desks behind Books.
@@ -27,7 +28,7 @@ The job exists at every team, and crashes are its biggest swing in the season (W
 Three twists, in this order:
 
 1. **The car is the ledger.** Each part on each car has a life: laps use it, stress events use it (Jev classifies how hard a contact or a trip off the track hit and which parts), crashes destroy it. Wear is never booked (the cap excludes depreciation); it sets when each replacement is fitted, which is when its cost counts, and flags a power unit or gearbox past its allocation as a grid penalty.
-2. **The books keep themselves.** Balanced entries with when the cap counts each line, inventory moves, accruals, adjustments once the garage confirms, ERP postings, the evidence pack, the seal and the true-up. People answer a damage question when Jev is unsure, make the racing calls (priced, never recommended) and approve each crash's books in one click.
+2. **The books keep themselves.** Balanced entries with when the cap counts each line, inventory moves, accruals, adjustments once the garage confirms, ERP postings, the evidence pack, the seal and the true-up. People answer a damage question when Jev is unsure, make the racing calls (priced, never recommended) and approve each crash's response plan in one click; the books then post on precedent, not on amount: a line like one the team has booked before posts on its own, a line with no precedent waits for the Head of Cost Cap.
 3. **Milliseconds.** Every event is costed in about a millisecond, so the numbers are never stale when someone decides; telemetry sees a crash seconds before race control.
 
 After an incident the dashboard follows it in seven steps: seen, hardware, engineering call, race call, next steps, books, season. Race-day numbers are provisional: the weekend is sealed on Sunday night and briefed once the CFO approves, and the true-up against actuals weeks later recalibrates the price book.

@@ -50,10 +50,13 @@ not in Python:
   change or refuses it, and writes exactly one `race_audit` row in the same transaction. A refusal is committed, never
   thrown, so the attempt is on the record even when nothing changed.
 - **The database authorizes postings.** The desk asks (`request_race_posting`); the module answers `authorized` or
-  `held` for a named review role from the entry, the estimate behind it and the CFO's rules (`race_rules`): under
-  $250,000 the desk may post; from $250,000 the head of cost cap decides; from $1,000,000 the CFO; an estimate that is
-  only Jev's or the forecast agent's needs a person's sign-off (`race_signoffs`) first. A sign-off re-runs the decision
-  in the same transaction. The ERP (`world/api.py`) accepts a race entry only when pit-wall authorized it, so an agent
+  `held` for a named review role from the entry, the estimate behind it and the incident's response plan
+  (`race_plans`, race/plan.py). There is no amount threshold: the chief of staff approves the plan as a whole
+  (`approve_race_plan`); then an entry whose plan line has a precedent in the team's history (race/history.py: the same
+  part, booked the same way, at a price within a band of what it cost before; a compound entry matched part by part)
+  is authorized, whatever its amount, and an entry with no precedent is held for the head of cost cap. A Jev-only estimate
+  with no precedent needs a person's sign-off (`race_signoffs`) first. An approval or a sign-off re-runs the decision for
+  the incident's held entries in the same transaction. The ERP (`world/api.py`) accepts a race entry only when pit-wall authorized it, so an agent
   holding the gateway key still cannot post around the rule (403; 503 if pit-wall cannot be asked).
 - **People are seats.** `grant_seat` gives an identity a role and a name (`race_seats`); decisions are recorded under that
   name. The publisher's identity runs the agents and never counts as a person. Agents are refused every person
