@@ -113,3 +113,98 @@ def test_shadow_policy_yields_proposed():
     # a shadow only watches: Jev decides, the row names the draft that would have matched
     # (offline Jev calls a plain collision light at P=0.45, under the 0.5 floor, so the line also asks a person)
     assert cost.status == "needs_person" and cost.decided_by == "jev" and "shadow policy light-contact" in cost.why
+
+
+# ---------------------------------------------------------------------- the season, FX, the cap and the calibration
+from race import cap_forecast, prize as ladder  # noqa: E402
+
+JEV_PARTS = {"front_wing": 0.798, "floor": 0.69, "rear_wing": 0.51, "front_suspension": 0.66, "rear_suspension": 0.495, "gearbox": 0.48,
+             "chassis": 0.36, "bodywork": 0.76, "power_unit": 0.21, "brakes": 0.008, "electronics": 0.36}
+BRAZIL_TEAM_OF = {23: "Williams", 43: "Williams", 50: "Haas F1 Team", 1: "Red Bull Racing"}
+
+
+def brazil_ctx() -> EffectsContext:
+    return EffectsContext(team="Williams", team_of=BRAZIL_TEAM_OF, fx_date="2024-11-03", next_race_days=7, next_race_flyaway=True,
+                          positions={23: 7, 43: 18})
+
+
+def stop(car, kph, lap, at):
+    return RaceEvent(kind="car_stopped", at=at, session_key=9627, meeting_key=1249, lap=lap, driver_number=car, team_name="Williams",
+                     payload={"peak_kph": kph, "signature": "stop", "summary": f"{kph} to 0 km/h"},
+                     state=CarState(car, "Williams", position=10, lap=lap, updated_at=at))
+
+
+def jev_heavy() -> JevAnswers:
+    return JevAnswers(relevant=0.95, severity="heavy", parts=dict(JEV_PARTS), confidence={"severity": 0.6},
+                      probabilities={"severity": {"heavy": 0.6, "moderate": 0.3, "light": 0.08, "none": 0.02}})
+
+
+def test_sao_paulo_weekend_lands_near_the_press_figure():
+    """Albon 315 km/h, Colapinto 166 km/h in qualifying and 188 km/h in the race: about $4m (AMS via RacingNews365)."""
+    total = 0
+    for car, kph, lap, at in ((43, 166, 5, "2024-11-03T10:39:00Z"), (23, 315, 28, "2024-11-03T11:57:19Z"), (43, 188, 31, "2024-11-03T16:36:55Z")):
+        out = effects_for(stop(car, kph, lap, at), jev_heavy(), None, brazil_ctx())
+        total += sum(x.mid_cents for x in out if x.kind == "cost")
+        crash = next(x for x in out if x.bucket == "6050")
+        assert f"{kph} km/h" in crash.why
+    contact = ev("incident", car=43, payload=dict(COLLISION_43))
+    total += sum(x.mid_cents for x in effects_for(contact, offline_decide(contact, {"team_cars": [23, 43]}), None, brazil_ctx()) if x.kind == "cost")
+    assert 300_000_000 <= total <= 450_000_000, total / 1e8
+
+
+def test_the_hardest_hit_costs_the_most():
+    a = sum(x.mid_cents for x in effects_for(stop(23, 315, 28, "2024-11-03T11:57:19Z"), jev_heavy(), None, brazil_ctx()) if x.kind == "cost")
+    b = sum(x.mid_cents for x in effects_for(stop(43, 166, 5, "2024-11-03T10:39:00Z"), jev_heavy(), None, brazil_ctx()) if x.kind == "cost")
+    assert a > 1.5 * b
+
+
+def test_a_car_that_did_not_start_books_no_crash_again():
+    c = brazil_ctx()
+    c.standings_start = {"Williams": 17.0, "Alpine": 16.0, "Haas F1 Team": 46.0}
+    c.team_of = {**BRAZIL_TEAM_OF, 10: "Alpine"}
+    c.positions = {23: 7, 43: 12, 10: 9}
+    c.prize_position = None
+    effects_for(RaceEvent(kind="position", at="2024-11-03T15:31:00Z", session_key=9636, meeting_key=1249, lap=1, driver_number=10,
+                          team_name="Alpine", payload={"from": 10, "to": 9}), JevAnswers(), None, c)
+    dns = RaceEvent(kind="retirement_confirmed", at="2024-11-03T17:30:00Z", session_key=9636, meeting_key=1249, lap=0, driver_number=23,
+                    team_name="Williams", payload={"dns": True, "dnf": False, "number_of_laps": 0},
+                    state=CarState(23, "Williams", status="retired", updated_at="2024-11-03T17:30:00Z"))
+    out = effects_for(dns, offline_decide(dns, {"team_cars": [23, 43], "retired_within_laps": 0}), None, c)
+    assert [x for x in out if x.kind in ("cost", "cap_headroom")] == [], "the damage was booked when the car stopped in qualifying"
+    assert c.positions[23] is None, "the running order still drops the car"
+    assert c.prize_position is not None
+
+
+def test_prize_uses_the_season_ladder():
+    c = brazil_ctx()
+    c.standings_start = {"Williams": 17.0, "Alpine": 16.0, "Haas F1 Team": 46.0}
+    c.team_of = {**BRAZIL_TEAM_OF, 10: "Alpine"}
+    c.positions = {23: 20, 43: 20, 10: 20}
+    c.prize_position = 2  # Williams P2 of the three teams listed
+    c.positions[10] = 1  # Alpine leads: 25 points pass Williams
+    out = [x for x in effects_for(RaceEvent(kind="position", at="2024-11-03T16:00:00Z", session_key=9636, meeting_key=1249, lap=20, driver_number=10,
+                                            team_name="Alpine", payload={"from": 2, "to": 1}), JevAnswers(), None, c) if x.kind == "revenue_projection"]
+    assert len(out) == 1 and out[0].mid_cents == ladder.prize(2024, 3) - ladder.prize(2024, 2) < 0
+    assert "2024 ladder" in out[0].why and "The Race" in out[0].why
+
+
+def test_euro_bonus_is_converted_to_dollars():
+    c = ctx(fx_date="2024-11-03")
+    out = [x for x in effects_for(ev("position", payload={"from": 12, "to": 9}, pos=9), JevAnswers(), None, c) if x.bucket == "sponsor_bonus:volta"]
+    assert out, "Volta's points-finish clause is in euros"
+    rate = float(c.world.fx("EUR", "2024-11-03"))
+    assert out[0].mid_cents == round(10_000_000 * rate) != 10_000_000
+    assert "EUR 100,000" in out[0].why
+
+
+def test_cap_headroom_uses_the_season_cap_and_what_was_booked_before():
+    c = brazil_ctx()
+    c.cap_relevant_cents = 100_000_000_00
+    out = effects_for(stop(23, 315, 28, "2024-11-03T11:57:19Z"), jev_heavy(), None, c)
+    hr = next(x for x in out if x.kind == "cap_headroom")
+    assert hr.mid_cents == cap_forecast.cap_level_cents(2024) - c.cap_relevant_cents - c.race_cost_mid
+    assert hr.why.startswith("2024 cap")
+    assert ctx().season == 2026 and ctx(year=2024).season == 2024
+
+
+COLLISION_43 = {"car_numbers": [50, 43], "team_involved": True, "reason": "CAUSING A COLLISION", "stage": "NOTED"}

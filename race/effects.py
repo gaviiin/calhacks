@@ -9,6 +9,10 @@ plan on top. Every effect carries `decided_by`, `why` and the Jev probabilities 
 
 Buckets: 6050 crash damage parts, 5200 repair labour, 6300 expedited freight (Meridian's chart of accounts,
 world/company.py), prize_money (projected constructors' ladder), sponsor_bonus:<id>, cap_headroom.
+
+Money is USD cents. The price book is in GBP and sponsor clauses are in each sponsor's currency: both convert at
+world/fx_rates.csv on the session's date, else at the stated fallback rate (race/prices.py). The season (`year`)
+picks the prize ladder (race/prize.py) and the cap level (race/cap_forecast.py).
 """
 
 from __future__ import annotations
@@ -17,14 +21,16 @@ import os
 from dataclasses import dataclass, field
 
 from finance.world import World
-from race import prices as P
+from race import cap_forecast, prices as P
+from race import prize as prize_ladder
 from race.events import Effect, RaceEvent
 from race.jev import JevAnswers
 from race.points import points_for, position_of, projected_standings
 from race.policies import Policy
 from race.precedents import PrecedentMatch
 
-CAP_USD_CENTS = int(os.environ.get("CAP_USD_CENTS", str(215_000_000 * 100)))  # 2026 cost cap, agents/config.py
+CAP_OVERRIDE = int(os.environ["CAP_USD_CENTS"]) if os.environ.get("CAP_USD_CENTS") else None  # a what-if cap for every season
+CAP_USD_CENTS = CAP_OVERRIDE or cap_forecast.cap_level_cents(2026)  # kept for readers that want the 2026 figure
 RELEVANCE_FLOOR = 0.15
 REVISION_FLOOR = 0.15  # a later estimate for the same crash is only posted when it moves the mid by 15%
 LIKELY = 0.5  # a part counts in the low band when P(damaged) >= LIKELY ...
@@ -69,9 +75,12 @@ class EffectsContext:
     next_race_days: int | None = None
     next_race_flyaway: bool = False
     fx_date: str = "2026-06-01"
-    cap_relevant_cents: int = 0  # relevant costs booked so far this cap year (from cost-cap-desk when available)
+    year: int | None = None  # the season; None reads it from fx_date (the session's date)
+    cap_level_cents: int | None = None  # None asks race/cap_forecast.py for the season's cap
+    cap_relevant_cents: int = 0  # relevant costs booked this cap year before this session (cap_forecast.relevant_before_cents
+    #                               plus earlier sessions of the weekend, when the Weekend sets it)
     # memory across events
-    booked: dict[int, dict] = field(default_factory=dict)  # car -> {"lap": int, "mid": int, "low": int, "high": int}
+    booked: dict[int, dict] = field(default_factory=dict)  # car -> {"lap", "mid", "low", "high", "kph", "parts", "severity"}
     prize_position: int | None = None
     prize_position_before: int | None = None  # the projection before the first change this race (for the forecast)
     bonus_state: dict[str, str] = field(default_factory=dict)  # f"{sponsor}|{clause}|{car}" -> expected | lost
@@ -86,15 +95,46 @@ class EffectsContext:
     def team_cars(self) -> list[int]:
         return sorted(c for c, t in self.team_of.items() if t == self.team)
 
-    def gbp_cents(self, gbp: float) -> int:
+    @property
+    def season(self) -> int:
+        if self.year:
+            return int(self.year)
         try:
-            rate = float(self.world.fx("GBP", self.fx_date))
-        except (KeyError, FileNotFoundError):
-            rate = P.USD_PER_GBP
-        return int(round(gbp * rate * 100))
+            return int(self.fx_date[:4])
+        except (TypeError, ValueError):
+            return 2026
+
+    def usd_per(self, currency: str) -> tuple[float, str]:
+        """(USD per unit, where the rate came from)."""
+        cur = (currency or "USD").upper()
+        if cur == "USD":
+            return 1.0, "USD"
+        try:
+            return float(self.world.fx(cur, self.fx_date)), f"{cur}/USD {self.fx_date[:10]}"
+        except (KeyError, FileNotFoundError, ValueError):
+            rate = P.FALLBACK_USD_PER.get(cur, 1.0)
+            return rate, f"{cur}/USD fallback {rate}"
+
+    def usd_cents(self, minor: int, currency: str) -> int:
+        """An amount in the minor units of `currency` as USD cents."""
+        return int(round(minor * self.usd_per(currency)[0]))
+
+    def gbp_cents(self, gbp: float) -> int:
+        return int(round(gbp * self.usd_per("GBP")[0] * 100))
+
+    def cap_level(self) -> int:
+        if CAP_OVERRIDE is not None:
+            return CAP_OVERRIDE
+        return int(self.cap_level_cents if self.cap_level_cents is not None else cap_forecast.cap_level_cents(self.season))
 
     def cap_headroom_cents(self) -> int:
-        return CAP_USD_CENTS - self.cap_relevant_cents - self.race_cost_mid
+        return self.cap_level() - self.cap_relevant_cents - self.race_cost_mid
+
+    def cap_why(self, revision: bool = False) -> str:
+        before = (f"${self.cap_relevant_cents / 1e8:,.1f}m relevant costs booked before this session" if self.cap_relevant_cents
+                  else "relevant costs before this session not yet supplied (0 assumed)")
+        return (f"{self.season} cap ${self.cap_level() / 1e8:,.1f}m less {before} less this session's crash damage (mid"
+                f"{', revised' if revision else ''}).")
 
     def clauses(self) -> list[tuple[dict, dict]]:
         """(sponsor, clause) for every performance clause in the team's current contracts."""
@@ -190,6 +230,16 @@ def crash_effects(event: RaceEvent, jev: JevAnswers, policy: Policy | None, ctx:
             ask = (f"Asks the Head of Racing Finance: Jev is unsure (severity {jev_sev}, P={conf:.2f} < {ask_floor():.2f}). "
                    "Confirm or correct. ")
 
+    # The telemetry knows how hard the car hit; Jev and precedents only read the words. Pool them (race/prices.py),
+    # except under a granted policy, whose severity is the team's own rule.
+    prev = ctx.booked.get(car)
+    kph = event.payload.get("peak_kph") or (prev or {}).get("kph")
+    pooled = ""
+    if kph and not policy and "cost_cents" not in tpl:
+        parts_p = P.impact_parts(parts_p, kph)
+        sev_p = P.impact_severity_p(sev_p, kph)
+        pooled = f" Pooled with the telemetry impact ({int(kph)} km/h implies {P.impact_severity(kph)})."
+
     out: list[Effect] = []
     if "cost_cents" in tpl:
         lo, mid, hi = _band(*tpl["cost_cents"])
@@ -200,9 +250,9 @@ def crash_effects(event: RaceEvent, jev: JevAnswers, policy: Policy | None, ctx:
     where = f"L{event.lap} {event.payload.get('turn') or ''}".strip()
     reason = event.payload.get("reason") or event.payload.get("summary") or event.kind.replace("_", " ")
     why = (f"{event.kind.replace('_', ' ')} for car {car} at {where}: {reason}. Severity {sev} "
-           f"(P={sev_p.get(sev, 0):.2f}); parts weighted by P(damaged){basis_note}.")
-
-    prev = ctx.booked.get(car)
+           f"(P={sev_p.get(sev, 0):.2f}); parts weighted by P(damaged){basis_note}.{pooled}")
+    belief = {"kph": kph, "parts": {k: round(v, 3) for k, v in parts_p.items()}, "severity": {k: round(v, 3) for k, v in sev_p.items()},
+              "decided_by": decided_by}
     retired = ctx.positions.get(car, 0) is None or (event.state is not None and event.state.status.startswith("retired"))
     if prev and (retired or abs(event.lap - prev["lap"]) <= 10):
         # Same crash, later evidence (the stewards' message after our own retirement call). Post only a revision,
@@ -212,17 +262,17 @@ def crash_effects(event: RaceEvent, jev: JevAnswers, policy: Policy | None, ctx:
         if prev["mid"] == 0 or abs(mid - prev["mid"]) / max(prev["mid"], 1) < REVISION_FLOOR:
             return []
         d_lo, d_mid, d_hi = _band(lo - prev["low"], mid - prev["mid"], hi - prev["high"])
-        ctx.booked[car] = {"lap": prev["lap"], "mid": mid, "low": lo, "high": hi}
+        ctx.booked[car] = {"lap": prev["lap"], "mid": mid, "low": lo, "high": hi, **belief}
         ctx.race_cost_mid += d_mid
         out.append(Effect("cost", "6050", d_lo, d_mid, d_hi, f"Crash damage revision - car {car} - {reason.lower()}",
                           "assumption", decided_by, ask + "Revised estimate after new evidence: " + why, jev.log(), status))
-        out.append(Effect("cap_headroom", "cap_headroom", ctx.cap_headroom_cents(), ctx.cap_headroom_cents(), ctx.cap_headroom_cents(),
-                          "Cap headroom after revision", "policy", "code", "2026 cap less relevant costs to date less this race's crash damage (mid).", {}, "autonomous"))
+        hr = ctx.cap_headroom_cents()
+        out.append(Effect("cap_headroom", "cap_headroom", hr, hr, hr, "Cap headroom after revision", "policy", "code", ctx.cap_why(True), {}, "autonomous"))
         return out
 
     if mid <= 0:
         return []
-    ctx.booked[car] = {"lap": event.lap, "mid": mid, "low": lo, "high": hi}
+    ctx.booked[car] = {"lap": event.lap, "mid": mid, "low": lo, "high": hi, **belief}
     parts_txt = ", ".join(f"{d['label']} {int(d['p'] * 100)}%" for d in detail[:5]) or "fixed band"
     basis = "precedent" if precedent and not policy else "assumption"
     out.append(Effect("cost", "6050", lo, mid, hi, f"Crash damage - car {car} - {parts_txt}", basis, decided_by, ask + why, jev.log(), status))
@@ -243,7 +293,7 @@ def crash_effects(event: RaceEvent, jev: JevAnswers, policy: Policy | None, ctx:
     ctx.race_cost_mid += mid
     hr = ctx.cap_headroom_cents()
     out.append(Effect("cap_headroom", "cap_headroom", hr, hr, hr, "Cap headroom after this incident", "policy", "code",
-                      "2026 cap ($215m) less relevant costs to date less this race's crash damage (mid).", {}, "autonomous"))
+                      ctx.cap_why(), {}, "autonomous"))
     return out
 
 
@@ -260,11 +310,12 @@ def prize_effects(event: RaceEvent, jev: JevAnswers, ctx: EffectsContext) -> lis
         ctx.prize_position_before = old_pos if old_pos is not None else new_pos
     if old_pos is None or old_pos == new_pos:
         return []
-    delta = ctx.world.prize(new_pos) - ctx.world.prize(old_pos)
+    year = ctx.season
+    delta = prize_ladder.prize(year, new_pos) - prize_ladder.prize(year, old_pos)
     arrow = "up" if new_pos < old_pos else "down"
     pts = dict(standings)
     why = (f"Projected constructors' position moves from P{old_pos} to P{new_pos} ({arrow}) on the running order: "
-           f"{ctx.team} {pts.get(ctx.team, 0):.0f} pts projected. Prize ladder is the synthetic world table; real payouts are confidential.")
+           f"{ctx.team} {pts.get(ctx.team, 0):.0f} pts projected. {year} ladder: {prize_ladder.basis(year)}.")
     return [Effect("revenue_projection", "prize_money", delta, delta, delta,
                    f"Projected season prize money: P{old_pos} -> P{new_pos}", "ladder", "code", why, jev.log() if jev.relevant else {}, "autonomous")]
 
@@ -279,17 +330,20 @@ def bonus_effects(event: RaceEvent, jev: JevAnswers, ctx: EffectsContext) -> lis
             key = f"{sponsor['id']}|{clause['id']}|{car}"
             qualifies = _qualifies(clause, _Row(pos))
             prev = ctx.bonus_state.get(key)
-            amount = int(clause.get("amount") or 0)
+            cur = (clause.get("currency") or sponsor.get("currency") or "USD").upper()
+            minor = int(clause.get("amount") or 0)
+            amount = ctx.usd_cents(minor, cur)
+            fx_note = "" if cur == "USD" else f" {cur} {minor / 100:,.0f} at {ctx.usd_per(cur)[1]} ({ctx.usd_per(cur)[0]:.4f})."
             if qualifies and prev != "expected":
                 ctx.bonus_state[key] = "expected"
                 out.append(Effect("bonus", f"sponsor_bonus:{sponsor['id']}", amount, amount, amount,
                                   f"{sponsor['name']} clause {clause['id']} ({clause['type']}) expected - car {car} P{pos}", "contract", "code",
-                                  f"Car {car} runs P{pos}, inside the clause's window; booked as expected until the result is final.", {}, "autonomous"))
+                                  f"Car {car} runs P{pos}, inside the clause's window; booked as expected until the result is final.{fx_note}", {}, "autonomous"))
             elif not qualifies and prev == "expected":
                 ctx.bonus_state[key] = "lost"
                 out.append(Effect("bonus", f"sponsor_bonus:{sponsor['id']}", -amount, -amount, -amount,
                                   f"{sponsor['name']} clause {clause['id']} ({clause['type']}) lost - car {car} {'OUT' if pos is None else f'P{pos}'}",
-                                  "contract", "code", f"Car {car} left the clause's window ({event.kind.replace('_', ' ')}).", jev.log() if jev.bonus_risk >= 1 else {}, "autonomous"))
+                                  "contract", "code", f"Car {car} left the clause's window ({event.kind.replace('_', ' ')}).{fx_note}", jev.log() if jev.bonus_risk >= 1 else {}, "autonomous"))
     return out
 
 
@@ -310,6 +364,18 @@ def pit_stop_effects(event: RaceEvent, policy: Policy | None, precedent: Precede
     return [Effect("cost", "tyres", 0, 0, 0, memo, "policy" if granted else "precedent", decided_by, why, {}, "autonomous")]
 
 
+def fine_effects(event: RaceEvent, ctx: EffectsContext) -> list[Effect]:
+    """A stewards' fine on our car: an expense, never a relevant cost (Issue 22 Art. 3.1(m) / 2026 D5.1.1.m)."""
+    p = event.payload
+    if "FINE" not in str(p.get("what") or "").upper() or p.get("served"):
+        return []
+    lo, mid, hi = (ctx.usd_cents(x * 100, "EUR") for x in P.FIA_FINE_EUR)
+    rule = "Issue 22 Art. 3.1(m)" if ctx.season <= 2025 else "D5.1.1.m"
+    return [Effect("cost", "6910", lo, mid, hi, f"FIA fine - car {event.driver_number} - {(p.get('reason') or 'stewards decision').lower()}",
+                   "assumption", "code", f"Stewards fined car {event.driver_number}; the message names no amount, so the band is the usual "
+                   f"EUR {P.FIA_FINE_EUR[0]:,}-{P.FIA_FINE_EUR[2]:,}. Outside the cost cap ({rule}).", {}, "proposed")]
+
+
 def effects_for(event: RaceEvent, jev: JevAnswers, policy: Policy | None, ctx: EffectsContext,
                 precedent: PrecedentMatch | None = None) -> list[Effect]:
     team_car = ctx.team_of.get(event.driver_number) == ctx.team
@@ -324,8 +390,11 @@ def effects_for(event: RaceEvent, jev: JevAnswers, policy: Policy | None, ctx: E
         ctx.standings_start.setdefault(event.payload["team"], float(event.payload["points_start"]))
 
     out: list[Effect] = []
-    if event.kind in ("car_stopped", "incident", "retirement_suspected", "retirement_confirmed") and involved:
+    dns = event.kind == "retirement_confirmed" and bool(event.payload.get("dns"))  # damage was booked where the car crashed
+    if event.kind in ("car_stopped", "incident", "retirement_suspected", "retirement_confirmed") and involved and not dns:
         out += crash_effects(event, jev, policy, ctx, precedent)
+    if event.kind == "penalty" and team_car:
+        out += fine_effects(event, ctx)
     if event.kind == "pit_stop" and team_car:
         out += pit_stop_effects(event, policy, precedent, ctx)
     if event.kind in ("position", "retirement_suspected", "retirement_confirmed", "standings"):

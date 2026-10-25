@@ -1,0 +1,401 @@
+/* Stage 3 respond and stage 4 account. Tokens from styles.css: amber waits, lime is a person's approval or the
+   recommendation, coral is refused or ruled out; every status also says itself in words. */
+
+.rd {
+  display: grid;
+  gap: 12px;
+  min-width: 0;
+}
+
+.rd-sub {
+  margin: 0 0 6px;
+  font: 700 13px var(--body);
+  color: var(--steel);
+  letter-spacing: 0.02em;
+  text-transform: uppercase;
+}
+
+.rd-chip {
+  display: inline-flex;
+  align-items: center;
+  padding: 1px 6px;
+  border: 1px solid var(--line);
+  border-radius: 2px;
+  font-size: 12px;
+  line-height: 1.5;
+  color: var(--steel);
+  white-space: nowrap;
+}
+
+.rd-chip--hold {
+  border-color: var(--hold);
+  background: var(--hold-wash);
+  color: var(--hold);
+  font-weight: 600;
+}
+
+.rd-chip--ok {
+  border-color: var(--lime);
+  background: var(--lime-wash);
+  color: var(--lime);
+  font-weight: 600;
+}
+
+.rd-chip--alert {
+  border-color: var(--alert);
+  background: var(--alert-wash);
+  color: var(--alert);
+}
+
+.rd-chip--off {
+  border-style: dashed;
+  color: var(--muted);
+}
+
+/* ---------------------------------------------------------------- the decision */
+
+.rd-decision {
+  padding: 14px;
+  border: 1px solid var(--line);
+  border-left: 3px solid var(--line);
+  background: var(--panel-2);
+}
+
+.rd-decision--waiting {
+  border-left-color: var(--hold);
+}
+
+.rd-decision-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+}
+
+.rd-decision-head h3 {
+  margin: 0;
+  font: 800 20px var(--display);
+  letter-spacing: 0.01em;
+}
+
+.rd-decision-facts {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 8px 0 10px;
+  color: var(--steel);
+}
+
+.rd-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 8px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rd-option {
+  min-width: 0;
+  padding: 10px 12px;
+  border: 1px solid var(--line-soft);
+  background: var(--panel);
+}
+
+.rd-option--rec {
+  border-color: var(--lime);
+}
+
+.rd-option--out .rd-option-top b {
+  color: var(--steel);
+}
+
+.rd-option-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px;
+}
+
+.rd-hours {
+  position: relative;
+  height: 6px;
+  margin: 10px 0 8px;
+  background: var(--line-soft);
+}
+
+.rd-hours-need {
+  position: absolute;
+  inset: 0 auto 0 0;
+  background: var(--steel);
+}
+
+.rd-option--out .rd-hours-need {
+  background: var(--alert);
+}
+
+.rd-hours-avail {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  margin-left: -1px;
+  background: var(--ink);
+}
+
+.rd-option-figs {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+}
+
+.rd-option-figs div,
+.rd-facts div {
+  display: flex;
+  flex-wrap: wrap;
+  justify-content: space-between;
+  gap: 2px 10px;
+}
+
+.rd-option-figs dt,
+.rd-facts dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.rd-option-figs dd,
+.rd-facts dd {
+  margin: 0;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.rd-risk {
+  margin: 8px 0 0;
+  font-size: 13px;
+}
+
+.rd-why {
+  margin: 12px 0 4px;
+}
+
+.rd-outcome {
+  margin: 6px 0;
+  color: var(--steel);
+}
+
+.rd-decision .decide-actions {
+  margin-top: 10px;
+}
+
+/* ---------------------------------------------------------------- spares */
+
+.rd-spares ul {
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(180px, 1fr));
+  gap: 1px;
+  margin: 0;
+  padding: 0;
+  border: 1px solid var(--line-soft);
+  background: var(--line-soft);
+  list-style: none;
+}
+
+.rd-spares li {
+  display: grid;
+  grid-template-columns: 1fr auto;
+  gap: 2px 8px;
+  padding: 8px 10px;
+  background: var(--panel);
+}
+
+.rd-spare-note {
+  grid-column: 1 / -1;
+  font-size: 12px;
+}
+
+.rd-spare--out .rd-spare-note {
+  color: var(--hold);
+}
+
+/* ---------------------------------------------------------------- groups, actions, entries */
+
+.rd-group {
+  border-top: 1px solid var(--line-soft);
+  padding-top: 8px;
+}
+
+.rd-group > summary {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 4px 12px;
+  cursor: pointer;
+  list-style: none;
+}
+
+.rd-group > summary::-webkit-details-marker {
+  display: none;
+}
+
+.rd-group > summary::before {
+  content: '+';
+  margin-right: 6px;
+  color: var(--muted);
+  font-family: var(--mono);
+}
+
+.rd-group[open] > summary::before {
+  content: '−';
+}
+
+.rd-group-name {
+  flex: 1 1 auto;
+  font-weight: 600;
+}
+
+.rd-action .action-top {
+  min-width: 0;
+}
+
+.rd-title {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.rd-kind {
+  min-width: 7em;
+}
+
+.rd-details {
+  margin-top: 6px;
+  font-size: 13px;
+}
+
+.rd-details > summary,
+.rd-cancelled > summary {
+  cursor: pointer;
+  color: var(--muted);
+  font-size: 12.5px;
+}
+
+.rd-details p {
+  margin: 6px 0;
+}
+
+.rd-facts {
+  display: grid;
+  gap: 4px;
+  margin: 6px 0 0;
+}
+
+.rd-cancelled {
+  margin-top: 8px;
+}
+
+.rd-decided {
+  list-style: none;
+}
+
+.rd-account-totals {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  border: 1px solid var(--line-soft);
+  background: var(--line-soft);
+}
+
+.rd-account-totals > div {
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--panel);
+}
+
+.rd-account-totals dt {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.rd-account-totals dd {
+  margin: 2px 0 0;
+  font-size: 16px;
+}
+
+.rd-legend {
+  margin: 0;
+  font-size: 13px;
+}
+
+.rd-entries {
+  display: grid;
+  gap: 6px;
+  margin: 8px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rd-entry {
+  padding: 8px 12px;
+  background: var(--panel-2);
+}
+
+.rd-entry-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 10px;
+}
+
+.rd-entry-memo {
+  flex: 1 1 16em;
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.rd-entry-amount {
+  margin-left: auto;
+  font-size: 14px;
+}
+
+.rd-entry-note,
+.rd-entry-full {
+  margin: 4px 0 0;
+  font-size: 13px;
+}
+
+.rd-link {
+  margin-top: 4px;
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--steel);
+  font: inherit;
+  font-size: 12.5px;
+  text-decoration: underline;
+  text-underline-offset: 2px;
+  cursor: pointer;
+}
+
+.rd-link:hover {
+  color: var(--ink);
+}
+
+.rd-lines {
+  margin-top: 6px;
+}
+
+@media (max-width: 760px) {
+  .rd-options {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rd-account-totals {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .rd-kind {
+    min-width: 0;
+  }
+}

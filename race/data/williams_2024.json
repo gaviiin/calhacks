@@ -1,0 +1,97 @@
+{
+  "_note": "Williams at the São Paulo Grand Prix 2024 (meeting 1249): what the respond stage (race/logistics.py) assumes about spares, chassis, hours, freight and allocations. Every number carries its basis: press (a published figure, with its source) or assumption (ours, with the reasoning). Williams does not publish its spares count; the press anchors are Vowles' own words.",
+  "meeting_key": 1249,
+  "as_of": "2024-11-02",
+  "team": "Williams",
+  "sources": {
+    "vowles_spares": {
+      "basis": "press",
+      "url": "https://api.fia.com/news/f1-2024-qatar-grand-prix-friday-press-conference-transcript",
+      "note": "James Vowles, FIA Qatar 2024 Friday press conference: a team typically holds four or five of each component, and is in trouble after five or six crashes."
+    },
+    "chassis_count": {
+      "basis": "press",
+      "url": "https://www.formula1.com/en/latest/article/explained-why-williams-had-to-bench-sargeant-in-australia-and-the-big-impact.2qYMr5RgwWeGwy9yRRbDZ",
+      "note": "Williams had no spare chassis in Australia 2024; three chassis were built for 2024, the third arriving by Miami."
+    },
+    "damage_tally": {
+      "basis": "press",
+      "url": "https://www.crash.net/f1/news/1060561/1/james-vowles-reveals-recent-crashes-cost-williams-more-3m",
+      "note": "Vowles after Brazil: the recent crashes cost more than $3m and destroyed five front wings, five floors, five rear wings, three gearboxes, two engines and two chassis."
+    },
+    "brazil_cost": {
+      "basis": "press",
+      "url": "https://racingnews365.com/williams-denied-cost-cap-request-by-fia-report",
+      "note": "Auto Motor und Sport, as reported by RacingNews365: the Brazil weekend's crashes cost Williams about $4m. race/prices.py is calibrated to land near it."
+    }
+  },
+  "spares": {
+    "_basis": "assumption",
+    "_why": "Vowles' four or five of each component, less what Mexico (Albon's lap-1 retirement) and the season had already used: the truck arrived in São Paulo short. at_track travels with the team to Las Vegas; factory is finished stock at Grove.",
+    "front_wing": {"at_track": 3, "factory": 1},
+    "rear_wing": {"at_track": 2, "factory": 1},
+    "floor": {"at_track": 2, "factory": 1},
+    "front_suspension": {"at_track": 3, "factory": 2},
+    "rear_suspension": {"at_track": 2, "factory": 2},
+    "gearbox": {"at_track": 2, "factory": 1},
+    "bodywork": {"at_track": 3, "factory": 2},
+    "brakes": {"at_track": 4, "factory": 4},
+    "rear_brakes": {"at_track": 2, "factory": 2},
+    "electronics": {"at_track": 2, "factory": 2},
+    "steering_rack": {"at_track": 1, "factory": 1},
+    "wheel_speed_sensor": {"at_track": 6, "factory": 10},
+    "power_unit": {"at_track": 0, "factory": 0, "_why": "power unit elements come from the supplier's pool against the driver's allocation, not from Williams stock"},
+    "chassis": {"at_track": 1, "factory": 0, "_why": "three chassis built (press): two race cars and one bare spare tub that travels with the team"}
+  },
+  "chassis": {
+    "built_2024": 3,
+    "basis": "press",
+    "source": "chassis_count",
+    "spare_tub_build_hours": {"low": 10, "mid": 12, "high": 14, "basis": "assumption", "why": "a bare tub has to take the power unit, gearbox, suspension, loom, cooling and bodywork, then fire up and pass the checks: an overnight job for both crews"}
+  },
+  "repair": {
+    "basis": "assumption",
+    "why": "hours to change one damaged part like for like in the garage; two crews work the front and the rear of the car at once, then the car fires up and is checked",
+    "crews": 2,
+    "checks_hours": 1.0,
+    "hours": {
+      "front_wing": 0.5, "rear_wing": 1.0, "floor": 3.0, "front_suspension": 2.5, "rear_suspension": 2.5, "gearbox": 4.0, "bodywork": 1.0,
+      "brakes": 1.0, "rear_brakes": 1.5, "electronics": 2.0, "steering_rack": 2.0, "wheel_speed_sensor": 0.3, "power_unit": 5.0
+    },
+    "tub_at_track": "a damaged monocoque is not repaired at the track: it goes back to Grove"
+  },
+  "decision": {
+    "basis": "assumption",
+    "lead_minutes": 60,
+    "why": "the team principal decides an hour before the start so the stewards and the Technical Delegate can be told before the pit exit opens",
+    "finish_rate": 0.75,
+    "pit_lane_expected_points": 0.3,
+    "spread": 5,
+    "points_why": "expected points from a grid slot: the mean points of finishing within five places of it, times the chance of finishing (0.75, a wet Interlagos), and never less than a pit-lane start; a pit-lane start in a 20-car field rarely scores"
+  },
+  "freight": {
+    "basis": "assumption",
+    "why": "a flyaway after a flyaway: the race kit goes straight from São Paulo; parts made at Grove join the factory's last air consolidation, and anything later travels as hand carry with a person on a passenger flight",
+    "events": [
+      {"name": "Las Vegas Grand Prix", "race": "2024-11-23", "factory_air_cutoff": "2024-11-16T18:00:00Z", "hand_carry_cutoff": "2024-11-20T08:00:00Z"},
+      {"name": "Qatar Grand Prix", "race": "2024-12-01", "factory_air_cutoff": "2024-11-25T18:00:00Z", "hand_carry_cutoff": "2024-11-27T08:00:00Z"},
+      {"name": "Abu Dhabi Grand Prix", "race": "2024-12-08", "factory_air_cutoff": "2024-12-02T18:00:00Z", "hand_carry_cutoff": "2024-12-04T08:00:00Z"}
+    ],
+    "hand_carry_parts": ["front_wing", "rear_wing", "front_suspension", "rear_suspension", "bodywork", "brakes", "rear_brakes", "electronics", "steering_rack", "wheel_speed_sensor"]
+  },
+  "allocation": {
+    "basis": "assumption",
+    "why": "the power unit limits (ICE, TC, MGU-H, MGU-K 4; ES, CE 2 per driver) are the 2024 Sporting Regulations'; the gearbox limit of 4 and every count used by round 21 are ours: both cars at their limits on most elements, as most of the field was by Brazil. Colapinto inherited Sargeant's usage.",
+    "limits": {"ICE": 4, "TC": 4, "MGU-H": 4, "MGU-K": 4, "ES": 2, "CE": 2, "gearbox": 4},
+    "used": {
+      "23": {"ICE": 4, "TC": 4, "MGU-H": 4, "MGU-K": 4, "ES": 2, "CE": 2, "gearbox": 3},
+      "43": {"ICE": 4, "TC": 4, "MGU-H": 3, "MGU-K": 4, "ES": 2, "CE": 2, "gearbox": 3}
+    },
+    "pu_elements": ["ICE", "TC", "MGU-H", "MGU-K", "ES", "CE"]
+  },
+  "damage_tally_after_brazil": {
+    "basis": "press",
+    "source": "damage_tally",
+    "front_wing": 5, "floor": 5, "rear_wing": 5, "gearbox": 3, "power_unit": 2, "chassis": 2
+  }
+}
