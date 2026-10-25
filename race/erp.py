@@ -12,6 +12,7 @@ Each new entry is either posted now or held. It is held when
                                           system_of_work/REDUCERS.md `materiality`: at or above it only the
                                           human_head_of_cost_cap may approve, the controller decides below it
     c) the entry is outside the cap (`recognition == 'excluded'`, an FIA fine)  -> Head of Cost Cap confirms the exclusion
+    d) it adjusts an entry that is not in the ERP yet (held, failed)               -> whoever reviews that entry
 
 The highest role wins (cfo > head_of_cost_cap > controller) and every reason is kept. Otherwise the desk posts it on
 its own authority. A held entry reaches the ERP only after a person approves it in the dashboard
@@ -129,6 +130,11 @@ def review_for(entry: Entry, state) -> tuple[str, list[str]]:
                                  "(cost cap desk REDUCERS.md `materiality`)")
     if entry.recognition == "excluded":
         need("head_of_cost_cap", "it is booked outside the cap (an FIA fine); the Head of Cost Cap confirms the exclusion")
+    if entry.entry_key.endswith(":adj"):
+        orig = (getattr(state, "postings", {}) or {}).get(entry.entry_key[: -len(":adj")])
+        if orig is not None and orig.status != "posted":
+            who = orig.review_role or "controller"
+            need(who, f"it adjusts an entry not in the ERP yet ({orig.status}, for the {who.replace('_', ' ')}): the two are reviewed together")
     return role, why
 
 

@@ -193,6 +193,31 @@ def test_an_entry_from_a_line_that_waits_for_a_person_is_held(fake_erp):
     assert p2.review_role == "cfo" and "waits for a person" in p2.reason and "CFO" in p2.reason
 
 
+def test_an_adjustment_to_an_entry_not_in_the_erp_is_held_with_it(fake_erp):
+    st, sink = State(), FakeSink()
+    orig = entry(st, amount=50_000_000)
+    [p] = book(st, sink, [orig])
+    assert p.status == "held" and p.review_role == "head_of_cost_cap"
+    down = Entry(entry_key=f"{orig.entry_key}:adj", incident_key="inc-1", memo="Adjustment after the garage's assessment (-$200,000)",
+                 effective_date="2024-11-03", recognition="first_use", cap_relevant=True, effect_key=orig.effect_key,
+                 lines=[EntryLine("1400", debit_cents=20_000_000), EntryLine("6050", credit_cents=20_000_000)], evidence=[], at=orig.at)
+    st.entries[down.entry_key] = down
+    [a] = book(st, sink, [down])
+    assert a.status == "held" and a.review_role == "head_of_cost_cap" and "reviewed together" in a.reason, "under $250k, but its entry is not posted"
+    assert fake_erp.calls == 0
+
+    st2, sink2 = State(), FakeSink()
+    small = entry(st2, amount=3_000_000)
+    [q] = book(st2, sink2, [small])
+    assert q.status == "posted"
+    adj = Entry(entry_key=f"{small.entry_key}:adj", incident_key="inc-1", memo="Adjustment (+$10,000)", effective_date="2024-11-03",
+                recognition="first_use", cap_relevant=True, effect_key=small.effect_key,
+                lines=[EntryLine("6050", debit_cents=1_000_000), EntryLine("1400", credit_cents=1_000_000)], evidence=[], at=small.at)
+    st2.entries[adj.entry_key] = adj
+    [b] = book(st2, sink2, [adj])
+    assert b.status == "posted", "its entry is in the ERP: the adjustment follows on the desk's authority"
+
+
 def test_approving_posts_it_and_rejecting_keeps_it_out(fake_erp):
     st, sink = State(), FakeSink()
     a, b = entry(st, amount=120_000_000), entry(st, amount=600_550, status="needs_person")

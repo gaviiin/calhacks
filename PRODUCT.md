@@ -20,17 +20,22 @@ Race day is the product; the desks behind it are where its entries land.
 
 ## Product Purpose
 
-Pit Wall is race-day finance for a Formula 1 team. The demo is Williams at the 2024 São Paulo Grand Prix: three crashes in one Sunday, a car that did not start, no points, and a fall from P8 to P9 in the constructors' championship. From the moment a car stops to the CFO's brief, in seven stages:
+Pit Wall is race-weekend finance that keeps up with the race. **Know what a crash costs, and what it costs the season, before the car is back in the garage**; the engineers and the CFO decide on the same numbers that night instead of the following week; every figure is booked, flagged for review where it needs a person, and traceable.
 
-1. **Detect**: a telemetry tripwire sees our car stop seconds before the red flag, and minutes before race control (which sometimes never names the car).
-2. **Log**: one incident per crash whose belief evolves as evidence arrives, versioned as what we believed when.
-3. **Respond**: the playbook learned from the team's own history reserves spares, raises work orders against the next event, drafts the FIA paperwork, and prices the decision to withdraw a car; anything outward-facing waits for the person who owns it.
-4. **Account**: balanced provisional entries, each saying when the cost cap counts it (a spare when fitted, a destroyed part already counted when first used, a fine never).
-5. **Ask**: a person is asked only when a wrong call would cost more than the question, and the answer is a choice between two cases the team has lived through.
-6. **Re-plan**: the rest of the season and the cap re-run after every change: the chance of holding P8, the prize money at stake and how much of it our crashes cost versus rivals' results, next year's aero-testing allowance, and how much development must move into next year to stay under the cap.
-7. **Close**: the weekend is sealed under one hash and briefed to each role; actuals true it up later and recalibrate the price book.
+Today a crash reaches finance as parts invoices weeks later, and reaches the season picture at the year-end forecast, while the calls those numbers should inform (repair, spare tub or withdraw; what to fly to the next race; how much development to defer under the cap) are made that night. The demo is Williams at the 2024 São Paulo Grand Prix: three crashes in one Sunday, a car that did not start, no points, P8 lost to Alpine. It leads with Albon's 315 km/h qualifying crash.
 
-Success: on race day a reviewer can see, for any number, which stage produced it, from what evidence, under which learned rule or which person's answer; people spend their time only on what the desk could not settle.
+After an incident, two calls run side by side and the rest follows them:
+
+1. **Seen**: a telemetry tripwire sees our car stop seconds before the red flag, and minutes before race control (which sometimes never names the car). One incident per crash; its belief evolves as evidence arrives, versioned as what we believed when.
+2. **Engineering call**: the garage confirms the damage in one click (a choice between two crashes the team has lived through, asked only when a wrong call would cost more than the question); when the car must start soon, the Team Principal sees repair, spare tub and withdraw priced side by side and chooses. No recommendation.
+3. **Race call**: the strategist sees each option for the car on track priced in positions, points, prize and cap. No recommendation.
+4. **Next steps**: execution follows the choice. The desk does the reversible work (spares, work orders, inventory moves, the evidence pack); anything outward or irreversible (an FIA notice, air freight) waits for its owner with a deadline.
+5. **Books**: balanced provisional entries, each saying when the cost cap counts it, posted to the ERP or held for the person materiality names.
+6. **Season**: 10,000 seasons after every change: the chance of holding the place, the prize money at stake and how much of it our crashes cost versus rivals' results, the cap overspend risk and the development to defer.
+
+Race-day numbers are provisional: the weekend is sealed on Sunday night and briefed to each role once the CFO approves, and the true-up against actuals weeks later recalibrates the price book.
+
+Success: on race day a reviewer can see, for any number, which step produced it, from what evidence, under which learned rule or which person's answer; people spend their time only on the calls that are theirs.
 
 The two desks behind Books keep their own story: the **revenue accountant** books sponsor fees, bonuses and prize money through one write path a deterministic kernel re-checks (K1 to K12), and the **cost cap analyst** classifies every cost line under the FIA Financial Regulations, under house policies a Policy Learner drafted from last year's books.
 
@@ -53,7 +58,7 @@ The agents never post on their own authority. Every proposal carries its regulat
 ## Brand Commitments
 
 - Name: **Pit Wall**. Race day: **Williams Racing**, from public data only (OpenF1 timing and telemetry, Jolpica results, press figures with sources); not affiliated. People appear by role. The desks behind Books: **Meridian Racing** (synthetic), sponsors Halcyon Energy (title), Volta Telecom, Arcadia Watches, Northwind Cloud, Ridgeline Logistics.
-- Visual identity: the landing page's (`landing/`), confirmed by the user on Oct 24: near-black ground, lime accent, Barlow Condensed, DM Sans, IBM Plex Mono.
+- Visual identity: race day uses the Williams garage palette (white and grays, Williams blue for a person or the primary action, navy ink), asked for by the user on Oct 25; the landing page (`landing/`) keeps its near-black ground. Type: Barlow Condensed, DM Sans, IBM Plex Mono.
 
 ## Evidence on Hand
 

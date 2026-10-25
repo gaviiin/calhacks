@@ -107,6 +107,25 @@ def test_a_part_no_longer_likely_is_cancelled_and_a_decision_is_kept():
     assert len(acts) <= len(later)
 
 
+def test_execution_follows_the_team_principals_choice():
+    st = state()
+    run(incident(), st)
+    key = "1249-9627-23-1:withdraw_car"
+    w = st.actions[key]
+    w.status, w.detail = "approved", {**w.detail, "chosen": "withdraw", "chosen_by": "Team Principal"}
+    later = run(incident(version=2), st)
+    assert later["1249-9627-23-1:parc_ferme_list"].status == "cancelled", "no parts change under parc ferme once the car is withdrawn"
+    n = later["1249-9627-23-1:fia_notice"]
+    assert n.status == "awaiting_approval" and n.outward, "the notice still waits for the Sporting Director to send it"
+    assert n.detail["chosen"] == "withdraw" and n.detail["to"] == "the Stewards" and "will not take the start" in n.detail["draft"]
+    assert later[key].detail["chosen"] == "withdraw"
+
+    w.detail = {**w.detail, "chosen": "repair"}
+    again = run(incident(version=3), st)
+    assert again["1249-9627-23-1:parc_ferme_list"].status == "auto"
+    assert again["1249-9627-23-1:fia_notice"].detail["chosen"] == "repair"
+
+
 def test_outward_or_irreversible_actions_wait_and_every_detail_says_why():
     st = state()
     acts = {**run(incident(car=43, at="2024-11-03T10:39:00Z", kph=166), st), **run(incident(), st),

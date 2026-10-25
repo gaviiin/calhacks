@@ -2,6 +2,7 @@ import { useMemo } from 'react';
 import { usdShort } from '../../lib/format';
 import { useRace, type RaceData } from '../../lib/race';
 import { carLabel, ledger, sortTime } from '../../lib/raceModel';
+import { signedCents } from '../raceday/AccountPanel';
 import { ClosePanel } from '../raceday/ClosePanel';
 import { latestSim } from '../raceday/ReplanPanel';
 import { ActButton, clock, parse, roleLabel } from '../raceday/shared';
@@ -138,14 +139,16 @@ export function CFOView() {
   // the books: every entry the desk drafted, by where it sits now
   const books = useMemo(() => {
     const b = { posted: { c: 0, k: 0 }, held: { c: 0, k: 0 }, unrouted: { c: 0, k: 0 }, rejected: { c: 0, k: 0 } };
+    const lines = new Map<string, (typeof race.entryLines)[number][]>();
+    for (const l of race.entryLines) lines.set(l.entryKey, [...(lines.get(l.entryKey) ?? []), l]);
     for (const e of race.entries) {
       const s = postingOf.get(e.entryKey)?.status;
       const slot = s === 'posted' || s === 'approved' ? b.posted : s === 'held' ? b.held : s === 'rejected' ? b.rejected : b.unrouted;
-      slot.c += Math.abs(n(e.amountCents));
+      slot.c += n(signedCents(e, lines.get(e.entryKey))); // a reversal or a downward adjustment counts against, as in Accounting
       slot.k += 1;
     }
     return b;
-  }, [race.entries, postingOf]);
+  }, [race.entries, race.entryLines, postingOf]);
   const bookParts = [
     { key: 'posted', label: 'Posted', tone: 'navy' as const, ...books.posted },
     { key: 'held', label: 'Held', tone: 'wait' as const, ...books.held },

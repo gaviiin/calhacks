@@ -417,12 +417,22 @@ def plan(inc: Incident, state) -> list[Action]:
                     "the Team Principal decides.", **decision},
             owner="team_principal", status="awaiting_approval", due=decide_by, outward=True, reversible=False)
 
+    # Execution follows the person's choice: once the Team Principal has chosen, the paperwork that goes with it is
+    # the only paperwork left (the decision itself is kept by _settle).
+    prior_w = (state.actions or {}).get(f"{ik}:withdraw_car")
+    chosen = (prior_w.detail or {}).get("chosen") if prior_w is not None and prior_w.status in ("approved", "done") else None
+    chosen_by = (prior_w.detail or {}).get("chosen_by", "the Team Principal") if chosen else ""
+
     if stype != "Race" and start:
-        add("parc_ferme_list", f"Parc fermé: replaced parts on car {car} for the Technical Delegate",
-            {"why": "Between qualifying and the race the car is in parc fermé: like-for-like replacements need the Technical Delegate's "
-                    "approval, so the list is drafted now from the likely parts and confirmed by the garage.",
-             "parts": [{"part": p, "label": _label(p, p), "spec": "identical specification"} for p in parts if p != "chassis"],
-             "used_only_if": "the car is repaired to start"}, owner="chief_mechanic")
+        pf_detail = {"why": "Between qualifying and the race the car is in parc fermé: like-for-like replacements need the Technical Delegate's "
+                            "approval, so the list is drafted now from the likely parts and confirmed by the garage.",
+                     "parts": [{"part": p, "label": _label(p, p), "spec": "identical specification"} for p in parts if p != "chassis"],
+                     "used_only_if": "the car is repaired to start"}
+        if chosen == "withdraw":
+            add("parc_ferme_list", f"Parc fermé list for car {car}: not needed, the car is withdrawn",
+                {**pf_detail, "why": f"{chosen_by} chose to withdraw car {car}: no parts change under parc fermé."}, owner="chief_mechanic", status="cancelled")
+        else:
+            add("parc_ferme_list", f"Parc fermé: replaced parts on car {car} for the Technical Delegate", pf_detail, owner="chief_mechanic")
         drafts = [
             {"option": "repair", "to": "Technical Delegate",
              "draft": f"Williams requests approval to replace damaged parts on car {car} under parc fermé with parts of identical specification (list attached)."},
@@ -430,10 +440,17 @@ def plan(inc: Incident, state) -> list[Action]:
              "draft": f"Williams will change the survival cell of car {car} under parc fermé; the car will start from the pit lane."},
             {"option": "withdraw", "to": "the Stewards", "draft": f"Williams notifies that car {car} will not take the start of the race."},
         ]
-        add("fia_notice", f"FIA notice for car {car}: one draft per option",
-            {"why": "One draft for each option the Team Principal may choose; the Sporting Director sends the one that matches the choice "
-                    "(a notice to the FIA is outward).", "drafts": drafts, "follows": "the Team Principal's choice"},
-            owner="sporting_director", status="awaiting_approval", due=start, outward=True)
+        pick = next((d for d in drafts if d["option"] == chosen), None)
+        if pick is not None:
+            add("fia_notice", f"FIA notice to {pick['to']}: car {car}, {chosen.replace('_', ' ')}",
+                {"why": f"{chosen_by} chose {chosen.replace('_', ' ')}; this is the notice that goes with it. Outward: the Sporting Director sends it.",
+                 "drafts": drafts, "chosen": chosen, "to": pick["to"], "draft": pick["draft"], "follows": chosen_by},
+                owner="sporting_director", status="awaiting_approval", due=start, outward=True)
+        else:
+            add("fia_notice", f"FIA notice for car {car}: one draft per option",
+                {"why": "One draft for each option the Team Principal may choose; the Sporting Director sends the one that matches the choice "
+                        "(a notice to the FIA is outward).", "drafts": drafts, "follows": "the Team Principal's choice"},
+                owner="sporting_director", status="awaiting_approval", due=start, outward=True)
 
     p_pu, p_gb = b["parts"].get("power_unit", 0.0), b["parts"].get("gearbox", 0.0)
     if max(p_pu, p_gb) >= POSSIBLE:

@@ -29,6 +29,12 @@ after every event, each its own module writing its own pit-wall table:
 | 6 Re-plan | `season_sim.py`, `cap_forecast.py` | `race_sims` | code (numpy, 10,000 seasons, one seed per weekend) |
 | 7 Close | `close.py`, later `trueup.py` | `race_closes` | Claude drafts, a check rejects any figure not in the snapshot; the CFO approves |
 
+Execution follows a person's call. When the Team Principal chooses repair, spare tub or withdraw (in the dashboard, or
+replayed from `data/snapshot_1249.json`), `Weekend.follow_decisions` reads the choice back from `race_actions` and
+re-plans the incident: the FIA notice becomes the one draft for that choice, still waiting for the Sporting Director to
+send it, and the parc fermé list is cancelled once the car is withdrawn. The dashboard's incident strip follows one
+incident through the same modules as six steps: seen, engineering call, race call, next steps, books, season.
+
 Learning has eras (`policy_learner.ERAS`): São Paulo 2024 learns only from Williams' 2024 races before it
 (`make race-onboard-2024`, store `data/precedents_2024.jsonl`, policies `race-y2024-*`) plus two press-sourced practice
 crashes, so a replay never matches its own future. Every assumption is in `data/williams_2024.json` with its basis.

@@ -13,6 +13,7 @@ import { QuestionCard } from '../raceday/AskPanel';
 import { ActButton, clock, parse, roleLabel } from '../raceday/shared';
 import { SEVERITIES, incidentCondition, readBelief, repairedCondition, sparesFor, topSeverity, type Belief, type IncidentInput, type SpareReading } from './incidentCondition';
 import { Axis, Figure, Meter, Panel, Pill, Stack, type Tone } from './kit';
+import { NextSteps } from './NextSteps';
 import './pitwall.css';
 
 // The pit wall: for the pit crew and the race engineers. Three questions, per Williams car: what is its condition now
@@ -295,6 +296,7 @@ export function PitWallView() {
         {cars.map((c) => (
           <CarCard key={c.number} car={c} />
         ))}
+        <NextSteps />
       </div>
     </div>
   );

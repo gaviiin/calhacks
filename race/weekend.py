@@ -107,6 +107,7 @@ class Weekend:
         st.now = ev.at
         for line in people.apply_due(st, self.sink, self.script, ev.at):
             self.say(f"[people] {line}")
+            self.follow_decisions()
         if effects:
             st.effects.append((ev, effects))
         t0 = time.perf_counter()
@@ -218,10 +219,46 @@ class Weekend:
         if head:
             self.say(f"[re-plan] {head} ({run.runtime_ms} ms)")
 
+    def follow_decisions(self) -> None:
+        """A person decided an action that waited for them (in the dashboard, or replayed): read it back and re-plan the
+        incident, so the next steps follow the choice (the notice that goes with it, the list no longer needed)."""
+        st = self.state
+        waiting = [a for a in st.actions.values() if a.status == "awaiting_approval"]
+        if waiting and self.sink is not None and not self.sink.disabled:
+            now = time.monotonic()
+            if now - getattr(self, "_decision_poll", 0.0) >= 1.0:
+                self._decision_poll = now
+                rows = {r["action_key"]: r for r in self.sink.sql("SELECT * FROM race_actions") if r.get("status") in ("approved", "rejected", "done")}
+                for a in waiting:
+                    r = rows.get(a.action_key)
+                    if r is None:
+                        continue
+                    a.status, a.decided_by = r["status"], r.get("decided_by") or a.decided_by
+                    try:
+                        a.detail = json.loads(r.get("detail_json") or "{}") or a.detail
+                    except ValueError:
+                        pass
+        for a in list(st.actions.values()):
+            if a.kind != "withdraw_car" or a.status not in ("approved", "done"):
+                continue
+            chosen = a.detail.get("chosen")
+            notice = st.actions.get(f"{a.incident_key}:fia_notice")
+            inc = st.incidents.get(a.incident_key)
+            if not chosen or inc is None or (notice is not None and notice.detail.get("chosen") == chosen):
+                continue
+            fresh = [x for x in logistics.plan(inc, st) if st.actions.get(x.action_key) != x]
+            for x in fresh:
+                st.actions[x.action_key] = x
+            if fresh and self.sink:
+                self.sink.actions(fresh)
+            self.say(f"[respond] {a.detail.get('chosen_by', 'a person')} chose {chosen.replace('_', ' ')} for car {inc.driver_number}: "
+                     f"{len(fresh)} next steps re-planned")
+
     def apply_answers(self) -> None:
         """Answers a person gave in the dashboard since the last event: apply them and re-decide what they cover.
-        Held entries a person approved are posted to the ERP here too."""
+        Held entries a person approved are posted to the ERP here too, and decisions are followed."""
         self.record_postings(erp.apply_reviews(self.state, self.sink))
+        self.follow_decisions()
         changed = questions.apply_answers(self.state, self.sink, self.book)
         pend = getattr(self.state, "pending_entries", None)
         if pend:
@@ -317,6 +354,7 @@ class Weekend:
                 # The snapshot's end can fall in a quiet spell (a red flag): decisions due by then still land.
                 for line in people.apply_due(self.state, self.sink, self.script, self.until):
                     self.say(f"[people] {line}")
+                self.follow_decisions()
                 self.state._last_poll = 0.0
                 self.apply_answers()
             booked_before += r.ctx.race_cost_mid

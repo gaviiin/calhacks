@@ -1,0 +1,354 @@
+/* The incident flow strip: one incident, six steps, each a link to the view of the person who owns it. */
+
+.fl {
+  display: grid;
+  grid-template-columns: auto minmax(0, 1fr);
+  gap: 14px;
+  align-items: stretch;
+  margin: 0 0 16px;
+  padding: 10px 12px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: var(--panel);
+  box-shadow: 0 1px 2px rgba(11, 27, 51, 0.05);
+}
+
+.fl-sr {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
+}
+
+.fl-pick {
+  display: grid;
+  align-content: center;
+  gap: 3px;
+  padding-right: 14px;
+  border-right: 1px solid var(--line-soft);
+}
+
+.fl-chip {
+  display: flex;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 3px 8px;
+  border: 1px solid transparent;
+  border-radius: 4px;
+  background: none;
+  color: var(--steel);
+  font: 500 12px/1.3 var(--mono);
+  font-variant-numeric: tabular-nums;
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.fl-chip b {
+  font-weight: 600;
+}
+
+.fl-chip span {
+  color: var(--muted);
+}
+
+.fl-chip span::after {
+  content: ' km/h';
+  font-size: 10px;
+}
+
+.fl-chip:hover {
+  background: var(--raise);
+  color: var(--navy);
+}
+
+.fl-chip--on {
+  border-color: var(--lime);
+  background: var(--lime-wash);
+  color: var(--lime);
+}
+
+.fl-chip--on span {
+  color: var(--lime);
+}
+
+.fl-chip:focus-visible,
+.fl-step a:focus-visible {
+  outline: 2px solid var(--lime);
+  outline-offset: 1px;
+}
+
+.fl-steps {
+  display: grid;
+  grid-template-columns: repeat(6, minmax(0, 1fr));
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.fl-step {
+  position: relative;
+  min-width: 0;
+}
+
+/* the connector from this step's node to the next one's */
+.fl-step:not(:last-child)::after {
+  position: absolute;
+  top: 17px;
+  left: 34px;
+  right: -2px;
+  height: 2px;
+  border-radius: 1px;
+  background: var(--line);
+  content: '';
+}
+
+.fl-step--done:not(:last-child)::after {
+  background: var(--navy);
+}
+
+.fl-step a {
+  display: grid;
+  grid-template-rows: 22px auto auto auto;
+  gap: 2px;
+  height: 100%;
+  padding: 6px 10px 6px 8px;
+  border-radius: 5px;
+  color: inherit;
+  text-decoration: none;
+}
+
+.fl-step a:hover {
+  background: var(--raise);
+}
+
+.fl-step--here a {
+  background: var(--lime-wash);
+  box-shadow: inset 0 -2px 0 var(--lime);
+}
+
+.fl-node {
+  position: relative;
+  z-index: 1;
+  display: grid;
+  place-items: center;
+  width: 22px;
+  height: 22px;
+  border: 2px solid var(--steel);
+  border-radius: 50%;
+  background: var(--panel);
+  color: var(--steel);
+  font: 600 11px var(--mono);
+}
+
+.fl-step--done .fl-node {
+  border-color: var(--navy);
+  background: var(--navy);
+  color: #fff;
+}
+
+.fl-step--wait .fl-node {
+  border-color: var(--hold);
+  background: var(--hold-wash);
+  color: var(--hold);
+}
+
+.fl-step--none .fl-node {
+  border-style: dashed;
+  border-color: #b9c4d3;
+  color: #b9c4d3;
+}
+
+.fl-label {
+  margin-top: 4px;
+  color: var(--muted);
+  font: 600 10.5px var(--body);
+  letter-spacing: 0.05em;
+  text-transform: uppercase;
+  white-space: nowrap;
+}
+
+.fl-value {
+  overflow: hidden;
+  color: var(--navy);
+  font: 600 17px/1.2 var(--mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fl-value small {
+  margin-left: 5px;
+  font-size: 11px;
+  font-weight: 600;
+}
+
+.fl-down {
+  color: var(--alert);
+}
+
+.fl-up {
+  color: #0f7a3d;
+}
+
+.fl-sub {
+  overflow: hidden;
+  color: var(--muted);
+  font: 500 11.5px/1.3 var(--body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.fl-step--wait .fl-sub {
+  color: var(--hold);
+  font-weight: 600;
+}
+
+.fl-step--none .fl-value,
+.fl-step--none .fl-label {
+  color: #9aa7b8;
+}
+
+@media (max-width: 860px) {
+  .fl {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 8px;
+  }
+
+  .fl-pick {
+    display: flex;
+    overflow-x: auto;
+    padding: 0 0 8px;
+    border-right: 0;
+    border-bottom: 1px solid var(--line-soft);
+  }
+
+  .fl-steps {
+    grid-template-columns: repeat(3, minmax(0, 1fr));
+    row-gap: 4px;
+  }
+
+  .fl-step:nth-child(3n)::after {
+    display: none;
+  }
+
+  .fl-value {
+    font-size: 15px;
+  }
+}
+
+/* next steps (the Garage) */
+
+#next-steps {
+  scroll-margin-top: 16px;
+}
+
+.ns {
+  margin-top: 16px;
+}
+
+.ns-list {
+  display: grid;
+  margin: 0 0 12px;
+  padding: 0;
+  list-style: none;
+}
+
+.ns-row {
+  display: grid;
+  grid-template-columns: 116px minmax(0, 1fr) auto auto;
+  gap: 4px 14px;
+  align-items: center;
+  padding: 9px 0;
+  border-top: 1px solid var(--line-soft);
+}
+
+.ns-row:first-child {
+  border-top: 0;
+}
+
+.ns-row--wait {
+  box-shadow: inset 3px 0 0 var(--hold);
+  padding-left: 10px;
+}
+
+.ns-due {
+  color: var(--muted);
+  font: 500 12px var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.ns-due b {
+  color: var(--navy);
+  font-weight: 600;
+}
+
+.ns-what {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.ns-title {
+  color: var(--navy);
+  font: 600 13.5px/1.3 var(--body);
+}
+
+.ns-draft {
+  overflow: hidden;
+  color: var(--steel);
+  font: 400 12px/1.35 var(--body);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.ns-who,
+.ns-act {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: center;
+  justify-content: flex-end;
+}
+
+.ns-desk {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  padding-top: 10px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.ns-chip {
+  padding: 4px 9px;
+  border-radius: 4px;
+  background: var(--panel-2);
+  color: var(--steel);
+  font: 500 12px var(--body);
+}
+
+.ns-chip b {
+  color: var(--navy);
+  font: 600 12px var(--mono);
+}
+
+.ns-chip--off {
+  background: none;
+  border: 1px dashed var(--line);
+  color: var(--muted);
+  text-decoration: line-through;
+  text-decoration-color: rgba(90, 104, 125, 0.5);
+}
+
+@media (max-width: 720px) {
+  .ns-row {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .ns-who,
+  .ns-act {
+    justify-content: flex-start;
+  }
+}

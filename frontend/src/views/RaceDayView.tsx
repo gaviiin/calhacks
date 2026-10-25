@@ -1,4 +1,4 @@
-import { useMemo } from 'react';
+import { useEffect, useMemo, useState } from 'react';
 import { RaceScope, latestMeeting, useRace } from '../lib/race';
 import { sortTime } from '../lib/raceModel';
 import { AccountPanel, accountHeadline } from './raceday/AccountPanel';
@@ -11,18 +11,23 @@ import { RespondPanel, respondHeadline } from './raceday/RespondPanel';
 import { Stage, clock, type Headline } from './raceday/shared';
 import { AccountingView } from './roles/AccountingView';
 import { CFOView } from './roles/CFOView';
+import { FlowFocus } from './roles/focus';
+import { IncidentFlow } from './roles/IncidentFlow';
 import { PitWallView } from './roles/PitWallView';
 import { ReplayControl } from './roles/ReplayControl';
 import { ServiceStrip } from './roles/ServiceStrip';
 import { StrategyView } from './roles/StrategyView';
 
-// One weekend, a view for each person who works it. Every view reads the same live rows; none of them recommends.
+// One weekend, a view for each person who works it, in the order an incident reaches them: the garage sees the car
+// and makes the engineering call, the strategist the race call, accounting books what follows, the CFO reads the
+// season. Every view reads the same live rows; none of them recommends.
 const ROLES = [
-  { id: 'pitwall', label: 'Pit wall', who: 'pit crew and engineers', View: PitWallView },
+  { id: 'garage', label: 'Garage', who: 'pit crew, engineers and the Team Principal', View: PitWallView },
   { id: 'strategy', label: 'Strategy', who: 'head of strategy', View: StrategyView },
-  { id: 'cfo', label: 'CFO', who: 'CFO and Head of Cost Cap', View: CFOView },
   { id: 'accounting', label: 'Accounting', who: 'financial controller and accountants', View: AccountingView },
+  { id: 'cfo', label: 'CFO', who: 'CFO and Head of Cost Cap', View: CFOView },
 ] as const;
+const ALIAS: Record<string, string> = { pitwall: 'garage' };
 
 // Race day: one weekend read as seven stages, from the moment a car stops to the CFO's brief. The rail shows one
 // figure per stage; each stage opens to its detail. The full live desk (timing, blueprint, tape) stays at #/race.
@@ -43,6 +48,13 @@ const SESSIONS: Record<number, string> = { 9627: 'Qualifying', 9636: 'Race', 112
 export function RaceDayView({ role, nav }: { role: string | null; nav: (h: string) => void }) {
   const all = useRace();
   const meeting = useMemo(() => latestMeeting(all), [all]);
+  const [focus, setFocus] = useState<string | null>(null);
+  const [anchor, setAnchor] = useState<string | null>(null);
+  useEffect(() => {
+    if (!anchor) return;
+    const t = window.setTimeout(() => (document.getElementById(anchor)?.scrollIntoView({ behavior: 'smooth', block: 'start' }), setAnchor(null)), 60);
+    return () => window.clearTimeout(t);
+  }, [anchor, role]);
   // #/day/flow: the seven stages in order, kept for the pitch deck and off the switcher.
   if (role === 'flow') {
     return (
@@ -51,8 +63,13 @@ export function RaceDayView({ role, nav }: { role: string | null; nav: (h: strin
       </RaceScope>
     );
   }
-  const r = ROLES.find((x) => x.id === role) ?? ROLES[0];
+  const r = ROLES.find((x) => x.id === (ALIAS[role ?? ''] ?? role)) ?? ROLES[0];
+  const go = (tab: string, anchor?: string) => {
+    nav(`/day/${tab}`);
+    if (anchor) setAnchor(anchor);
+  };
   return (
+    <FlowFocus value={{ incidentKey: focus, setIncidentKey: setFocus }}>
     <RaceScope meeting={meeting}>
       <div className="day-bar">
         <nav className="day-tabs" aria-label="Views">
@@ -65,8 +82,10 @@ export function RaceDayView({ role, nav }: { role: string | null; nav: (h: strin
         </nav>
         <WeekendHeader meeting={meeting} />
       </div>
+      <IncidentFlow tab={r.id} go={go} />
       <r.View />
     </RaceScope>
+    </FlowFocus>
   );
 }
 
