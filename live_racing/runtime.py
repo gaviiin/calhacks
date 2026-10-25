@@ -7,6 +7,7 @@ from pathlib import Path
 
 from finance.world import World
 
+from .advisor import Advisor
 from .config import Config
 from .jev_router import JevRouter
 from .normalize import NormalizedEvent, read_jsonl
@@ -47,7 +48,8 @@ def build_jev(cfg: Config, enabled: bool = True) -> JevRouter:
 
 
 def make_replay(race_id: str, options: ReplayOptions | ResultReplayOptions | None = None, *, cfg: Config | None = None, memory: MemorySink | None = None,
-                spacetime: bool = True, jsonl: bool = True, log=print, replay_id: str | None = None, pause_handler=None, step_handler=None):
+                spacetime: bool = True, jsonl: bool = True, log=print, replay_id: str | None = None, pause_handler=None, step_handler=None,
+                advisor: bool | None = None):
     """A Replay (OpenF1 slice) or a ResultReplay (FIA documents), depending on what the race has."""
     cfg = cfg or Config.from_env()
     race = get_race(race_id)
@@ -60,7 +62,8 @@ def make_replay(race_id: str, options: ReplayOptions | ResultReplayOptions | Non
         o = options if isinstance(options, ReplayOptions) else ReplayOptions(**(options.__dict__ if options else {}))
         jev = build_jev(cfg, o.jev)
         meta, events = load_slice(cfg, race)
-        return Replay(race, meta, events, world, publisher, jev, o, log=log, replay_id=rid, pause_handler=pause_handler, step_handler=step_handler)
+        return Replay(race, meta, events, world, publisher, jev, o, log=log, replay_id=rid, pause_handler=pause_handler, step_handler=step_handler,
+                      advisor=Advisor(enabled=advisor))
     o = options if isinstance(options, ResultReplayOptions) else ResultReplayOptions(**{k: v for k, v in (options.__dict__ if options else {}).items()
                                                                                         if k in ("speed", "jev", "max_sleep_s", "mode")})
     jev = build_jev(cfg, o.jev)

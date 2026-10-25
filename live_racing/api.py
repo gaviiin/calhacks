@@ -53,6 +53,7 @@ class StartReplay(BaseModel):
     corroborate_after_s: float = 60.0
     state_every_s: float = 2.0
     spacetime: bool = True
+    advisor: bool | None = None  # None = on when ANTHROPIC_API_KEY is set and LIVE_ADVISOR is not off
 
 
 def current():
@@ -79,7 +80,7 @@ def start(body: StartReplay):
     with _LOCK:
         rp = current()
         if rp is not None and rp.status.state in ("fast_forward", "running", "paused"):
-            raise HTTPException(409, f"a replay is already {rp.status.state}: {rp.replay_id}")
+            rp.stop()
         if body.race_id not in RACES:
             raise HTTPException(404, f"unknown race {body.race_id}")
         if body.race_id == "2024_belgian_gp":
@@ -89,13 +90,14 @@ def start(body: StartReplay):
                                     corroborate_after_s=body.corroborate_after_s, state_every_s=body.state_every_s)
         _CURRENT["log"] = []
         try:
-            rp = make_replay(body.race_id, options, memory=BUS, spacetime=body.spacetime, log=_log)
+            rp = make_replay(body.race_id, options, memory=BUS, spacetime=body.spacetime, log=_log, advisor=body.advisor)
         except FileNotFoundError as exc:
             raise HTTPException(409, str(exc)) from exc
         th = threading.Thread(target=rp.run, name=f"replay-{rp.replay_id}", daemon=True)
         _CURRENT.update(replay=rp, thread=th)
         th.start()
-        return {"replay_id": rp.replay_id, "state": rp.status.state, "jev": rp.jev.describe(), "sinks": rp.publisher.names()}
+        return {"replay_id": rp.replay_id, "state": rp.status.state, "jev": rp.jev.describe(), "sinks": rp.publisher.names(),
+                "advisor": getattr(getattr(rp, "advisor", None), "describe", lambda: "n/a")()}
 
 
 @app.post("/live/replay/resume")
@@ -127,6 +129,9 @@ def state():
         "result_changes": [r["payload"] for r in BUS.of_kind("result_change")],
         "jev_decisions": [r["payload"] for r in BUS.of_kind("jev_decision")][-50:],
         "finance_impacts": [r["payload"] for r in BUS.of_kind("finance_impact")],
+        "strategy": (BUS.latest.get(("strategy_advice", rp.race.race_id)) or {}).get("payload") if rp is not None else None,
+        "incident_plans": [r["payload"] for r in BUS.of_kind("incident_plan")],
+        "feed": rp.feed_health().model_dump(mode="json") if rp is not None else None,
         "metrics": rp.metrics() if rp is not None else None,
         "log": _CURRENT["log"][-60:],
         "seq": BUS.seq,
@@ -166,6 +171,29 @@ def finance_impact(incident_id: str, body: FinanceImpactUpdate):
 def events(since: int = 0, kinds: str | None = None, limit: int = 500):
     out = BUS.since(since, kinds.split(",") if kinds else None)[:limit]
     return {"events": out, "seq": BUS.seq}
+
+
+@app.get("/live/feed")
+def feed():
+    """Measured liveness: cadence, the race clock, each sink's writes (SpacetimeDB rows), Jev, the exposure tally."""
+    rp = current()
+    if rp is None:
+        raise HTTPException(404, "no replay")
+    return rp.feed_health()
+
+
+@app.get("/live/strategy")
+def strategy():
+    rp = current()
+    r = BUS.latest.get(("strategy_advice", rp.race.race_id)) if rp is not None else None
+    if r is None:
+        raise HTTPException(404, "no strategy advice yet")
+    return r["payload"]
+
+
+@app.get("/live/plans")
+def plans():
+    return [r["payload"] for r in BUS.of_kind("incident_plan")]
 
 
 @app.get("/live/metrics")

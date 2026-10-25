@@ -29,7 +29,7 @@ report and every dollar figure. **What is a calculation:** the if-finished-now e
 make live-fetch                      # once, with internet: cache the 2024 São Paulo GP from OpenF1 (committed under data/openf1)
 make live-replay                     # laps 28-34 at 20x; FROM=30 TO=33 SPEED=inf PAUSE=32 to taste
 make live-spa                        # P1: Spa 2024, provisional -> Doc 43 summons -> Doc 44 DSQ -> Doc 46 final
-make live-api                        # :8020  POST /live/replay, GET /live/state, GET /live/stream (SSE), POST /live/incidents/{id}/finance-impact
+make live-api                        # :8020  POST /live/replay, GET /live/state|/strategy|/plans|/feed, GET /live/stream (SSE), POST /live/incidents/{id}/finance-impact
 make jev-smoke                       # credentialed Jev smoke test; BLOCKED without TYPESAFE_API_KEY
 uv run pytest -q live_racing/tests   # offline: no network, no SpacetimeDB, no key
 ```
@@ -57,6 +57,37 @@ telemetry ticks, 9 Jev requests (one per material candidate, plus one at corrobo
 Jev p50 67 ms / p95 98 ms, adapter received to published p95 1 ms. The labeled fixtures: 11 of 11
 routed as expected live, 11 requests, p50 68 ms, p95 167 ms (`make jev-smoke`). Without a key the
 same replay runs with every decision labelled `unavailable`.
+
+## The strategic layer: what every lever costs, and what a crash could cost
+
+Added on 2026-10-24 for the pit wall's "instant financial advisor" use. All of it is arithmetic on the
+timing feed and the synthetic contracts; none of it predicts pace or tyre wear.
+
+- **`strategy_advice`** (`strategy.py`, published on every team-car position change, flag change and
+  pit stop; `GET /live/strategy`): the sponsor exposure now, at the join and at its peak, and what has
+  been given up since the peak; for each team car the value of one place up and one place down
+  (`places[]`), what pitting now would cost (`pit[]`: this race's median pit-lane time, halved under
+  the Safety Car, free under a red flag, the cars that would get past from their lap-start gaps, the
+  rejoin position and the dollar delta), and the tyre context (`tyres[]`: compound, age, field median;
+  no degradation model is pretended).
+- **`incident_plan`** (`incident_planner.py`, published for every incident on a watched car;
+  `GET /live/plans`): the outcomes priced against the same contracts: continue, pit now, repair and
+  rejoin (kept position under a red flag, a 90 s stop otherwise, stated as an assumption), 5 s and
+  10 s penalties, a drive-through, retiring, disqualification; each with the position after, the
+  exposure after, the delta, the clauses lost or gained and the constructors' position. The damage
+  estimate stays `null` until a garage report arrives; the cost-cap note says why.
+- **The live finance agent** (`advisor.py`): a Claude draft on each plan, off the ticker thread, so a
+  plan is published at once with `advisor.status: pending` and republished when the model answers
+  (`recommended_scenario`, `headline`, `rationale`, `what_we_need`, `confidence`, latency, model).
+  It may only pick a scenario code priced and may only use the figures in the plan; `used` is false
+  and the status says why whenever it did not answer. `claude-opus-5-5` (or `LIVE_ADVISOR_MODEL`),
+  adaptive thinking at low effort, the desks' server-side refusal fallback; `LIVE_ADVISOR=off` silences it.
+  Measured live on 2026-10-24: two plans answered in 6.5 s and 6.7 s, both grounded (the car-43 plan
+  said "not ours; prepare for retirement, exposure unchanged").
+- **`feed_health`** (`health.py`, every 5 s of wall time while running; `GET /live/feed`): how alive the
+  feed is, measured: publishes per minute and per second, seconds since the last publish, the race
+  clock, every sink's rows written / errors / last write (`spacetimedb` is the dashboard's table),
+  Jev's request stats, the advisor's mode, and the exposure tally.
 
 ## Contracts (plan section 6, frozen in `schemas.py`)
 
@@ -121,6 +152,7 @@ to a person; after corroboration Jev is asked again with `driver_attribution: co
 | `finance_projections.py` | if-finished-now exposure through `finance.bonuses.bonuses_for`; `diff` |
 | `jev_router.py` | the TypeSafe adapter, gates, fallback, cache, budget, latency |
 | `publisher.py` | memory bus, JSONL, SpacetimeDB `mirror_item`, webhook |
+| `strategy.py`, `incident_planner.py`, `advisor.py`, `health.py` | place and pit-stop values, priced accident outcomes, the Claude advisor, feed health |
 | `replay.py`, `result_replay.py` | the OpenF1 replay and the FIA-document (Spa) replay |
 | `api.py` | the `/live` FastAPI app (:8020) |
 | `scripts/fetch_openf1_brazil_2024.py`, `scripts/replay_brazil_2024.py`, `scripts/replay_spa_2024.py`, `scripts/smoke_test_jev.py` | the commands |

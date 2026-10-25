@@ -23,9 +23,14 @@ def test_same_slice_twice_gives_the_same_incidents_and_decisions(world, brazil, 
     assert {k: v.version for k, v in a.incidents.items()} == {k: v.version for k, v in b.incidents.items()}
     assert "2024_sao_paulo_gp:race:lap32:car43:crash_candidate" in a.incidents
     assert [(d["kind"], d["at"], d["decision"]["chosen_route"]) for d in a.decisions] == [(d["kind"], d["at"], d["decision"]["chosen_route"]) for d in b.decisions]
-    ids_a = [(r["kind"], r["id"], r["version"]) for r in ma.records]
-    ids_b = [(r["kind"], r["id"], r["version"]) for r in mb.records]
+    ids_a = [(r["kind"], r["id"], r["version"]) for r in ma.records if r["kind"] != "feed_health"]  # health is wall-clock paced
+    ids_b = [(r["kind"], r["id"], r["version"]) for r in mb.records if r["kind"] != "feed_health"]
     assert ids_a == ids_b
+    assert ma.of_kind("strategy_advice") and ma.of_kind("incident_plan") and ma.of_kind("feed_health")
+    plan = [r["payload"] for r in ma.records if r["kind"] == "incident_plan" and r["id"].endswith("car43:crash_candidate")]
+    assert plan and plan[0]["advisor"]["status"] == "disabled" and plan[0]["damage_estimate_cents"] is None
+    health = ma.of_kind("feed_health")[0]["payload"]
+    assert {s["name"] for s in health["sinks"]} == {"memory", "jsonl"} and health["publishes_total"] > 0 and health["exposure_peak_cents"] is not None
     # the memory sink keeps one row per (kind, id): two incidents, one race state, one status
     assert len(ma.of_kind("incident_signal")) == 2 and len(ma.of_kind("race_state")) == 1
     lines = [json.loads(l) for l in (tmp_path / "a.jsonl").read_text().splitlines()]

@@ -55,10 +55,11 @@ def main() -> int:
         input(f"   {ev.event_time_utc[11:23]} {ev.endpoint:<12} car {ev.driver_number or '-':<3} lap {ev.lap_number or '-'} > ")
 
     rp = make_replay(args.race, options, cfg=cfg, spacetime=not args.no_spacetime, pause_handler=pause, step_handler=step)
-    print(f"{rp.race.name}: {len(rp.events)} events, team cars {rp.team_cars}, Jev {rp.jev.describe()}, sinks {rp.publisher.names()}")
+    print(f"{rp.race.name}: {len(rp.events)} events, team cars {rp.team_cars}, Jev {rp.jev.describe()}, advisor {rp.advisor.describe()}, sinks {rp.publisher.names()}")
     print(f"replay {rp.replay_id}: laps {args.from_lap}-{args.to_lap or 'end'} at {speed}x; "
           f"state every {args.state_every}s of race time and on every material event\n")
     rp.run()
+    rp.wait_for_advisor()
     m = rp.metrics()
     print("\nmeasured:", json.dumps(m, indent=1))
     if args.metrics_out:

@@ -279,3 +279,161 @@ class ReplayStatus(BaseModel):
     duplicates_suppressed: int = 0
     sinks: list[str] = Field(default_factory=list)
     error: str | None = None
+
+
+# ---------------------------------------------------------------------- strategic finance (plan section 5, extended)
+
+
+class PlaceValue(BaseModel):
+    """What one place up or down is worth to the team right now, from the contracts."""
+
+    car: int
+    driver_id: str
+    position: int | None
+    value_now_cents: int
+    up_one_cents: int = 0
+    down_one_cents: int = 0
+    up_one_text: str = ""
+    down_one_text: str = ""
+
+
+class PitScenario(BaseModel):
+    car: int
+    position: int | None
+    pit_loss_s: float
+    pit_loss_basis: str
+    under: str | None = None
+    cars_passed: list[int] = Field(default_factory=list)
+    cars_maybe: list[int] = Field(default_factory=list)
+    positions_lost: int = 0
+    rejoin_position: int | None = None
+    delta_cents: int = 0
+    text: str = ""
+
+
+class TyreContext(BaseModel):
+    car: int
+    compound: str | None
+    age_laps: int | None
+    stint_lap_start: int | None
+    field_median_age_laps: float | None
+    note: str
+
+
+class StrategyAdvice(BaseModel):
+    """Person 1 -> the pit wall: the money on every strategic lever, as of now. No model of tyre
+    degradation or pace is pretended; gaps come from the timing feed, pit loss from this race's stops."""
+
+    schema_version: int = SCHEMA_VERSION
+    race_id: str
+    version: int = 1
+    as_of_utc: str
+    observed_at_utc: str
+    lap: int | None
+    flag_status: str | None
+    exposure_now_cents: int
+    exposure_at_join_cents: int | None
+    exposure_peak_cents: int | None
+    lost_from_peak_cents: int | None
+    places: list[PlaceValue] = Field(default_factory=list)
+    pit: list[PitScenario] = Field(default_factory=list)
+    tyres: list[TyreContext] = Field(default_factory=list)
+    weather_note: str = ""
+    status: Literal["indicative"] = "indicative"
+    financial_source: Literal["synthetic"] = "synthetic"
+    basis: str = ""
+    timestamps: Timestamps = Field(default_factory=Timestamps)
+
+
+class IncidentScenario(BaseModel):
+    key: Literal["continue", "pit_now", "retire", "repair_and_rejoin", "penalty_5s", "penalty_10s", "drive_through", "disqualified"]
+    label: str
+    assumption: str
+    position_after: int | None
+    exposure_after_cents: int
+    delta_cents: int
+    lines_lost: list[str] = Field(default_factory=list)
+    lines_gained: list[str] = Field(default_factory=list)
+    constructors_position_after: int | None = None
+    prize_delta_cents: int = 0
+
+
+class AdvisorNote(BaseModel):
+    """The live finance agent's draft on an incident: a recommendation among the scenarios code
+    priced, never a booking. `used` is false whenever the model did not answer."""
+
+    used: bool = False
+    status: Literal["pending", "ok", "disabled", "unavailable", "refused", "error", "invalid"] = "disabled"
+    model: str | None = None
+    latency_ms: int | None = None
+    recommended_scenario: str | None = None
+    headline: str | None = None
+    rationale: str | None = None
+    what_we_need: list[str] = Field(default_factory=list)
+    confidence: Literal["low", "medium", "high"] | None = None
+    error: str | None = None
+    drafted_at_utc: str | None = None
+
+
+class IncidentPlan(BaseModel):
+    """Accident outcomes priced for one car: what each choice does to the sponsor exposure and the
+    constructors' position, with the cost-cap side left to the garage report (plan 6C)."""
+
+    schema_version: int = SCHEMA_VERSION
+    incident_id: str
+    version: int = 1
+    race_id: str
+    car: int
+    driver_id: str
+    team_car: bool
+    as_of_utc: str
+    observed_at_utc: str
+    lap: int | None
+    flag_status: str | None
+    position_now: int | None
+    exposure_now_cents: int
+    scenarios: list[IncidentScenario] = Field(default_factory=list)
+    damage_estimate_cents: int | None = None
+    cost_cap_note: str
+    advisor: AdvisorNote = Field(default_factory=AdvisorNote)
+    status: Literal["indicative"] = "indicative"
+    financial_source: Literal["synthetic"] = "synthetic"
+    basis: str = ""
+    timestamps: Timestamps = Field(default_factory=Timestamps)
+
+
+class SinkHealth(BaseModel):
+    name: str
+    ok: bool
+    written: int = 0
+    errors: int = 0
+    last_write_utc: str | None = None
+    detail: str | None = None
+
+
+class FeedHealth(BaseModel):
+    """How alive the feed is, measured: wall-clock cadence of publishes, the race clock, every sink's
+    write counts (the SpacetimeDB rows the dashboard reads), Jev's request stats, the exposure tally."""
+
+    replay_id: str | None
+    state: str | None
+    mode: Mode = "replay"
+    now_utc: str
+    race_clock_utc: str | None
+    lap: int | None
+    last_publish_utc: str | None
+    seconds_since_last_publish: float | None
+    publishes_total: int
+    publishes_last_60s: int
+    publishes_per_second_10s: float
+    state_updates: int
+    publish_p95_ms: int | None
+    sinks: list[SinkHealth] = Field(default_factory=list)
+    jev: dict[str, Any] = Field(default_factory=dict)
+    advisor: str
+    exposure_now_cents: int | None
+    exposure_at_join_cents: int | None
+    exposure_peak_cents: int | None
+    lost_from_peak_cents: int | None
+    incidents: int = 0
+    incident_plans: int = 0

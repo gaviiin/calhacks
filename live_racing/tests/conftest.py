@@ -46,4 +46,5 @@ def quiet(monkeypatch, tmp_path):
     monkeypatch.delenv("TYPESAFE_API_KEY", raising=False)
     monkeypatch.delenv("FINANCE_AGENT_URL", raising=False)
     monkeypatch.setenv("JEV_MODE", "api")
+    monkeypatch.setenv("LIVE_ADVISOR", "off")
     return tmp_path

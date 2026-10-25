@@ -80,6 +80,7 @@ class RaceState:
         self.flag_status: str | None = None
         self.weather = Weather()
         self.recent_race_control: list[dict] = []
+        self.pit_lane_durations: list[float] = []
         self.events_applied = 0
         self.last_event: NormalizedEvent | None = None
 
@@ -119,6 +120,8 @@ class RaceState:
             d.last_pit_lap = p.get("lap_number")
             d.last_pit_at = ev.event_time_utc
             d.status = "in_pit"
+            if p.get("lane_duration"):
+                self.pit_lane_durations.append(float(p["lane_duration"]))
             changes.append(f"pit:{d.number}")
         elif ep == "stint_start":
             d = self.driver(int(p["driver_number"]))

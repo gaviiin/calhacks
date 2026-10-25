@@ -19,6 +19,7 @@ from typing import Callable
 from finance import fia_bridge
 
 from .finance_projections import diff, forecast_for_rows, usd
+from .health import feed_health
 from .jev_router import JevRouter, deterministic_route
 from .publisher import Publisher
 from .races import Race
@@ -69,12 +70,21 @@ class ResultReplay:
 
     def stop(self) -> None:
         self._stop.set()
+        if self.status.state not in ("finished", "stopped", "error"):
+            self.status.state = "stopped"
 
     def resume(self) -> None:
         pass
 
     def ack_finance_impact(self, update: FinanceImpactUpdate):
         raise KeyError(update.incident_id)
+
+    def feed_health(self):
+        now = self.signals[-1].after.amount_cents if self.signals else None
+        first = self.signals[0].before.amount_cents if self.signals else None
+        peak = max((s.before.amount_cents or 0) for s in self.signals) if self.signals else None
+        return feed_health(self.replay_id, self.status, self.o.mode, self.now(), self.status.clock_utc, None, self.publisher, self.jev, "n/a (document replay)",
+                           len(self.signals), now, first, peak, 0, 0)
 
     def _publish_status(self) -> None:
         self.status.sinks = self.publisher.names()

@@ -45,12 +45,17 @@ class MemorySink:
         self.records: deque[dict] = deque(maxlen=maxlen)
         self.latest: dict[tuple[str, str], dict] = {}
         self.seq = 0
+        self.written = 0
+        self.errors = 0
+        self.last_write_utc: str | None = None
         self._subs: list[queue.Queue] = []
         self._lock = threading.Lock()
 
     def write(self, record: dict) -> None:
         with self._lock:
             self.seq += 1
+            self.written += 1
+            self.last_write_utc = record["published_at_utc"]
             record = {**record, "seq": self.seq}
             self.records.append(record)
             self.latest[(record["kind"], record["id"])] = record
@@ -87,11 +92,14 @@ class JsonlSink:
         self.path = Path(path)
         self.path.parent.mkdir(parents=True, exist_ok=True)
         self.written = 0
+        self.errors = 0
+        self.last_write_utc: str | None = None
 
     def write(self, record: dict) -> None:
         with open(self.path, "a") as f:
             f.write(json.dumps(record, separators=(",", ":"), default=str) + "\n")
         self.written += 1
+        self.last_write_utc = record["published_at_utc"]
 
 
 class SpacetimeSink:
@@ -113,6 +121,7 @@ class SpacetimeSink:
         self.disabled_reason: str | None = None
         self.errors = 0
         self.written = 0
+        self.last_write_utc: str | None = None
 
     def write(self, record: dict) -> None:
         if self.disabled:
@@ -146,6 +155,7 @@ class SpacetimeSink:
                 self.disabled, self.disabled_reason = True, f"mirror off after 5 errors; last: {r.status_code} {r.text.strip()[:120]}"
             return
         self.written += 1
+        self.last_write_utc = record["published_at_utc"]
 
 
 class WebhookSink:
@@ -161,6 +171,7 @@ class WebhookSink:
         self.sent = 0
         self.errors = 0
         self.last_error: str | None = None
+        self.last_write_utc: str | None = None
 
     def write(self, record: dict) -> None:
         if record["kind"] not in self.kinds:
@@ -170,6 +181,7 @@ class WebhookSink:
                 r = self.http.post(self.url, json=record)
                 if r.status_code < 300:
                     self.sent += 1
+                    self.last_write_utc = record["published_at_utc"]
                     return
                 self.last_error = f"HTTP {r.status_code}"
             except httpx.HTTPError as exc:
@@ -185,6 +197,25 @@ class Publisher:
         self.now = now
         self.published = 0
         self.publish_latencies_ms: list[int] = []
+        self.wall_times: deque[float] = deque(maxlen=2000)  # time.monotonic() of each publish, for the cadence
+        self.last_publish_utc: str | None = None
+        self._lock = threading.Lock()
+
+    def sink_health(self) -> list[dict]:
+        out = []
+        for s in self.sinks:
+            disabled = getattr(s, "disabled", False)
+            out.append({"name": s.name, "ok": not disabled, "written": getattr(s, "written", getattr(s, "sent", 0)), "errors": getattr(s, "errors", 0),
+                        "last_write_utc": getattr(s, "last_write_utc", None),
+                        "detail": getattr(s, "disabled_reason", None) or getattr(s, "last_error", None) or (str(getattr(s, "url", "")) or None)})
+        return out
+
+    def cadence(self) -> dict:
+        now = time.monotonic()
+        last60 = sum(1 for t in self.wall_times if now - t <= 60)
+        last10 = sum(1 for t in self.wall_times if now - t <= 10)
+        return {"publishes_total": self.published, "publishes_last_60s": last60, "publishes_per_second_10s": round(last10 / 10, 2),
+                "last_publish_utc": self.last_publish_utc}
 
     def names(self) -> list[str]:
         out = []
@@ -207,12 +238,15 @@ class Publisher:
         if isinstance(payload, dict) and "timestamps" in payload and isinstance(payload["timestamps"], dict):
             payload["timestamps"]["state_published"] = published_at
         record = {"kind": kind, "id": id, "version": version, "status": status, "published_at_utc": published_at, "payload": payload}
-        for s in self.sinks:
-            try:
-                s.write(record)
-            except Exception as exc:  # noqa: BLE001  a sink must never stop the race ticker
-                record.setdefault("sink_errors", []).append(f"{s.name}: {exc.__class__.__name__}")
-        self.published += 1
+        with self._lock:
+            for s in self.sinks:
+                try:
+                    s.write(record)
+                except Exception as exc:  # noqa: BLE001  a sink must never stop the race ticker
+                    record.setdefault("sink_errors", []).append(f"{s.name}: {exc.__class__.__name__}")
+            self.published += 1
+            self.wall_times.append(time.monotonic())
+            self.last_publish_utc = published_at
         return record
 
     def percentile(self, p: float) -> int | None:
