@@ -369,7 +369,7 @@ class OptionSet:
                 "trigger": self.trigger, "options_json": _j(self.options)[:8192]}
 
 
-POSTING_STATUSES = ("posted", "held", "approved", "rejected", "failed")
+POSTING_STATUSES = ("authorized", "posted", "held", "approved", "rejected", "failed")
 
 
 @dataclass

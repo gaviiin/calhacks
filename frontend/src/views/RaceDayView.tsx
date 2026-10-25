@@ -13,6 +13,7 @@ import { AccountingView } from './roles/AccountingView';
 import { CFOView } from './roles/CFOView';
 import { FlowFocus } from './roles/focus';
 import { IncidentFlow } from './roles/IncidentFlow';
+import { PitWallProof } from './roles/PitWallProof';
 import { PitWallView } from './roles/PitWallView';
 import { ReplayControl } from './roles/ReplayControl';
 import { ServiceStrip } from './roles/ServiceStrip';
@@ -84,6 +85,7 @@ export function RaceDayView({ role, nav }: { role: string | null; nav: (h: strin
       </div>
       <IncidentFlow tab={r.id} go={go} />
       <r.View />
+      <PitWallProof />
     </RaceScope>
     </FlowFocus>
   );

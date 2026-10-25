@@ -314,3 +314,69 @@ def test_the_weekend_books_its_entries(fake_erp):
     assert len(fake_erp.journal) == len(by["posted"])
     for rec in fake_erp.journal:
         assert sum(l[1] for l in lines_of(rec)) == sum(l[2] for l in lines_of(rec))
+
+
+# ---------------------------------------------------------------- pit-wall decides
+
+class PitWallSink(FakeSink):
+    """A sink whose database decides: request_posting returns the module's row, never the desk's opinion."""
+
+    def __init__(self, decisions: dict[str, tuple[str, str, str]]):
+        super().__init__()
+        self.decisions = decisions
+        self.requests: list[str] = []
+
+    def request_posting(self, entry_key, at):
+        self.requests.append(entry_key)
+        status, role, reason = self.decisions[entry_key]
+        self.rows[entry_key] = {"entry_key": entry_key, "status": status, "review_role": role, "reason": reason, "by": "pit-wall"}
+        return dict(self.rows[entry_key])
+
+    def record(self, postings):
+        for p in postings:
+            cur = self.rows.get(p.entry_key)
+            if p.status == "posted" and not (cur and cur["status"] in ("authorized", "approved", "posted")):
+                raise AssertionError("pit-wall refuses a posting it did not authorize")
+            if p.status in ("posted", "failed") or cur is None:
+                self.rows[p.entry_key] = {**(cur or {}), **p.wire(), "status": p.status if p.status == "posted" else (cur or {}).get("status", p.status)}
+
+
+def test_the_desk_sends_only_what_pit_wall_authorized(fake_erp):
+    st = State()
+    small = entry(st, amount=3_000_000)  # small enough to post on the desk's rules, but only Jev's estimate
+    other = entry(st, amount=2_000_000)
+    sink = PitWallSink({small.entry_key: ("held", "controller", "held for review: the estimate is Jev's alone"),
+                        other.entry_key: ("authorized", "", "authorized by pit-wall: $20,000 under the $250,000 limit")})
+    out = {p.entry_key: p for p in book(st, sink, [small, other])}
+    assert sink.requests == [small.entry_key, other.entry_key]
+    assert out[small.entry_key].status == "held" and out[small.entry_key].review_role == "controller"
+    assert "Jev's alone" in out[small.entry_key].reason
+    assert out[other.entry_key].status == "posted" and len(fake_erp.journal) == 1
+    # a person signs off the estimate: pit-wall flips the row to authorized and the desk posts it on its next look
+    sink.rows[small.entry_key]["status"] = "authorized"
+    [p] = review(st, sink)
+    assert p.status == "posted" and len(fake_erp.journal) == 2
+
+
+def test_the_erp_gateway_refuses_a_race_entry_pit_wall_did_not_authorize(monkeypatch):
+    from fastapi.testclient import TestClient
+
+    from world import api
+
+    body = {"work_item_id": "race-e1", "period_key": "2024-11", "memo": "Race desk incurred: crash parts",
+            "evidence_refs": ["race_entry:e1"], "lines": [{"account_id": "capcat-X", "debit_minor": 100, "credit_minor": 0},
+                                                          {"account_id": "capadj-Y", "debit_minor": 0, "credit_minor": 100}]}
+    h = {"X-Gateway-Key": "dev-gateway-key"}
+    monkeypatch.delenv("GATEWAY_KEY", raising=False)
+    monkeypatch.delenv("ERP_REQUIRE_PITWALL", raising=False)
+    with TestClient(api.create_app() if hasattr(api, "create_app") else api.app) as client:
+        monkeypatch.setattr(api, "pitwall_posting_status", lambda key: "held")
+        r = client.post("/erp/journal_entries", json=body, headers=h)
+        assert r.status_code == 403 and "has not authorized race entry e1 (held)" in r.json()["detail"]
+        monkeypatch.setattr(api, "pitwall_posting_status", lambda key: None)
+        assert client.post("/erp/journal_entries", json=body, headers=h).status_code == 503  # fail closed
+        monkeypatch.setattr(api, "pitwall_posting_status", lambda key: "authorized")
+        assert client.post("/erp/journal_entries", json=body, headers=h).status_code == 200
+        # entries that are not race entries are the cost cap gateway's and are not asked about
+        monkeypatch.setattr(api, "pitwall_posting_status", lambda key: (_ for _ in ()).throw(AssertionError("asked")))
+        assert client.post("/erp/journal_entries", json={**body, "work_item_id": "w2", "evidence_refs": ["gl:1"]}, headers=h).status_code == 200

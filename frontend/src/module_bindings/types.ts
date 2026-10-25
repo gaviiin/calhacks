@@ -249,6 +249,19 @@ export const RaceActions = __t.object("RaceActions", {
 });
 export type RaceActions = __Infer<typeof RaceActions>;
 
+export const RaceAudit = __t.object("RaceAudit", {
+  auditId: __t.u64(),
+  at: __t.string(),
+  who: __t.string(),
+  name: __t.string(),
+  role: __t.string(),
+  action: __t.string(),
+  targetKey: __t.string(),
+  allowed: __t.bool(),
+  reason: __t.string(),
+});
+export type RaceAudit = __Infer<typeof RaceAudit>;
+
 export const RaceBeliefs = __t.object("RaceBeliefs", {
   beliefKey: __t.string(),
   incidentKey: __t.string(),
@@ -442,6 +455,26 @@ export const RaceIncidents = __t.object("RaceIncidents", {
 });
 export type RaceIncidents = __Infer<typeof RaceIncidents>;
 
+export const RaceLatency = __t.object("RaceLatency", {
+  id: __t.u32(),
+  events: __t.u64(),
+  lastEventKey: __t.string(),
+  lastMs: __t.u32(),
+  meanMs: __t.u32(),
+  maxMs: __t.u32(),
+  lastCommittedAt: __t.string(),
+});
+export type RaceLatency = __Infer<typeof RaceLatency>;
+
+export const RaceOnline = __t.object("RaceOnline", {
+  connectionId: __t.string(),
+  who: __t.string(),
+  name: __t.string(),
+  role: __t.string(),
+  connectedAt: __t.string(),
+});
+export type RaceOnline = __Infer<typeof RaceOnline>;
+
 export const RaceOptions = __t.object("RaceOptions", {
   optionKey: __t.string(),
   sessionKey: __t.u32(),
@@ -560,6 +593,13 @@ export const RaceQuestionInput = __t.object("RaceQuestionInput", {
 });
 export type RaceQuestionInput = __Infer<typeof RaceQuestionInput>;
 
+export const RaceQuestionTimers = __t.object("RaceQuestionTimers", {
+  scheduledId: __t.u64(),
+  scheduledAt: __t.scheduleAt(),
+  questionKey: __t.string(),
+});
+export type RaceQuestionTimers = __Infer<typeof RaceQuestionTimers>;
+
 export const RaceQuestions = __t.object("RaceQuestions", {
   questionKey: __t.string(),
   incidentKey: __t.string(),
@@ -577,6 +617,42 @@ export const RaceQuestions = __t.object("RaceQuestions", {
   createdAt: __t.string(),
 });
 export type RaceQuestions = __Infer<typeof RaceQuestions>;
+
+export const RaceReplayMode = __t.object("RaceReplayMode", {
+  id: __t.u32(),
+  replayedDecisions: __t.bool(),
+  setBy: __t.string(),
+  at: __t.string(),
+});
+export type RaceReplayMode = __Infer<typeof RaceReplayMode>;
+
+export const RaceRules = __t.object("RaceRules", {
+  id: __t.u32(),
+  autoPostMaxCents: __t.i64(),
+  cfoCents: __t.i64(),
+  modelMayPostAlone: __t.bool(),
+  replayPace: __t.f64(),
+  updatedBy: __t.string(),
+  updatedAt: __t.string(),
+});
+export type RaceRules = __Infer<typeof RaceRules>;
+
+export const RaceSeats = __t.object("RaceSeats", {
+  who: __t.identity(),
+  name: __t.string(),
+  role: __t.string(),
+  grantedAt: __t.string(),
+});
+export type RaceSeats = __Infer<typeof RaceSeats>;
+
+export const RaceSignoffs = __t.object("RaceSignoffs", {
+  effectKey: __t.string(),
+  who: __t.string(),
+  name: __t.string(),
+  via: __t.string(),
+  at: __t.string(),
+});
+export type RaceSignoffs = __Infer<typeof RaceSignoffs>;
 
 export const RaceSims = __t.object("RaceSims", {
   simKey: __t.string(),

@@ -35,6 +35,7 @@ import {
 
 // Import all reducer arg schemas
 import AnswerRaceQuestionReducer from "./answer_race_question_reducer";
+import ApplyRaceAnswerReducer from "./apply_race_answer_reducer";
 import ApproveRaceCloseReducer from "./approve_race_close_reducer";
 import AskRaceQuestionReducer from "./ask_race_question_reducer";
 import ChooseRaceActionOptionReducer from "./choose_race_action_option_reducer";
@@ -42,6 +43,7 @@ import ConfirmRaceEffectReducer from "./confirm_race_effect_reducer";
 import CorrectRaceEffectReducer from "./correct_race_effect_reducer";
 import DecideRacePostingReducer from "./decide_race_posting_reducer";
 import DefaultRaceQuestionReducer from "./default_race_question_reducer";
+import GrantSeatReducer from "./grant_seat_reducer";
 import IngestDecisionReducer from "./ingest_decision_reducer";
 import IngestDocumentReducer from "./ingest_document_reducer";
 import MarkRaceCloseSentReducer from "./mark_race_close_sent_reducer";
@@ -58,9 +60,13 @@ import RecordRaceHealthReducer from "./record_race_health_reducer";
 import RecordRaceOptionsReducer from "./record_race_options_reducer";
 import RecordRacePostingReducer from "./record_race_posting_reducer";
 import RecordRaceSimReducer from "./record_race_sim_reducer";
+import RequestRacePostingReducer from "./request_race_posting_reducer";
 import SetIngestorReducer from "./set_ingestor_reducer";
 import SetRaceActionStatusReducer from "./set_race_action_status_reducer";
+import SetRaceClockReducer from "./set_race_clock_reducer";
 import SetRacePolicyAutonomyReducer from "./set_race_policy_autonomy_reducer";
+import SetRaceRulesReducer from "./set_race_rules_reducer";
+import SetReplayDecisionsReducer from "./set_replay_decisions_reducer";
 import SetReviewStatusReducer from "./set_review_status_reducer";
 import SetWriterReducer from "./set_writer_reducer";
 import UpsertRaceIncidentReducer from "./upsert_race_incident_reducer";
@@ -75,6 +81,7 @@ import JeLinesRow from "./je_lines_table";
 import JournalEntriesRow from "./journal_entries_table";
 import PitWallItemsRow from "./pit_wall_items_table";
 import RaceActionsRow from "./race_actions_table";
+import RaceAuditRow from "./race_audit_table";
 import RaceBeliefsRow from "./race_beliefs_table";
 import RaceClosesRow from "./race_closes_table";
 import RaceEffectsRow from "./race_effects_table";
@@ -84,11 +91,17 @@ import RaceEventsRow from "./race_events_table";
 import RaceForecastsRow from "./race_forecasts_table";
 import RaceHealthRow from "./race_health_table";
 import RaceIncidentsRow from "./race_incidents_table";
+import RaceLatencyRow from "./race_latency_table";
+import RaceOnlineRow from "./race_online_table";
 import RaceOptionsRow from "./race_options_table";
 import RacePoliciesRow from "./race_policies_table";
 import RacePostingsRow from "./race_postings_table";
 import RacePrecedentsRow from "./race_precedents_table";
 import RaceQuestionsRow from "./race_questions_table";
+import RaceReplayModeRow from "./race_replay_mode_table";
+import RaceRulesRow from "./race_rules_table";
+import RaceSeatsRow from "./race_seats_table";
+import RaceSignoffsRow from "./race_signoffs_table";
 import RaceSimsRow from "./race_sims_table";
 
 /** Type-only namespace exports for generated type groups. */
@@ -179,6 +192,23 @@ const tablesSchema = __schema({
       { name: 'race_actions_action_key_key', constraint: 'unique', columns: ['actionKey'] },
     ],
   }, RaceActionsRow),
+  raceAudit: __table({
+    name: 'race_audit',
+    indexes: [
+      { accessor: 'action', name: 'race_audit_action_idx_btree', algorithm: 'btree', columns: [
+        'action',
+      ] },
+      { accessor: 'auditId', name: 'race_audit_audit_id_idx_btree', algorithm: 'btree', columns: [
+        'auditId',
+      ] },
+      { accessor: 'targetKey', name: 'race_audit_target_key_idx_btree', algorithm: 'btree', columns: [
+        'targetKey',
+      ] },
+    ],
+    constraints: [
+      { name: 'race_audit_audit_id_key', constraint: 'unique', columns: ['auditId'] },
+    ],
+  }, RaceAuditRow),
   raceBeliefs: __table({
     name: 'race_beliefs',
     indexes: [
@@ -305,6 +335,28 @@ const tablesSchema = __schema({
       { name: 'race_incidents_incident_key_key', constraint: 'unique', columns: ['incidentKey'] },
     ],
   }, RaceIncidentsRow),
+  raceLatency: __table({
+    name: 'race_latency',
+    indexes: [
+      { accessor: 'id', name: 'race_latency_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'race_latency_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, RaceLatencyRow),
+  raceOnline: __table({
+    name: 'race_online',
+    indexes: [
+      { accessor: 'connectionId', name: 'race_online_connection_id_idx_btree', algorithm: 'btree', columns: [
+        'connectionId',
+      ] },
+    ],
+    constraints: [
+      { name: 'race_online_connection_id_key', constraint: 'unique', columns: ['connectionId'] },
+    ],
+  }, RaceOnlineRow),
   raceOptions: __table({
     name: 'race_options',
     indexes: [
@@ -375,6 +427,50 @@ const tablesSchema = __schema({
       { name: 'race_questions_question_key_key', constraint: 'unique', columns: ['questionKey'] },
     ],
   }, RaceQuestionsRow),
+  raceReplayMode: __table({
+    name: 'race_replay_mode',
+    indexes: [
+      { accessor: 'id', name: 'race_replay_mode_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'race_replay_mode_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, RaceReplayModeRow),
+  raceRules: __table({
+    name: 'race_rules',
+    indexes: [
+      { accessor: 'id', name: 'race_rules_id_idx_btree', algorithm: 'btree', columns: [
+        'id',
+      ] },
+    ],
+    constraints: [
+      { name: 'race_rules_id_key', constraint: 'unique', columns: ['id'] },
+    ],
+  }, RaceRulesRow),
+  raceSeats: __table({
+    name: 'race_seats',
+    indexes: [
+      { accessor: 'who', name: 'race_seats_who_idx_btree', algorithm: 'btree', columns: [
+        'who',
+      ] },
+    ],
+    constraints: [
+      { name: 'race_seats_who_key', constraint: 'unique', columns: ['who'] },
+    ],
+  }, RaceSeatsRow),
+  raceSignoffs: __table({
+    name: 'race_signoffs',
+    indexes: [
+      { accessor: 'effectKey', name: 'race_signoffs_effect_key_idx_btree', algorithm: 'btree', columns: [
+        'effectKey',
+      ] },
+    ],
+    constraints: [
+      { name: 'race_signoffs_effect_key_key', constraint: 'unique', columns: ['effectKey'] },
+    ],
+  }, RaceSignoffsRow),
   raceSims: __table({
     name: 'race_sims',
     indexes: [
@@ -394,6 +490,7 @@ const tablesSchema = __schema({
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
   __reducerSchema("answer_race_question", AnswerRaceQuestionReducer),
+  __reducerSchema("apply_race_answer", ApplyRaceAnswerReducer),
   __reducerSchema("approve_race_close", ApproveRaceCloseReducer),
   __reducerSchema("ask_race_question", AskRaceQuestionReducer),
   __reducerSchema("choose_race_action_option", ChooseRaceActionOptionReducer),
@@ -401,6 +498,7 @@ const reducersSchema = __reducers(
   __reducerSchema("correct_race_effect", CorrectRaceEffectReducer),
   __reducerSchema("decide_race_posting", DecideRacePostingReducer),
   __reducerSchema("default_race_question", DefaultRaceQuestionReducer),
+  __reducerSchema("grant_seat", GrantSeatReducer),
   __reducerSchema("ingest_decision", IngestDecisionReducer),
   __reducerSchema("ingest_document", IngestDocumentReducer),
   __reducerSchema("mark_race_close_sent", MarkRaceCloseSentReducer),
@@ -417,9 +515,13 @@ const reducersSchema = __reducers(
   __reducerSchema("record_race_options", RecordRaceOptionsReducer),
   __reducerSchema("record_race_posting", RecordRacePostingReducer),
   __reducerSchema("record_race_sim", RecordRaceSimReducer),
+  __reducerSchema("request_race_posting", RequestRacePostingReducer),
   __reducerSchema("set_ingestor", SetIngestorReducer),
   __reducerSchema("set_race_action_status", SetRaceActionStatusReducer),
+  __reducerSchema("set_race_clock", SetRaceClockReducer),
   __reducerSchema("set_race_policy_autonomy", SetRacePolicyAutonomyReducer),
+  __reducerSchema("set_race_rules", SetRaceRulesReducer),
+  __reducerSchema("set_replay_decisions", SetReplayDecisionsReducer),
   __reducerSchema("set_review_status", SetReviewStatusReducer),
   __reducerSchema("set_writer", SetWriterReducer),
   __reducerSchema("upsert_race_incident", UpsertRaceIncidentReducer),

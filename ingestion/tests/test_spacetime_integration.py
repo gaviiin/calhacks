@@ -206,4 +206,13 @@ def test_module_tables_are_the_evidence_and_finance_mirror(owner_db):
         "raceOptions",
         "racePostings",
         "raceHealth",
+        # pit-wall's gate (the money rules enforced in the module): seats, sign-offs, the audit trail, timers
+        "raceAudit",
+        "raceLatency",
+        "raceOnline",
+        "raceQuestionTimers",
+        "raceReplayMode",
+        "raceRules",
+        "raceSeats",
+        "raceSignoffs",
     }

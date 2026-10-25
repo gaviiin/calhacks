@@ -244,7 +244,9 @@ def apply_answers(state, sink, book) -> list[Incident]:
 
 def _apply_to_lines(q: Question, opt: dict, by: str, state, sink) -> None:
     """The answer settles every crash line of the incident: the first parts line takes the answer's band, the desk's
-    own revisions of it are superseded (corrected to zero, so the crash is booked once), the rest are confirmed."""
+    own revisions of it are superseded (corrected to zero, so the crash is booked once), the rest are confirmed. Each
+    write goes through pit-wall's apply_race_answer, which checks the answer exists and the line is the incident's, and
+    records the answering person's sign-off (a deadline default signs nothing off)."""
     lo, mid, hi = (int(x) for x in opt["band"])
     reason = f"{by}: {opt['label']} ({q.question_key})"[:512]
     inc = state.incidents.get(q.incident_key)
@@ -262,7 +264,7 @@ def _apply_to_lines(q: Question, opt: dict, by: str, state, sink) -> None:
                 e.status = "corrected"
                 _adjust_books(state, k, e.mid_cents, 0, reason)
                 if sink is not None:
-                    sink.correct(k, 0, 0, 0, f"superseded by {reason}"[:512], by, state.now)
+                    sink.apply_answer(q.question_key, k, True, 0, 0, 0, state.now)
             elif e.bucket == "6050":
                 parts_done = True
                 if abs(e.mid_cents - mid) > 0.05 * max(mid, 1):
@@ -270,15 +272,15 @@ def _apply_to_lines(q: Question, opt: dict, by: str, state, sink) -> None:
                     e.status = "corrected"
                     _adjust_books(state, k, e.mid_cents, parts_mid, reason)
                     if sink is not None:
-                        sink.correct(k, parts_lo, parts_mid, parts_hi, reason, by, state.now)
-                elif e.status in ("needs_person", "proposed"):
+                        sink.apply_answer(q.question_key, k, True, parts_lo, parts_mid, parts_hi, state.now)
+                elif e.status in ("needs_person", "proposed", "autonomous"):
                     e.status = "confirmed"
                     if sink is not None:
-                        sink.confirm(k, reason, by, state.now)
-            elif e.status in ("needs_person", "proposed"):
+                        sink.apply_answer(q.question_key, k, False, e.low_cents, e.mid_cents, e.high_cents, state.now)
+            elif e.status in ("needs_person", "proposed", "autonomous"):
                 e.status = "confirmed"
                 if sink is not None:
-                    sink.confirm(k, reason, by, state.now)
+                    sink.apply_answer(q.question_key, k, False, e.low_cents, e.mid_cents, e.high_cents, state.now)
     rp = getattr(state, "replay", None)
     if inc is not None and rp is not None and inc.session_key == int(rp.session.get("session_key") or 0):
         b = rp.ctx.booked.get(inc.driver_number)

@@ -1,4 +1,5 @@
 import { schema, table, t, SenderError } from 'spacetimedb/server';
+import { ScheduleAt } from 'spacetimedb';
 
 // Public, metadata-only evidence. Anyone allowed to subscribe can read these
 // rows, so never put sponsor contracts, ledger data, or secrets here.
@@ -419,6 +420,86 @@ const raceHealth = table(
   }
 );
 
+// ---------------------------------------------------------------- the race money gate (one door, one audit row)
+// Every race decision that moves money or speaks for a person goes through gate(): the module resolves who is calling
+// from the connection's identity (never from a `by` argument), checks the rule, then applies the change or refuses it,
+// and writes exactly one race_audit row in the same transaction. A refusal is committed, never thrown, so the attempt
+// is on the record even when nothing changed.
+const raceAudit = table(
+  { name: 'race_audit', public: true },
+  {
+    auditId: t.u64().primaryKey().autoInc(),
+    at: t.string(), // commit time
+    who: t.string(), // the caller's identity (hex)
+    name: t.string(), // the seat's name, or agent:<role>
+    role: t.string(), // the role the module resolved for the caller
+    action: t.string().index('btree'),
+    targetKey: t.string().index('btree'),
+    allowed: t.bool(),
+    reason: t.string(),
+  }
+);
+
+// A person's seat: an identity, a name and a role. Decisions are attributed from here, not from what a client claims.
+const raceSeats = table(
+  { name: 'race_seats', public: true },
+  { who: t.identity().primaryKey(), name: t.string(), role: t.string(), grantedAt: t.string() }
+);
+
+// The money rules, set by the CFO. One row (id 0); the defaults below apply until it exists.
+const raceRules = table(
+  { name: 'race_rules', public: true },
+  {
+    id: t.u32().primaryKey(),
+    autoPostMaxCents: t.i64(), // under this the desk may post on its own authority (the $250k materiality)
+    cfoCents: t.i64(), // at or above this the CFO decides ($1M)
+    modelMayPostAlone: t.bool(), // false: an estimate from Jev or the forecast agent needs a person's sign-off to post
+    replayPace: t.f64(), // race seconds per wall second for the running replay (1 = live); scales question deadlines
+    updatedBy: t.string(),
+    updatedAt: t.string(),
+  }
+);
+
+// A person signed off an estimate (directly, or by answering the question about it). The posting rule reads this.
+const raceSignoffs = table(
+  { name: 'race_signoffs', public: true },
+  { effectKey: t.string().primaryKey(), who: t.string(), name: t.string(), via: t.string(), at: t.string() }
+);
+
+// Who is watching right now: one row per open dashboard connection (agents are not seats and are not listed).
+const raceOnline = table(
+  { name: 'race_online', public: true },
+  { connectionId: t.string().primaryKey(), who: t.string(), name: t.string(), role: t.string(), connectedAt: t.string() }
+);
+
+// Measured, not claimed: from the moment the desk read an event to the moment its row committed here.
+const raceLatency = table(
+  { name: 'race_latency', public: true },
+  {
+    id: t.u32().primaryKey(),
+    events: t.u64(),
+    lastEventKey: t.string(),
+    lastMs: t.u32(),
+    meanMs: t.u32(),
+    maxMs: t.u32(),
+    lastCommittedAt: t.string(),
+  }
+);
+
+// Replaying a demo: the team's documented decisions (race/people.py) are recorded through the desk, tagged
+// '(replayed)'. Off unless the owner or the CFO turns it on for a replay; every replayed decision is audited as one.
+const raceReplayMode = table(
+  { name: 'race_replay_mode', public: true },
+  { id: t.u32().primaryKey(), replayedDecisions: t.bool(), setBy: t.string(), at: t.string() }
+);
+
+// A question's deadline, kept by the database itself: when it comes due the module takes the stated default even if
+// every agent process is down.
+const raceQuestionTimers = table(
+  { name: 'race_question_timers' },
+  { scheduledId: t.u64().primaryKey().autoInc(), scheduledAt: t.scheduleAt(), questionKey: t.string() }
+);
+
 const spacetimedb = schema({
   fiaDocuments,
   config,
@@ -444,6 +525,14 @@ const spacetimedb = schema({
   raceOptions,
   racePostings,
   raceHealth,
+  raceAudit,
+  raceSeats,
+  raceRules,
+  raceSignoffs,
+  raceOnline,
+  raceLatency,
+  raceQuestionTimers,
+  raceReplayMode,
 });
 export default spacetimedb;
 
@@ -544,16 +633,162 @@ function requireRole(ctx: any, role: string) {
   if (!w || w.role !== role) throw new SenderError(`unauthorized: caller lacks role ${role}`);
 }
 
+// ---------------------------------------------------------------- who is calling, and the one door
+
+const AGENT_ROLES = ['kernel', 'router', 'race'];
+const PERSON_ROLES = ['race_head', 'controller', 'head_of_cost_cap', 'cfo'];
+// Who may decide a held posting: the review role it was held for, or a more senior seat. race_head is the
+// dashboard's head-of-racing-finance seat and decides at controller level.
+const REVIEW_RANK: Record<string, number> = { '': 0, controller: 1, head_of_cost_cap: 2, cfo: 3 };
+const SEAT_RANK: Record<string, number> = { race_head: 1, controller: 1, head_of_cost_cap: 2, cfo: 3 };
+const RULES_ID = 0;
+const DEFAULT_RULES = { autoPostMaxCents: 25_000_000n, cfoCents: 100_000_000n, modelMayPostAlone: false, replayPace: 1 };
+
+type Caller = { who: string; name: string; role: string; person: boolean; owner: boolean };
+
+function callerOf(ctx: any): Caller {
+  const cfg = ctx.db.config.id.find(CONFIG_ID);
+  const owner = !!cfg && ctx.sender.equals(cfg.owner);
+  const w = ctx.db.writers.who.find(ctx.sender);
+  const seat = ctx.db.raceSeats.who.find(ctx.sender);
+  const role: string = w?.role ?? (owner ? 'owner' : 'none');
+  // The publisher's identity is also the agents' identity on a demo laptop, so it never counts as a person.
+  const person = !owner && PERSON_ROLES.includes(role);
+  const name = seat?.name ?? (person ? role : owner ? 'publisher' : role === 'none' ? 'unknown' : `agent:${role}`);
+  return { who: ctx.sender.toHexString(), name, role, person, owner };
+}
+
+function rules(ctx: any) {
+  return ctx.db.raceRules.id.find(RULES_ID) ?? DEFAULT_RULES;
+}
+
+function audit(ctx: any, c: Caller, action: string, targetKey: string, allowed: boolean, reason: string) {
+  ctx.db.raceAudit.insert({
+    auditId: 0n, at: ctx.timestamp.toISOString(), who: c.who, name: c.name, role: c.role, action, targetKey, allowed, reason: reason.slice(0, 512),
+  });
+}
+
+/** The one door. `check` returns a refusal reason or null; `apply` makes the change and may return a note. Exactly one
+ * race_audit row is written either way, in this transaction. Returns whether the change was applied. */
+function gate(ctx: any, action: string, targetKey: string, check: (c: Caller) => string | null, apply: (c: Caller) => string | void): boolean {
+  const c = callerOf(ctx);
+  const refusal = check(c);
+  if (refusal) {
+    audit(ctx, c, action, targetKey, false, refusal);
+    return false;
+  }
+  const note = apply(c);
+  audit(ctx, c, action, targetKey, true, note || 'allowed');
+  return true;
+}
+
+/** A person, or (only while replay mode is on) the desk recording a documented decision tagged '(replayed)'. */
+function personOrReplay(ctx: any, c: Caller, by: string): string | null {
+  if (c.person) return null;
+  const mode = ctx.db.raceReplayMode.id.find(0);
+  if (mode?.replayedDecisions && (c.role === 'race' || c.owner) && /\(replayed\)\s*$/.test(by)) return null;
+  return personOnly(c);
+}
+
+const personOnly = (c: Caller) =>
+  c.person ? null : c.owner || AGENT_ROLES.includes(c.role) ? 'only a person decides this; an agent identity is refused' : `caller has no seat (${c.role})`;
+
+function usd(cents: bigint): string {
+  const neg = cents < 0n;
+  const a = neg ? -cents : cents;
+  const dollars = a / 100n;
+  const s = dollars.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',');
+  return `${neg ? '-' : ''}$${s}`;
+}
+
 export const setWriter = spacetimedb.reducer(
   { who: t.identity(), role: t.string() },
   (ctx, { who, role }) => {
     const cfg = ctx.db.config.id.find(CONFIG_ID);
     if (!cfg || !ctx.sender.equals(cfg.owner)) throw new SenderError('unauthorized: only the module owner can grant roles');
-    if (!['kernel', 'router', 'race', 'race_head'].includes(role)) throw new SenderError('unknown role');
+    if (![...AGENT_ROLES, ...PERSON_ROLES].includes(role)) throw new SenderError('unknown role');
     if (ctx.db.writers.who.find(who)) ctx.db.writers.who.update({ who, role });
     else ctx.db.writers.insert({ who, role });
   }
 );
+
+// A person's seat: the role and the name every decision of theirs is recorded under. Owner only.
+export const grantSeat = spacetimedb.reducer(
+  { who: t.identity(), role: t.string(), name: t.string() },
+  (ctx, { who, role, name }) => {
+    const cfg = ctx.db.config.id.find(CONFIG_ID);
+    if (!cfg || !ctx.sender.equals(cfg.owner)) throw new SenderError('unauthorized: only the module owner can grant seats');
+    if (!PERSON_ROLES.includes(role)) throw new SenderError('unknown seat role');
+    if (name.trim().length === 0 || name.length > 64) throw new SenderError('invalid seat name');
+    if (who.equals(cfg.owner)) throw new SenderError('the publisher identity runs the agents; give the person their own identity');
+    if (ctx.db.writers.who.find(who)) ctx.db.writers.who.update({ who, role });
+    else ctx.db.writers.insert({ who, role });
+    const row = { who, name, role, grantedAt: ctx.timestamp.toISOString() };
+    if (ctx.db.raceSeats.who.find(who)) ctx.db.raceSeats.who.update(row);
+    else ctx.db.raceSeats.insert(row);
+    // a dashboard already open under this identity is now that person
+    const hex = who.toHexString();
+    const open = [...ctx.db.raceOnline.iter()].filter((o: any) => o.who === hex);
+    for (const o of open) ctx.db.raceOnline.connectionId.update({ ...o, name, role });
+    audit(ctx, callerOf(ctx), 'grant_seat', hex, true, `${name} seated as ${role}`);
+  }
+);
+
+// The CFO sets the money rules; every change is audited.
+export const setRaceRules = spacetimedb.reducer(
+  { autoPostMaxCents: t.i64(), cfoCents: t.i64(), modelMayPostAlone: t.bool() },
+  (ctx, { autoPostMaxCents, cfoCents, modelMayPostAlone }) => {
+    if (autoPostMaxCents < 0n || cfoCents < autoPostMaxCents) throw new SenderError('invalid rules: 0 <= auto-post limit <= CFO threshold');
+    gate(ctx, 'set_rules', 'race_rules',
+      (c) => (c.role === 'cfo' && c.person) || c.owner ? null : 'only the CFO changes the money rules',
+      (c) => {
+        const cur = rules(ctx);
+        const row = { id: RULES_ID, autoPostMaxCents, cfoCents, modelMayPostAlone, replayPace: cur.replayPace, updatedBy: c.name, updatedAt: ctx.timestamp.toISOString() };
+        if (ctx.db.raceRules.id.find(RULES_ID)) ctx.db.raceRules.id.update(row);
+        else ctx.db.raceRules.insert(row);
+        return `auto-post under ${usd(autoPostMaxCents)}, CFO from ${usd(cfoCents)}, model estimates ${modelMayPostAlone ? 'may' : 'may not'} post alone`;
+      });
+  }
+);
+
+// The replay tells the module how fast race time runs, so a question's deadline (in race time) comes due on the wall clock.
+export const setRaceClock = spacetimedb.reducer(
+  { pace: t.f64() },
+  (ctx, { pace }) => {
+    requireRole(ctx, 'race');
+    if (!(pace > 0 && pace <= 1000)) throw new SenderError('invalid pace');
+    const cur = ctx.db.raceRules.id.find(RULES_ID);
+    if (cur) ctx.db.raceRules.id.update({ ...cur, replayPace: pace });
+    else ctx.db.raceRules.insert({ id: RULES_ID, ...DEFAULT_RULES, replayPace: pace, updatedBy: 'defaults', updatedAt: ctx.timestamp.toISOString() });
+  }
+);
+
+// The owner (or the CFO) turns replayed decisions on for a demo replay, and off again. Audited.
+export const setReplayDecisions = spacetimedb.reducer(
+  { allowed: t.bool() },
+  (ctx, { allowed }) => {
+    gate(ctx, 'set_replay_decisions', 'race_replay_mode',
+      (c) => (c.owner || (c.person && c.role === 'cfo') ? null : 'only the owner or the CFO sets replay mode'),
+      (c) => {
+        const row = { id: 0, replayedDecisions: allowed, setBy: c.name, at: ctx.timestamp.toISOString() };
+        if (ctx.db.raceReplayMode.id.find(0)) ctx.db.raceReplayMode.id.update(row);
+        else ctx.db.raceReplayMode.insert(row);
+        return allowed ? "replayed decisions on: the team's documented decisions are recorded, each labelled replayed" : 'replayed decisions off';
+      });
+  }
+);
+
+export const onConnect = spacetimedb.clientConnected((ctx) => {
+  const c = callerOf(ctx);
+  if (!ctx.connectionId || c.owner || AGENT_ROLES.includes(c.role)) return; // agents are not seats
+  const row = { connectionId: ctx.connectionId.toHexString(), who: c.who, name: c.person ? c.name : 'observer', role: c.person ? c.role : 'observer', connectedAt: ctx.timestamp.toISOString() };
+  if (ctx.db.raceOnline.connectionId.find(row.connectionId)) ctx.db.raceOnline.connectionId.update(row);
+  else ctx.db.raceOnline.insert(row);
+});
+
+export const onDisconnect = spacetimedb.clientDisconnected((ctx) => {
+  if (ctx.connectionId) ctx.db.raceOnline.connectionId.delete(ctx.connectionId.toHexString());
+});
 
 const EntryInput = t.object('EntryInput', {
   jeId: t.string(), runId: t.string(), kind: t.string(), status: t.string(), memo: t.string(), sponsorId: t.string(),
@@ -693,6 +928,21 @@ const CarStateInput = t.object('CarStateInput', {
   gapToLeader: t.string(), lastPitLap: t.u32(), status: t.string(), updatedAt: t.string(),
 });
 
+// From the desk reading the event (ingestedAt, its wall clock) to this commit. A replay stamps ingestedAt when it
+// sends, so this is the transport plus the transaction, measured by the database itself.
+function noteLatency(ctx: any, eventKey: string, ingestedAt: string) {
+  const sent = Date.parse(ingestedAt);
+  if (!Number.isFinite(sent)) return;
+  const committed = Number(ctx.timestamp.toMillis());
+  const ms = Math.max(0, Math.min(60_000, committed - sent));
+  const cur = ctx.db.raceLatency.id.find(0);
+  const events = (cur?.events ?? 0n) + 1n;
+  const mean = cur ? Math.round((cur.meanMs * Number(cur.events) + ms) / Number(events)) : ms;
+  const row = { id: 0, events, lastEventKey: eventKey, lastMs: ms, meanMs: mean, maxMs: Math.max(cur?.maxMs ?? 0, ms), lastCommittedAt: ctx.timestamp.toISOString() };
+  if (cur) ctx.db.raceLatency.id.update(row);
+  else ctx.db.raceLatency.insert(row);
+}
+
 // The tape is append-only and idempotent: replaying a session writes each fact once.
 export const recordRaceEvent = spacetimedb.reducer(
   { event: RaceEventInput, state: t.option(CarStateInput) },
@@ -709,7 +959,10 @@ export const recordRaceEvent = spacetimedb.reducer(
       if (!CAR_STATUSES.includes(state.status)) throw new SenderError('invalid state: unknown status');
       if (state.driverNumber !== event.driverNumber) throw new SenderError('invalid state: driver differs from event');
     }
-    if (!ctx.db.raceEvents.eventKey.find(event.eventKey)) ctx.db.raceEvents.insert(event);
+    if (!ctx.db.raceEvents.eventKey.find(event.eventKey)) {
+      ctx.db.raceEvents.insert(event);
+      noteLatency(ctx, event.eventKey, event.ingestedAt);
+    }
     if (state !== undefined) {
       const cur = ctx.db.carState.driverNumber.find(state.driverNumber);
       // A later state never goes backwards; a retirement is never undone by a stale position row.
@@ -830,22 +1083,54 @@ export const proposeRacePolicy = spacetimedb.reducer(
 
 export const setRacePolicyAutonomy = spacetimedb.reducer(
   { policyId: t.string(), autonomy: t.string(), by: t.string(), at: t.string() },
-  (ctx, { policyId, autonomy, by, at }) => {
-    requireRole(ctx, 'race_head');
+  (ctx, { policyId, autonomy, at }) => {
     if (!AUTONOMY.includes(autonomy)) throw new SenderError('unknown autonomy');
     requireIso('at', at);
     const cur = ctx.db.racePolicies.policyId.find(policyId);
     if (!cur) throw new SenderError('no such policy');
-    ctx.db.racePolicies.policyId.update({ ...cur, autonomy, approvedBy: autonomy === 'GRANTED' ? by : cur.approvedBy, updatedAt: at });
+    // A licence is granted by a person's seat (race_head or the CFO); the publisher may act for the head from the CLI.
+    gate(ctx, 'set_policy_autonomy', policyId,
+      (c) => (c.person && (c.role === 'race_head' || c.role === 'cfo')) || c.owner ? null : 'only the head of racing finance or the CFO sets a policy\'s autonomy',
+      (c) => {
+        ctx.db.racePolicies.policyId.update({ ...cur, autonomy, approvedBy: autonomy === 'GRANTED' ? c.name : cur.approvedBy, updatedAt: at });
+        return `${policyId} -> ${autonomy}`;
+      });
   }
 );
+
+// ---------------------------------------------------------------- sign-offs: a person stands behind an estimate
+
+function signOff(ctx: any, effectKey: string, who: string, name: string, via: string) {
+  const row = { effectKey, who, name, via, at: ctx.timestamp.toISOString() };
+  if (ctx.db.raceSignoffs.effectKey.find(effectKey)) ctx.db.raceSignoffs.effectKey.update(row);
+  else ctx.db.raceSignoffs.insert(row);
+}
+
+function writePrecedent(ctx: any, eff: any, precedentKey: string, low: bigint, mid: bigint, high: bigint, reason: string, by: string, at: string) {
+  const m = /^policy:(.+)$/.exec(eff.decidedBy);
+  const policyId = m ? m[1]! : '';
+  ctx.db.racePrecedents.insert({
+    precedentKey, effectKey: eff.effectKey, eventKey: eff.eventKey, policyId, correctedLowCents: low, correctedMidCents: mid, correctedHighCents: high, reason, by, at,
+  });
+  return policyId;
+}
+
+function markCorrected(ctx: any, eff: any, precedentKey: string, low: bigint, mid: bigint, high: bigint, reason: string, by: string, at: string) {
+  const policyId = writePrecedent(ctx, eff, precedentKey, low, mid, high, reason, by, at);
+  ctx.db.raceEffects.effectKey.update({ ...eff, status: 'corrected' });
+  if (policyId) {
+    const pol = ctx.db.racePolicies.policyId.find(policyId);
+    if (pol) ctx.db.racePolicies.policyId.update({ ...pol, contradictions: pol.contradictions + 1, updatedAt: at });
+  }
+}
+
+const AWAITING_PERSON = ['proposed', 'needs_person', 'autonomous'];
 
 // A person corrects a band. The original row stays (marked corrected), the precedent carries the
 // new numbers, and the policy that decided it counts one more contradiction.
 export const correctRaceEffect = spacetimedb.reducer(
   { effectKey: t.string(), lowCents: t.i64(), midCents: t.i64(), highCents: t.i64(), reason: t.string(), by: t.string(), at: t.string() },
-  (ctx, { effectKey, lowCents, midCents, highCents, reason, by, at }) => {
-    requireRole(ctx, 'race_head');
+  (ctx, { effectKey, lowCents, midCents, highCents, reason, at }) => {
     const eff = ctx.db.raceEffects.effectKey.find(effectKey);
     if (!eff) throw new SenderError('no such effect');
     if (!(lowCents <= midCents && midCents <= highCents)) throw new SenderError('invalid correction: band must be low <= mid <= high');
@@ -853,41 +1138,85 @@ export const correctRaceEffect = spacetimedb.reducer(
     requireIso('at', at);
     const precedentKey = `${effectKey}@${at}`;
     if (ctx.db.racePrecedents.precedentKey.find(precedentKey)) return;
-    const m = /^policy:(.+)$/.exec(eff.decidedBy);
-    const policyId = m ? m[1]! : '';
-    ctx.db.racePrecedents.insert({
-      precedentKey, effectKey, eventKey: eff.eventKey, policyId, correctedLowCents: lowCents, correctedMidCents: midCents,
-      correctedHighCents: highCents, reason, by, at,
+    gate(ctx, 'correct_effect', effectKey, personOnly, (c) => {
+      markCorrected(ctx, eff, precedentKey, lowCents, midCents, highCents, reason, c.name, at);
+      signOff(ctx, effectKey, c.who, c.name, 'correction');
+      reconsiderPostings(ctx, effectKey, c.name);
+      return `corrected to ${usd(midCents)} by ${c.name}`;
     });
-    ctx.db.raceEffects.effectKey.update({ ...eff, status: 'corrected' });
-    if (policyId) {
-      const pol = ctx.db.racePolicies.policyId.find(policyId);
-      if (pol) ctx.db.racePolicies.policyId.update({ ...pol, contradictions: pol.contradictions + 1, updatedAt: at });
-    }
   }
 );
 
-// A person confirms a band as booked. The precedent carries the unchanged numbers (a confirmation teaches as
-// much as a correction), and the row stays in the totals: corrected rows leave them, confirmed rows do not.
+// A person confirms a band. The precedent carries the unchanged numbers (a confirmation teaches as much as a
+// correction), the row stays in the totals, and the sign-off may release a posting that was waiting for it.
 export const confirmRaceEffect = spacetimedb.reducer(
   { effectKey: t.string(), reason: t.string(), by: t.string(), at: t.string() },
-  (ctx, { effectKey, reason, by, at }) => {
-    requireRole(ctx, 'race_head');
+  (ctx, { effectKey, reason, at }) => {
     const eff = ctx.db.raceEffects.effectKey.find(effectKey);
     if (!eff) throw new SenderError('no such effect');
     const precedentKey = `${effectKey}@${at}`;
     if (ctx.db.racePrecedents.precedentKey.find(precedentKey)) return; // the same confirmation twice
-    if (eff.status !== 'proposed' && eff.status !== 'needs_person') throw new SenderError('invalid confirmation: effect is not waiting for a person');
     if (reason.trim().length === 0 || reason.length > 512) throw new SenderError('invalid confirmation: reason');
     requireIso('at', at);
-    const m = /^policy:(.+)$/.exec(eff.decidedBy);
-    ctx.db.racePrecedents.insert({
-      precedentKey, effectKey, eventKey: eff.eventKey, policyId: m ? m[1]! : '', correctedLowCents: eff.lowCents,
-      correctedMidCents: eff.midCents, correctedHighCents: eff.highCents, reason, by, at,
-    });
-    ctx.db.raceEffects.effectKey.update({ ...eff, status: 'confirmed' });
+    gate(ctx, 'confirm_effect', effectKey,
+      (c) => personOnly(c) ?? (AWAITING_PERSON.includes(eff.status) ? null : `effect is ${eff.status}, not waiting for a person`),
+      (c) => {
+        writePrecedent(ctx, eff, precedentKey, eff.lowCents, eff.midCents, eff.highCents, reason, c.name, at);
+        ctx.db.raceEffects.effectKey.update({ ...eff, status: 'confirmed' });
+        signOff(ctx, effectKey, c.who, c.name, 'confirmation');
+        reconsiderPostings(ctx, effectKey, c.name);
+        return `confirmed at ${usd(eff.midCents)} by ${c.name}`;
+      });
   }
 );
+
+// The desk applies a person's recorded answer to the lines the question covered. It may only apply an answer that
+// exists: the question must be answered (or defaulted at its deadline) and must name this effect. A person's answer is
+// their sign-off; a deadline default is the desk's own conservative choice and signs nothing off.
+export const applyRaceAnswer = spacetimedb.reducer(
+  { questionKey: t.string(), effectKey: t.string(), corrected: t.bool(), lowCents: t.i64(), midCents: t.i64(), highCents: t.i64(), at: t.string() },
+  (ctx, { questionKey, effectKey, corrected, lowCents, midCents, highCents, at }) => {
+    requireIso('at', at);
+    if (!(lowCents <= midCents && midCents <= highCents)) throw new SenderError('invalid answer: band must be low <= mid <= high');
+    const q = ctx.db.raceQuestions.questionKey.find(questionKey);
+    const eff = ctx.db.raceEffects.effectKey.find(effectKey);
+    if (!q || !eff) throw new SenderError('no such question or effect');
+    const precedentKey = `${effectKey}@${questionKey}`;
+    if (ctx.db.racePrecedents.precedentKey.find(precedentKey)) return;
+    gate(ctx, 'apply_answer', effectKey,
+      (c) => {
+        if (c.role !== 'race') return 'only the race desk applies answers';
+        if (q.status !== 'answered' && q.status !== 'defaulted') return 'the question has no answer yet';
+        // The line must be one the question named, or one of its incident's own evidence (an answer settles the crash).
+        const inc = ctx.db.raceIncidents.incidentKey.find(q.incidentKey);
+        if (!q.effectKeys.split(',').includes(effectKey) && !(inc && inc.evidenceJson.includes(eff.eventKey))) return 'the question does not cover this effect';
+        if (!corrected && !AWAITING_PERSON.includes(eff.status)) return `effect is ${eff.status}`;
+        return null;
+      },
+      () => {
+        const answered = q.status === 'answered';
+        const by = answered ? q.answeredBy : 'deadline';
+        const reason = `${answered ? `${by} answered` : 'deadline default'} (${questionKey})`.slice(0, 512);
+        if (corrected) markCorrected(ctx, eff, precedentKey, lowCents, midCents, highCents, reason, by, at);
+        else {
+          writePrecedent(ctx, eff, precedentKey, eff.lowCents, eff.midCents, eff.highCents, reason, by, at);
+          ctx.db.raceEffects.effectKey.update({ ...eff, status: 'confirmed' });
+        }
+        if (answered) {
+          const who = answererOf(ctx, questionKey);
+          signOff(ctx, effectKey, who, by, `${/\(replayed\)\s*$/.test(by) ? 'replayed ' : ''}question:${questionKey}`);
+          reconsiderPostings(ctx, effectKey, by);
+          return `${by}'s answer applied${corrected ? `: corrected to ${usd(midCents)}` : ''}`;
+        }
+        return 'deadline default applied; no person signed this estimate off, so its posting still waits';
+      });
+  }
+);
+
+function answererOf(ctx: any, questionKey: string): string {
+  const rows = [...ctx.db.raceAudit.targetKey.filter(questionKey)].filter((a: any) => a.action === 'answer_question' && a.allowed);
+  return rows.length ? rows[rows.length - 1].who : '';
+}
 
 // ---------------------------------------------------------------- race-day flow reducers
 
@@ -969,16 +1298,17 @@ export const recordRaceActions = spacetimedb.reducer(
 
 export const setRaceActionStatus = spacetimedb.reducer(
   { actionKey: t.string(), status: t.string(), by: t.string(), at: t.string() },
-  (ctx, { actionKey, status, by, at }) => {
-    requireRole(ctx, 'race_head');
+  (ctx, { actionKey, status, at }) => {
     if (!['approved', 'rejected', 'done', 'cancelled'].includes(status)) throw new SenderError('invalid status');
     requireIso('at', at);
     const cur = ctx.db.raceActions.actionKey.find(actionKey);
     if (!cur) throw new SenderError('no such action');
-    if ((status === 'approved' || status === 'rejected') && cur.status !== 'awaiting_approval') {
-      throw new SenderError('invalid decision: action is not awaiting approval');
-    }
-    ctx.db.raceActions.actionKey.update({ ...cur, status, decidedBy: `person:${by}`, updatedAt: at });
+    gate(ctx, `action_${status}`, actionKey,
+      (c) => personOnly(c) ?? ((status === 'approved' || status === 'rejected') && cur.status !== 'awaiting_approval' ? 'action is not awaiting approval' : null),
+      (c) => {
+        ctx.db.raceActions.actionKey.update({ ...cur, status, decidedBy: `person:${c.name}`, updatedAt: at });
+        return `${cur.title}: ${status} by ${c.name}`;
+      });
   }
 );
 
@@ -987,11 +1317,9 @@ export const setRaceActionStatus = spacetimedb.reducer(
 export const chooseRaceActionOption = spacetimedb.reducer(
   { actionKey: t.string(), option: t.string(), by: t.string(), at: t.string() },
   (ctx, { actionKey, option, by, at }) => {
-    requireRole(ctx, 'race_head');
     requireIso('at', at);
     const cur = ctx.db.raceActions.actionKey.find(actionKey);
     if (!cur) throw new SenderError('no such action');
-    if (cur.status !== 'awaiting_approval') throw new SenderError('invalid choice: action is not awaiting a decision');
     let detail: Record<string, unknown>;
     try {
       detail = JSON.parse(cur.detailJson) as Record<string, unknown>;
@@ -999,10 +1327,15 @@ export const chooseRaceActionOption = spacetimedb.reducer(
       throw new SenderError('invalid choice: action detail is not JSON');
     }
     const options = Array.isArray(detail.options) ? (detail.options as { id?: string }[]) : [];
-    if (!options.some((o) => o.id === option)) throw new SenderError('invalid choice: not one of the priced options');
-    const detailJson = JSON.stringify({ ...detail, chosen: option, chosen_by: by, chosen_at: at });
-    if (detailJson.length > 4096) throw new SenderError('invalid choice: detail too large');
-    ctx.db.raceActions.actionKey.update({ ...cur, status: 'approved', detailJson, decidedBy: `person:${by}`, updatedAt: at });
+    gate(ctx, 'choose_option', actionKey,
+      (c) => personOrReplay(ctx, c, by) ?? (cur.status !== 'awaiting_approval' ? 'action is not awaiting a decision' : !options.some((o) => o.id === option) ? 'not one of the priced options' : null),
+      (c) => {
+        const who = c.person ? c.name : by.slice(0, 64);
+        const detailJson = JSON.stringify({ ...detail, chosen: option, chosen_by: who, chosen_at: at });
+        if (detailJson.length > 4096) throw new SenderError('invalid choice: detail too large');
+        ctx.db.raceActions.actionKey.update({ ...cur, status: 'approved', detailJson, decidedBy: `person:${who}`, updatedAt: at });
+        return `${cur.title}: ${who} chose ${option}${c.person ? '' : ' (replayed historical decision)'}`;
+      });
   }
 );
 
@@ -1054,23 +1387,39 @@ export const askRaceQuestion = spacetimedb.reducer(
     if (question.deadlineAt !== '') requireIso('question.deadlineAt', question.deadlineAt);
     if (ctx.db.raceQuestions.questionKey.find(question.questionKey)) return; // never ask twice
     ctx.db.raceQuestions.insert(question);
+    // The database keeps the deadline itself. Deadlines are in race time; the replay's pace maps them to the wall clock.
+    if (question.deadlineAt !== '') {
+      const raceSecs = (Date.parse(question.deadlineAt) - Date.parse(question.createdAt)) / 1000;
+      if (Number.isFinite(raceSecs) && raceSecs > 0) {
+        const wallMicros = BigInt(Math.round((raceSecs / rules(ctx).replayPace) * 1_000_000));
+        ctx.db.raceQuestionTimers.insert({ scheduledId: 0n, scheduledAt: ScheduleAt.time(ctx.timestamp.microsSinceUnixEpoch + wallMicros), questionKey: question.questionKey });
+      }
+    }
   }
 );
 
 // A person picks an option (or "neither", with their own band in answerJson). The desk reads the answer, applies
-// it and learns from it.
+// it and learns from it. The answer is recorded under the seat's name, not a name the client sends.
 export const answerRaceQuestion = spacetimedb.reducer(
   { questionKey: t.string(), answerJson: t.string(), by: t.string(), at: t.string() },
   (ctx, { questionKey, answerJson, by, at }) => {
-    requireRole(ctx, 'race_head');
     requireIso('at', at);
     requireLen('answerJson', answerJson, 2048);
     const q = ctx.db.raceQuestions.questionKey.find(questionKey);
     if (!q) throw new SenderError('no such question');
-    if (q.status !== 'open') throw new SenderError('invalid answer: question is no longer open');
-    ctx.db.raceQuestions.questionKey.update({ ...q, status: 'answered', answerJson, answeredBy: by });
+    gate(ctx, 'answer_question', questionKey,
+      (c) => personOrReplay(ctx, c, by) ?? (q.status !== 'open' ? `question is ${q.status}` : null),
+      (c) => {
+        const who = c.person ? c.name : by.slice(0, 64);
+        ctx.db.raceQuestions.questionKey.update({ ...q, status: 'answered', answerJson, answeredBy: who });
+        return c.person ? `answered by ${who}` : `replayed historical decision: ${who}`;
+      });
   }
 );
+
+function takeDefault(ctx: any, q: any) {
+  ctx.db.raceQuestions.questionKey.update({ ...q, status: 'defaulted', answerJson: JSON.stringify({ option: q.defaultOption, defaulted: true }), answeredBy: 'deadline' });
+}
 
 // Past its deadline, the desk takes the stated default (the conservative, reversible option) and says so.
 export const defaultRaceQuestion = spacetimedb.reducer(
@@ -1082,7 +1431,21 @@ export const defaultRaceQuestion = spacetimedb.reducer(
     if (!q) throw new SenderError('no such question');
     if (q.status !== 'open') return;
     if (q.deadlineAt === '' || q.deadlineAt > at) throw new SenderError('invalid default: deadline not reached');
-    ctx.db.raceQuestions.questionKey.update({ ...q, status: 'defaulted', answerJson: JSON.stringify({ option: q.defaultOption, defaulted: true }), answeredBy: 'deadline' });
+    takeDefault(ctx, q);
+  }
+);
+
+// The database's own timer: the deadline came due on the wall clock. No agent needs to be running.
+export const questionDeadlineDue = spacetimedb.reducer(
+  { name: 'question_deadline_due', onSchedule: raceQuestionTimers },
+  { timer: raceQuestionTimers.rowType },
+  (ctx, { timer }) => {
+    if (!ctx.sender.equals(ctx.databaseIdentity)) throw new SenderError('only the database schedules this');
+    const q = ctx.db.raceQuestions.questionKey.find(timer.questionKey);
+    if (!q || q.status !== 'open') return;
+    takeDefault(ctx, q);
+    audit(ctx, { who: ctx.sender.toHexString(), name: 'pit-wall timer', role: 'scheduler', person: false, owner: false }, 'question_default', q.questionKey, true,
+      `deadline reached with no answer: the database took the default (${q.defaultOption})`);
   }
 );
 
@@ -1121,13 +1484,16 @@ export const recordRaceClose = spacetimedb.reducer(
 
 export const approveRaceClose = spacetimedb.reducer(
   { closeKey: t.string(), by: t.string(), at: t.string() },
-  (ctx, { closeKey, by, at }) => {
-    requireRole(ctx, 'race_head');
+  (ctx, { closeKey, at }) => {
     requireIso('at', at);
     const cur = ctx.db.raceCloses.closeKey.find(closeKey);
     if (!cur) throw new SenderError('no such close');
-    if (cur.status !== 'draft') throw new SenderError('invalid approval: not a draft');
-    ctx.db.raceCloses.closeKey.update({ ...cur, status: 'approved', approvedBy: by });
+    gate(ctx, 'approve_close', closeKey,
+      (c) => personOnly(c) ?? (cur.status !== 'draft' ? 'not a draft' : null),
+      (c) => {
+        ctx.db.raceCloses.closeKey.update({ ...cur, status: 'approved', approvedBy: c.name });
+        return `weekend close approved by ${c.name}`;
+      });
   }
 );
 
@@ -1160,46 +1526,164 @@ export const recordRaceOptions = spacetimedb.reducer(
   }
 );
 
-const POSTING_STATUSES = ['posted', 'held', 'approved', 'rejected', 'failed'];
+const POSTING_STATUSES = ['authorized', 'posted', 'held', 'approved', 'rejected', 'failed'];
 const PostingInput = t.object('RacePostingInput', {
   entryKey: t.string(), incidentKey: t.string(), status: t.string(), erpEntryId: t.string(), costCapRef: t.string(), reviewRole: t.string(),
   reason: t.string(), amountCents: t.i64(), by: t.string(), at: t.string(),
 });
 
-// The desk records what it did with an entry: posted on its own authority (a rule covers it and it is under the
-// review threshold), held for a person, or posted after a person approved. A person's decision is never overwritten.
+// ---------------------------------------------------------------- posting: the database authorizes, the desk sends
+// An entry reaches the ERP only with pit-wall's authorization. The desk asks (requestRacePosting); the module decides
+// from the entry, the estimate behind it and the CFO's rules: `authorized` (the desk may send it now) or `held` for the
+// named review role. A person's sign-off on the estimate re-runs the decision in the same transaction. The ERP gateway
+// checks this row before it accepts a race entry, so even an agent holding the gateway key cannot post around it.
+
+const MODEL_DECIDERS = (decidedBy: string) => decidedBy === 'jev' || decidedBy.startsWith('claude');
+
+function postingDecision(ctx: any, entry: any): { role: string; reasons: string[] } {
+  const r = rules(ctx);
+  let role = '';
+  const reasons: string[] = [];
+  const need = (who: string, why: string) => {
+    reasons.push(why);
+    if ((REVIEW_RANK[who] ?? 0) > (REVIEW_RANK[role] ?? 0)) role = who;
+  };
+  const eff = entry.effectKey ? ctx.db.raceEffects.effectKey.find(entry.effectKey) : undefined;
+  if (eff) {
+    const signed = ctx.db.raceSignoffs.effectKey.find(eff.effectKey);
+    if (eff.status === 'corrected' && !signed) need('controller', 'the estimate behind it was corrected after the entry was raised');
+    else if (eff.status === 'needs_person' && !signed) need('controller', 'Jev was unsure of the estimate: a person confirms it first');
+    else if (MODEL_DECIDERS(eff.decidedBy) && !signed && !r.modelMayPostAlone) {
+      need('controller', `the estimate is ${eff.decidedBy === 'jev' ? "Jev's" : "the forecast agent's"} alone: a person signs it off before it posts`);
+    }
+  }
+  if (entry.amountCents >= r.cfoCents) need('cfo', `${usd(entry.amountCents)} is at or above the CFO's ${usd(r.cfoCents)} threshold`);
+  else if (entry.amountCents >= r.autoPostMaxCents) need('head_of_cost_cap', `${usd(entry.amountCents)} is at or above the ${usd(r.autoPostMaxCents)} materiality`);
+  if (entry.recognition === 'excluded') need('head_of_cost_cap', 'booked outside the cap (an FIA fine): the Head of Cost Cap confirms the exclusion');
+  // An adjustment never reaches the ERP ahead of the entry it adjusts: it waits with it, for the same person.
+  if (entry.entryKey.endsWith(':adj')) {
+    const orig = ctx.db.racePostings.entryKey.find(entry.entryKey.slice(0, -':adj'.length));
+    if (orig && orig.status !== 'posted') {
+      const who = orig.reviewRole || 'controller';
+      need(who, `it adjusts an entry not in the ERP yet (${orig.status}, for the ${who.replace(/_/g, ' ')}): the two are reviewed together`);
+    }
+  }
+  return { role, reasons };
+}
+
+function authorizedReason(ctx: any, entry: any, after?: string): string {
+  const eff = entry.effectKey ? ctx.db.raceEffects.effectKey.find(entry.effectKey) : undefined;
+  const signed = eff ? ctx.db.raceSignoffs.effectKey.find(eff.effectKey) : undefined;
+  const basis = signed ? `signed off by ${signed.name}` : eff ? `decided by ${eff.decidedBy}` : 'no estimate behind it';
+  return `${after ? `${after}: ` : ''}authorized by pit-wall: ${usd(entry.amountCents)} under the ${usd(rules(ctx).autoPostMaxCents)} limit, ${basis}`.slice(0, 512);
+}
+
+// A sign-off or correction changed the estimate behind some entries: re-run their posting decision now.
+function reconsiderPostings(ctx: any, effectKey: string, by: string) {
+  // Collect first: never write while an iterator is open.
+  const affected = [...ctx.db.raceEntries.iter()].filter((e: any) => e.effectKey === effectKey);
+  for (const entry of affected) {
+    const cur = ctx.db.racePostings.entryKey.find(entry.entryKey);
+    if (!cur || cur.status !== 'held') continue;
+    const d = postingDecision(ctx, entry);
+    if (d.role === '') {
+      ctx.db.racePostings.entryKey.update({ ...cur, status: 'authorized', reviewRole: '', reason: authorizedReason(ctx, entry, `after ${by}'s sign-off`), by: 'pit-wall', at: ctx.timestamp.toISOString() });
+    } else {
+      ctx.db.racePostings.entryKey.update({ ...cur, reviewRole: d.role, reason: `held for review: ${d.reasons.join('; ')}`.slice(0, 512) });
+    }
+  }
+}
+
+// The desk asks to post an entry. The module decides, records the decision on race_postings, and audits it.
+export const requestRacePosting = spacetimedb.reducer(
+  { entryKey: t.string(), at: t.string() },
+  (ctx, { entryKey, at }) => {
+    requireIso('at', at);
+    const entry = ctx.db.raceEntries.entryKey.find(entryKey);
+    if (!entry) throw new SenderError('invalid posting: no such entry');
+    const cur = ctx.db.racePostings.entryKey.find(entryKey);
+    gate(ctx, 'request_posting', entryKey,
+      (c) => (c.role !== 'race' ? 'only the race desk requests a posting' : null),
+      () => {
+        if (cur && cur.status !== 'failed') return `already ${cur.status}; the earlier decision stands`;
+        const d = postingDecision(ctx, entry);
+        const row = {
+          entryKey, incidentKey: entry.incidentKey, status: d.role ? 'held' : 'authorized', erpEntryId: cur?.erpEntryId ?? '', costCapRef: cur?.costCapRef ?? '',
+          reviewRole: d.role, reason: (d.role ? `held for review: ${d.reasons.join('; ')}` : authorizedReason(ctx, entry)).slice(0, 512),
+          amountCents: entry.amountCents, by: 'pit-wall', at,
+        };
+        if (cur) ctx.db.racePostings.entryKey.update(row);
+        else ctx.db.racePostings.insert(row);
+        return d.role ? `held for ${d.role}: ${d.reasons.join('; ')}` : 'authorized: the desk may send it to the ERP';
+      });
+  }
+);
+
+// The desk records what happened when it sent an entry: `posted` (with the ERP id) only for an entry pit-wall
+// authorized or a person approved, or `failed` (the authorization stands, so a retry needs no new decision).
+// A person's decision is never overwritten, and the module's own hold is never replaced by the desk's.
 export const recordRacePosting = spacetimedb.reducer(
   { posting: PostingInput },
   (ctx, { posting }) => {
-    requireRole(ctx, 'race');
     if (!POSTING_STATUSES.includes(posting.status)) throw new SenderError('invalid posting: unknown status');
     if (!ctx.db.raceEntries.entryKey.find(posting.entryKey)) throw new SenderError('invalid posting: no such entry');
     if (posting.status === 'posted' && posting.erpEntryId === '') throw new SenderError('invalid posting: a posted entry carries the ERP id');
     requireIso('posting.at', posting.at);
     requireLen('posting.reason', posting.reason, 512);
     const cur = ctx.db.racePostings.entryKey.find(posting.entryKey);
-    if (cur) {
-      if (cur.status === 'rejected') return;
-      if (cur.status === 'held' && posting.status === 'posted') throw new SenderError('invalid posting: a held entry needs a person first');
-      if (cur.status === 'posted' && posting.status !== 'posted') return;
-      ctx.db.racePostings.entryKey.update(posting);
-    } else {
-      ctx.db.racePostings.insert(posting);
-    }
+    gate(ctx, `record_${posting.status}`, posting.entryKey,
+      (c) => {
+        if (c.role !== 'race') return 'only the race desk records postings';
+        if (posting.status === 'approved' || posting.status === 'rejected' || posting.status === 'authorized') return `only ${posting.status === 'authorized' ? 'pit-wall' : 'a person'} sets ${posting.status}`;
+        if (posting.status === 'posted' && !(cur && (cur.status === 'authorized' || cur.status === 'approved' || cur.status === 'posted'))) {
+          return `not authorized in pit-wall (${cur ? cur.status : 'never requested'}): the entry may not be posted`;
+        }
+        return null;
+      },
+      () => {
+        if (posting.status === 'held') {
+          if (cur) return 'the module\'s own decision stands';
+          ctx.db.racePostings.insert(posting);
+          return 'held by the desk';
+        }
+        if (posting.status === 'failed') {
+          if (cur) ctx.db.racePostings.entryKey.update({ ...cur, reason: posting.reason, at: posting.at });
+          else ctx.db.racePostings.insert(posting);
+          return `send failed; ${cur ? `still ${cur.status}` : 'recorded'}`;
+        }
+        // posted
+        if (cur!.status === 'posted') return 'already posted';
+        ctx.db.racePostings.entryKey.update({ ...cur!, status: 'posted', erpEntryId: posting.erpEntryId, reason: posting.reason, by: posting.by, at: posting.at });
+        return `posted as ${posting.erpEntryId}`;
+      });
   }
 );
 
-// A person reviews a held entry: approved (the desk then posts it) or rejected (it never reaches the ERP).
+// A person reviews a held entry: approved (the desk then posts it) or rejected (it never reaches the ERP). The seat
+// must be at least as senior as the role it was held for, and the person who signed off the estimate behind it may
+// not also approve its posting (two people, every time).
 export const decideRacePosting = spacetimedb.reducer(
   { entryKey: t.string(), status: t.string(), by: t.string(), at: t.string() },
-  (ctx, { entryKey, status, by, at }) => {
-    requireRole(ctx, 'race_head');
+  (ctx, { entryKey, status, at }) => {
     if (!['approved', 'rejected'].includes(status)) throw new SenderError('invalid decision');
     requireIso('at', at);
     const cur = ctx.db.racePostings.entryKey.find(entryKey);
     if (!cur) throw new SenderError('no such posting');
-    if (cur.status !== 'held') throw new SenderError('invalid decision: the entry is not held for review');
-    ctx.db.racePostings.entryKey.update({ ...cur, status, by, at, reason: `${status} by ${by}: ${cur.reason}`.slice(0, 512) });
+    const entry = ctx.db.raceEntries.entryKey.find(entryKey);
+    const signed = entry?.effectKey ? ctx.db.raceSignoffs.effectKey.find(entry.effectKey) : undefined;
+    gate(ctx, `posting_${status}`, entryKey,
+      (c) => {
+        const p = personOnly(c);
+        if (p) return p;
+        if (cur.status !== 'held') return `the entry is ${cur.status}, not held for review`;
+        if ((SEAT_RANK[c.role] ?? 0) < (REVIEW_RANK[cur.reviewRole] ?? 0)) return `held for the ${cur.reviewRole.replace(/_/g, ' ')}; a ${c.role.replace(/_/g, ' ')} cannot decide it`;
+        if (status === 'approved' && signed && signed.who === c.who) return `${c.name} signed off the estimate behind this entry; a second person must approve its posting`;
+        return null;
+      },
+      (c) => {
+        ctx.db.racePostings.entryKey.update({ ...cur, status, by: c.name, at, reason: `${status} by ${c.name}: ${cur.reason}`.slice(0, 512) });
+        return `${status} by ${c.name} (${c.role})`;
+      });
   }
 );
 

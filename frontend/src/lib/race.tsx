@@ -19,6 +19,12 @@ import type {
   RacePrecedents,
   RaceQuestions,
   RaceSims,
+  RaceAudit,
+  RaceSeats,
+  RaceRules,
+  RaceSignoffs,
+  RaceOnline,
+  RaceLatency,
 } from '../module_bindings/types';
 
 // The race desk's six tables live in the pit-wall database, subscribed inside the same provider as
@@ -68,6 +74,15 @@ export interface RaceData {
   options: readonly RaceOptions[];
   postings: readonly RacePostings[];
   health: readonly RaceHealth[];
+  // pit-wall as the backend: every decision's audit row, who holds a seat, who is watching, the rules, the latency
+  audit: readonly RaceAudit[];
+  seats: readonly RaceSeats[];
+  rules: RaceRules | null;
+  signoffs: readonly RaceSignoffs[];
+  online: readonly RaceOnline[];
+  latency: RaceLatency | null;
+  /** this browser's seat, when it holds one */
+  mySeat: RaceSeats | null;
   /** A person reviews an entry held back from the ERP: approved (the desk posts it) or rejected. */
   decidePosting: (args: { entryKey: string; status: string; by: string; at: string }) => Promise<void>;
   /** A person decides an action that waits for them (approved | rejected | done | cancelled). */
@@ -106,6 +121,13 @@ const Ctx = createContext<RaceData>({
   options: [],
   postings: [],
   health: [],
+  audit: [],
+  seats: [],
+  rules: null,
+  signoffs: [],
+  online: [],
+  latency: null,
+  mySeat: null,
   decidePosting: () => Promise.reject(new Error('not connected to pit-wall')),
   decideAction: () => Promise.reject(new Error('not connected to pit-wall')),
   chooseOption: () => Promise.reject(new Error('not connected to pit-wall')),
@@ -145,49 +167,86 @@ export function RaceBridge({ children }: { children: ReactNode }) {
   const [options] = useTable(tables.raceOptions);
   const [postings] = useTable(tables.racePostings);
   const [health] = useTable(tables.raceHealth);
+  const [audit] = useTable(tables.raceAudit);
+  const [seats] = useTable(tables.raceSeats);
+  const [rulesRows] = useTable(tables.raceRules);
+  const [signoffs] = useTable(tables.raceSignoffs);
+  const [online] = useTable(tables.raceOnline);
+  const [latencyRows] = useTable(tables.raceLatency);
   const identityHex = conn.identity?.toHexString() ?? null;
   const getConnection = conn.getConnection;
+  const rules = rulesRows[0] ?? null;
+  const latency = latencyRows[0] ?? null;
+  const mySeat = useMemo(() => seats.find((x) => x.who.toHexString() === identityHex) ?? null, [seats, identityHex]);
+
+  // pit-wall commits a refusal as an audit row instead of throwing (so the attempt is on the record). After a decision,
+  // read this browser's newest audit row for the same key and surface a refusal as the button's error.
+  const auditRef = useRef(audit);
+  auditRef.current = audit;
+  const auditMark = useCallback(() => auditRef.current.reduce((m, a) => (a.auditId > m ? a.auditId : m), 0n), []);
+  const refusalFor = useCallback(
+    async (targetKey: string, since: bigint) => {
+      for (let i = 0; i < 20; i++) {
+        const mine = auditRef.current.filter((a) => a.who === identityHex && a.targetKey === targetKey && a.auditId > since);
+        if (mine.length) {
+          const last = mine.reduce((m, a) => (a.auditId > m.auditId ? a : m));
+          if (!last.allowed) throw new Error(`pit-wall refused: ${last.reason}`);
+          return;
+        }
+        await new Promise((r) => setTimeout(r, 50));
+      }
+    },
+    [identityHex]
+  );
 
   const correct = useCallback(
     async (args: CorrectArgs) => {
       const c = getConnection() as DbConnection | null;
       if (!c) throw new Error('not connected to pit-wall');
+      const since = auditMark();
       await c.reducers.correctRaceEffect(args);
+      await refusalFor(args.effectKey, since);
     },
-    [getConnection]
+    [getConnection, refusalFor, auditMark]
   );
 
   const confirm = useCallback(
     async (args: ConfirmArgs) => {
       const c = getConnection() as DbConnection | null;
       if (!c) throw new Error('not connected to pit-wall');
+      const since = auditMark();
       await c.reducers.confirmRaceEffect(args);
+      await refusalFor(args.effectKey, since);
     },
-    [getConnection]
+    [getConnection, refusalFor, auditMark]
   );
 
   const withConn = useCallback(
-    <A,>(fn: (c: DbConnection, args: A) => Promise<void>) =>
+    <A,>(fn: (c: DbConnection, args: A) => Promise<void>, keyOf: (args: A) => string) =>
       async (args: A) => {
         const c = getConnection() as DbConnection | null;
         if (!c) throw new Error('not connected to pit-wall');
+        const since = auditMark();
         await fn(c, args);
+        await refusalFor(keyOf(args), since);
       },
-    [getConnection]
+    [getConnection, refusalFor, auditMark]
   );
-  const decideAction = useMemo(() => withConn((c, a: { actionKey: string; status: string; by: string; at: string }) => c.reducers.setRaceActionStatus(a)), [withConn]);
-  const decidePosting = useMemo(() => withConn((c, a: { entryKey: string; status: string; by: string; at: string }) => c.reducers.decideRacePosting(a)), [withConn]);
-  const chooseOption = useMemo(() => withConn((c, a: { actionKey: string; option: string; by: string; at: string }) => c.reducers.chooseRaceActionOption(a)), [withConn]);
-  const answer = useMemo(() => withConn((c, a: { questionKey: string; answerJson: string; by: string; at: string }) => c.reducers.answerRaceQuestion(a)), [withConn]);
-  const approveClose = useMemo(() => withConn((c, a: { closeKey: string; by: string; at: string }) => c.reducers.approveRaceClose(a)), [withConn]);
+  const decideAction = useMemo(() => withConn((c, a: { actionKey: string; status: string; by: string; at: string }) => c.reducers.setRaceActionStatus(a), (a) => a.actionKey), [withConn]);
+  const decidePosting = useMemo(() => withConn((c, a: { entryKey: string; status: string; by: string; at: string }) => c.reducers.decideRacePosting(a), (a) => a.entryKey), [withConn]);
+  const chooseOption = useMemo(() => withConn((c, a: { actionKey: string; option: string; by: string; at: string }) => c.reducers.chooseRaceActionOption(a), (a) => a.actionKey), [withConn]);
+  const answer = useMemo(() => withConn((c, a: { questionKey: string; answerJson: string; by: string; at: string }) => c.reducers.answerRaceQuestion(a), (a) => a.questionKey), [withConn]);
+  const approveClose = useMemo(() => withConn((c, a: { closeKey: string; by: string; at: string }) => c.reducers.approveRaceClose(a), (a) => a.closeKey), [withConn]);
 
   const value = useMemo<RaceData>(
     () => ({
       connected: conn.isActive, identityHex, events, cars, effects, forecasts, policies, precedents, correct, confirm,
       incidents, beliefs, actions, entries, entryLines, questions, sims, closes, options, postings, health, decidePosting, decideAction, chooseOption, answer, approveClose,
+      audit, seats, rules, signoffs, online, latency, mySeat,
     }),
     [conn.isActive, identityHex, events, cars, effects, forecasts, policies, precedents, correct, confirm,
-      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, options, postings, health, decidePosting, decideAction, chooseOption, answer, approveClose]
+      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, options, postings, health, decidePosting, decideAction, chooseOption, answer, approveClose,
+      audit, seats, rules, signoffs, online, latency, mySeat]
   );
   // A replay at full speed writes thousands of rows a second, and each one re-renders the tables above. The views
   // below see the data at most four times a second, so a fast replay cannot freeze the page.

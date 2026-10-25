@@ -333,6 +333,10 @@ class Weekend:
         stats = {}
         self._done = {"jev_calls": 0, "jev_ms_sum": 0.0, "jev_errors": 0, "forecasts": 0}  # totals of the finished sessions
         booked_before = 0
+        if self.sink:
+            self.sink.set_clock(self.pace)  # pit-wall keeps question deadlines on the wall clock at this pace
+            # a demo script replays the team's documented decisions; pit-wall records them only in replay mode
+            self.sink.call("set_replay_decisions", [bool(self.script)])
         for key in self.sessions:
             if self.until and self._session_start(key) > self.until:
                 break
