@@ -152,10 +152,11 @@ export function Spine({ onWindow }: { onWindow?: (from: number, to: number) => v
   return (
     <section className="spine" aria-labelledby="spine-h" ref={wrap}>
       <div className="spine-head">
-        <h2 id="spine-h">The shift</h2>
+        <h2 id="spine-h">Activity, by actor, over time</h2>
         <p className="muted">
-          {plural(events.length, 'recorded action')} since {clock(new Date(t0))}. Agents propose, people decide, only the gateway
-          posts. {totalDenied > 0 && <span className="tone-alert">{plural(totalDenied, 'attempt')} refused by the module.</span>}
+          One lane per actor; a bar is how many actions it took in that minute, a red cross is an attempt the module refused.{' '}
+          {plural(events.length, 'recorded action')} since {clock(new Date(t0))}.{' '}
+          {totalDenied > 0 && <span className="tone-alert">{plural(totalDenied, 'attempt')} refused.</span>} Click a column to see those rows below.
         </p>
       </div>
       <div className="spine-plot">

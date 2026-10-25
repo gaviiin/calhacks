@@ -4,6 +4,8 @@ import { Shell, useSeatStatus, type View } from './components/Shell';
 import { useCostCap } from './lib/costcap';
 import { useRevenue } from './lib/revenue';
 import { AuditView } from './views/AuditView';
+import { ConnectView } from './views/ConnectView';
+import { RiskView } from './views/RiskView';
 import { CostCapView } from './views/CostCapView';
 import { EvidenceView } from './views/EvidenceView';
 import { InboxView } from './views/InboxView';
@@ -60,11 +62,15 @@ export default function App() {
         {!cc.ready && route.view !== 'revenue' && route.view !== 'evidence' && route.view !== 'race' ? (
           <p className="muted loading">Connecting to the cost cap desk on SpacetimeDB…</p>
         ) : route.view === 'overview' ? (
-          <Overview inbox={inbox} status={status} toAudit={(a, b) => nav(`/audit/${Math.floor(a)}-${Math.ceil(b)}`)} />
+          <Overview inbox={inbox} status={status} />
         ) : route.view === 'inbox' ? (
           <InboxView inbox={inbox} selected={route.arg} select={(k) => nav(`/inbox/${k}`)} status={status} />
         ) : route.view === 'cost-cap' ? (
           <CostCapView status={status} inbox={inbox} />
+        ) : route.view === 'risk' ? (
+          <RiskView />
+        ) : route.view === 'connect' ? (
+          <ConnectView />
         ) : route.view === 'revenue' ? (
           <RevenueView />
         ) : route.view === 'race' ? (

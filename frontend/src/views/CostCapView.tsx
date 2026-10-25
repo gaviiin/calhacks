@@ -1,5 +1,8 @@
 import { useMemo, useState } from 'react';
+import { AgentWork } from '../components/AgentWork';
 import { CapTrack } from '../components/CapTrack';
+import { CapTrajectory } from '../components/CapTrajectory';
+import { Decisions } from '../components/Decisions';
 import { resolveEntry, type InboxItem } from '../components/inboxModel';
 import type { SeatStatus } from '../components/Shell';
 import { WhyPane } from '../components/Why';
@@ -84,7 +87,9 @@ function CategoryBars() {
 
 function PolicyTree({ select }: { select: (key: string) => void }) {
   const cc = useCostCap();
-  const roots = cc.policies.filter((p) => p.parentPolicyId === undefined).sort((a, b) => b.precedentCount - a.precedentCount);
+  const [all, setAll] = useState(false);
+  const everyRoot = cc.policies.filter((p) => p.parentPolicyId === undefined).sort((a, b) => b.precedentCount - a.precedentCount);
+  const roots = all ? everyRoot : everyRoot.slice(0, 12);
   const kids = (p: Policy) => cc.policies.filter((c) => c.parentPolicyId === p.id);
   const used = useMemo(() => {
     const m = new Map<bigint, number>();
@@ -113,19 +118,26 @@ function PolicyTree({ select }: { select: (key: string) => void }) {
         </p>
       </div>
       <ul className="policy-tree">{roots.map((p) => row(p, 0))}</ul>
+      {everyRoot.length > 12 && (
+        <button className="btn btn--small" onClick={() => setAll((a) => !a)}>
+          {all ? 'Show the 12 most used' : `Show all ${everyRoot.length} policies`}
+        </button>
+      )}
     </section>
   );
 }
 
 export function CostCapView({ status, inbox }: { status: SeatStatus; inbox: InboxItem[] }) {
   const cc = useCostCap();
-  const [state, setState] = useState<string>('PROPOSED');
+  const [picked, setState] = useState<string | null>(null);
   const [selected, setSelected] = useState<string | null>(null);
   const counts = useMemo(() => {
     const m = new Map<string, number>();
     for (const w of cc.workItems) m.set(w.state, (m.get(w.state) ?? 0) + 1);
     return m;
   }, [cc.workItems]);
+  // open on what waits for a person, else the first state with lines
+  const state = picked ?? ['PROPOSED', 'NEEDS_INFO', 'APPROVED', 'POSTED', 'NEW', 'REJECTED'].find((s) => counts.get(s)) ?? 'PROPOSED';
   const rows = cc.workItems
     .filter((w) => w.state === state)
     .slice()
@@ -136,6 +148,10 @@ export function CostCapView({ status, inbox }: { status: SeatStatus; inbox: Inbo
   return (
     <div className="costcap">
       <CapTrack />
+      <div className="two-up">
+        <CapTrajectory compact />
+        <Decisions />
+      </div>
       <div className="split">
         <div className="split-list">
           <section aria-labelledby="queue-h">
@@ -183,6 +199,7 @@ export function CostCapView({ status, inbox }: { status: SeatStatus; inbox: Inbo
             </div>
           </section>
           <CategoryBars />
+          <AgentWork limit={16} select={setSelected} />
           <PolicyTree select={setSelected} />
         </div>
         <WhyPane entry={toEntry(selected)} status={status} />
