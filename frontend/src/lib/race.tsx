@@ -12,7 +12,9 @@ import type {
   RaceEvents,
   RaceForecasts,
   RaceIncidents,
+  RaceOptions,
   RacePolicies,
+  RacePostings,
   RacePrecedents,
   RaceQuestions,
   RaceSims,
@@ -62,6 +64,10 @@ export interface RaceData {
   questions: readonly RaceQuestions[];
   sims: readonly RaceSims[];
   closes: readonly RaceCloses[];
+  options: readonly RaceOptions[];
+  postings: readonly RacePostings[];
+  /** A person reviews an entry held back from the ERP: approved (the desk posts it) or rejected. */
+  decidePosting: (args: { entryKey: string; status: string; by: string; at: string }) => Promise<void>;
   /** A person decides an action that waits for them (approved | rejected | done | cancelled). */
   decideAction: (args: { actionKey: string; status: string; by: string; at: string }) => Promise<void>;
   /** A person answers a question: answerJson is {"option": id} or {"option": "neither", "band": [lo, mid, hi], "note": ...}. */
@@ -95,6 +101,9 @@ const Ctx = createContext<RaceData>({
   questions: [],
   sims: [],
   closes: [],
+  options: [],
+  postings: [],
+  decidePosting: () => Promise.reject(new Error('not connected to pit-wall')),
   decideAction: () => Promise.reject(new Error('not connected to pit-wall')),
   chooseOption: () => Promise.reject(new Error('not connected to pit-wall')),
   answer: () => Promise.reject(new Error('not connected to pit-wall')),
@@ -117,6 +126,8 @@ export function RaceBridge({ children }: { children: ReactNode }) {
   const [questions] = useTable(tables.raceQuestions);
   const [sims] = useTable(tables.raceSims);
   const [closes] = useTable(tables.raceCloses);
+  const [options] = useTable(tables.raceOptions);
+  const [postings] = useTable(tables.racePostings);
   const identityHex = conn.identity?.toHexString() ?? null;
   const getConnection = conn.getConnection;
 
@@ -148,6 +159,7 @@ export function RaceBridge({ children }: { children: ReactNode }) {
     [getConnection]
   );
   const decideAction = useMemo(() => withConn((c, a: { actionKey: string; status: string; by: string; at: string }) => c.reducers.setRaceActionStatus(a)), [withConn]);
+  const decidePosting = useMemo(() => withConn((c, a: { entryKey: string; status: string; by: string; at: string }) => c.reducers.decideRacePosting(a)), [withConn]);
   const chooseOption = useMemo(() => withConn((c, a: { actionKey: string; option: string; by: string; at: string }) => c.reducers.chooseRaceActionOption(a)), [withConn]);
   const answer = useMemo(() => withConn((c, a: { questionKey: string; answerJson: string; by: string; at: string }) => c.reducers.answerRaceQuestion(a)), [withConn]);
   const approveClose = useMemo(() => withConn((c, a: { closeKey: string; by: string; at: string }) => c.reducers.approveRaceClose(a)), [withConn]);
@@ -155,10 +167,10 @@ export function RaceBridge({ children }: { children: ReactNode }) {
   const value = useMemo<RaceData>(
     () => ({
       connected: conn.isActive, identityHex, events, cars, effects, forecasts, policies, precedents, correct, confirm,
-      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, decideAction, chooseOption, answer, approveClose,
+      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, options, postings, decidePosting, decideAction, chooseOption, answer, approveClose,
     }),
     [conn.isActive, identityHex, events, cars, effects, forecasts, policies, precedents, correct, confirm,
-      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, decideAction, chooseOption, answer, approveClose]
+      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, options, postings, decidePosting, decideAction, chooseOption, answer, approveClose]
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }
@@ -190,6 +202,8 @@ export function scopeToMeeting(race: RaceData, meeting: number | null): RaceData
     questions: race.questions.filter((q) => incKeys.has(q.incidentKey)),
     sims: race.sims.filter((x) => x.meetingKey === meeting),
     closes: race.closes.filter((c) => c.meetingKey === meeting),
+    options: race.options.filter((o) => o.meetingKey === meeting),
+    postings: race.postings.filter((p) => incKeys.has(p.incidentKey) || race.entries.some((e) => e.entryKey === p.entryKey && incKeys.has(e.incidentKey))),
   };
 }
 

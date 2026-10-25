@@ -369,6 +369,41 @@ const raceCloses = table(
   }
 );
 
+// What each pit-wall decision would do right now, per team car: stay out, pit now, other compound, the same stop
+// under green (after Varun Sanjeev's decision cockpit). Priced, never recommended; one row per car per decision point.
+const raceOptions = table(
+  { name: 'race_options', public: true },
+  {
+    optionKey: t.string().primaryKey(), // `${sessionKey}-${car}-L${lap}-${trigger}`
+    sessionKey: t.u32().index('btree'),
+    meetingKey: t.u32(),
+    driverNumber: t.u32(),
+    lap: t.u32(),
+    at: t.string(),
+    condition: t.string(), // green | sc | vsc | red
+    trigger: t.string(), // what opened the window: lap | safety_car | vsc | red_flag | pit_window | incident
+    optionsJson: t.string(),
+  }
+);
+
+// Where each race entry went in the books: posted to the ERP (through the gateway key), held for a person's review,
+// approved then posted, or rejected. One row per entry; the ERP's own id is kept.
+const racePostings = table(
+  { name: 'race_postings', public: true },
+  {
+    entryKey: t.string().primaryKey(),
+    incidentKey: t.string().index('btree'),
+    status: t.string(), // posted | held | approved | rejected | failed
+    erpEntryId: t.string(),
+    costCapRef: t.string(), // the cost cap desk row it landed in, when it did
+    reviewRole: t.string(), // who must review a held entry: controller | cfo | head_of_cost_cap
+    reason: t.string(), // why it was posted on its own, or why it waits
+    amountCents: t.i64(),
+    by: t.string(),
+    at: t.string(),
+  }
+);
+
 const spacetimedb = schema({
   fiaDocuments,
   config,
@@ -391,6 +426,8 @@ const spacetimedb = schema({
   raceQuestions,
   raceSims,
   raceCloses,
+  raceOptions,
+  racePostings,
 });
 export default spacetimedb;
 
@@ -1087,5 +1124,65 @@ export const markRaceCloseSent = spacetimedb.reducer(
     if (!cur) throw new SenderError('no such close');
     if (cur.status !== 'approved') throw new SenderError('invalid send: a person must approve the close first');
     ctx.db.raceCloses.closeKey.update({ ...cur, status: 'sent' });
+  }
+);
+
+const OptionsInput = t.object('RaceOptionsInput', {
+  optionKey: t.string(), sessionKey: t.u32(), meetingKey: t.u32(), driverNumber: t.u32(), lap: t.u32(), at: t.string(),
+  condition: t.string(), trigger: t.string(), optionsJson: t.string(),
+});
+
+export const recordRaceOptions = spacetimedb.reducer(
+  { options: OptionsInput },
+  (ctx, { options }) => {
+    requireRole(ctx, 'race');
+    requireIso('options.at', options.at);
+    requireLen('options.optionsJson', options.optionsJson, 8192);
+    if (/recommend/i.test(options.optionsJson)) throw new SenderError('invalid options: the desk prices options, it does not recommend');
+    if (ctx.db.raceOptions.optionKey.find(options.optionKey)) ctx.db.raceOptions.optionKey.update(options);
+    else ctx.db.raceOptions.insert(options);
+  }
+);
+
+const POSTING_STATUSES = ['posted', 'held', 'approved', 'rejected', 'failed'];
+const PostingInput = t.object('RacePostingInput', {
+  entryKey: t.string(), incidentKey: t.string(), status: t.string(), erpEntryId: t.string(), costCapRef: t.string(), reviewRole: t.string(),
+  reason: t.string(), amountCents: t.i64(), by: t.string(), at: t.string(),
+});
+
+// The desk records what it did with an entry: posted on its own authority (a rule covers it and it is under the
+// review threshold), held for a person, or posted after a person approved. A person's decision is never overwritten.
+export const recordRacePosting = spacetimedb.reducer(
+  { posting: PostingInput },
+  (ctx, { posting }) => {
+    requireRole(ctx, 'race');
+    if (!POSTING_STATUSES.includes(posting.status)) throw new SenderError('invalid posting: unknown status');
+    if (!ctx.db.raceEntries.entryKey.find(posting.entryKey)) throw new SenderError('invalid posting: no such entry');
+    if (posting.status === 'posted' && posting.erpEntryId === '') throw new SenderError('invalid posting: a posted entry carries the ERP id');
+    requireIso('posting.at', posting.at);
+    requireLen('posting.reason', posting.reason, 512);
+    const cur = ctx.db.racePostings.entryKey.find(posting.entryKey);
+    if (cur) {
+      if (cur.status === 'rejected') return;
+      if (cur.status === 'held' && posting.status === 'posted') throw new SenderError('invalid posting: a held entry needs a person first');
+      if (cur.status === 'posted' && posting.status !== 'posted') return;
+      ctx.db.racePostings.entryKey.update(posting);
+    } else {
+      ctx.db.racePostings.insert(posting);
+    }
+  }
+);
+
+// A person reviews a held entry: approved (the desk then posts it) or rejected (it never reaches the ERP).
+export const decideRacePosting = spacetimedb.reducer(
+  { entryKey: t.string(), status: t.string(), by: t.string(), at: t.string() },
+  (ctx, { entryKey, status, by, at }) => {
+    requireRole(ctx, 'race_head');
+    if (!['approved', 'rejected'].includes(status)) throw new SenderError('invalid decision');
+    requireIso('at', at);
+    const cur = ctx.db.racePostings.entryKey.find(entryKey);
+    if (!cur) throw new SenderError('no such posting');
+    if (cur.status !== 'held') throw new SenderError('invalid decision: the entry is not held for review');
+    ctx.db.racePostings.entryKey.update({ ...cur, status, by, at, reason: `${status} by ${by}: ${cur.reason}`.slice(0, 512) });
   }
 );

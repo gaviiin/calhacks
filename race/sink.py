@@ -13,7 +13,7 @@ import threading
 import httpx
 
 from finance.spacetime_mirror import cli_token
-from race.events import Action, Close, Effect, Entry, Incident, Question, RaceEvent, SimRun, now_iso
+from race.events import Action, Close, Effect, Entry, Incident, OptionSet, Posting, Question, RaceEvent, SimRun, now_iso
 
 
 class RaceSink:
@@ -92,6 +92,12 @@ class RaceSink:
 
     def close_sent(self, close_key: str, at: str) -> bool:
         return self.call("mark_race_close_sent", [close_key, at])
+
+    def options(self, o: OptionSet) -> bool:
+        return self.call("record_race_options", [o.wire()])
+
+    def posting(self, p: Posting) -> bool:
+        return self.call("record_race_posting", [p.wire()])
 
     def correct(self, effect_key: str, low: int, mid: int, high: int, reason: str, by: str, at: str) -> bool:
         return self.call("correct_race_effect", [effect_key, low, mid, high, reason, by, at])

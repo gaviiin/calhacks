@@ -277,3 +277,22 @@ describe('a decision with priced options', () => {
     expect(() => d.as('head', ctx => mod.chooseRaceActionOption(ctx, { actionKey: 'w1', option: 'repair', by: 'tp', at: AT }))).toThrow(/not awaiting/);
   });
 });
+
+describe('options and postings', () => {
+  it('never stores a recommendation, and a held entry needs a person before it posts', () => {
+    const d = makeDesk();
+    const o = { optionKey: '9636-43-L30-safety_car', sessionKey: 9636, meetingKey: 1249, driverNumber: 43, lap: 30, at: AT, condition: 'sc', trigger: 'safety_car',
+      optionsJson: JSON.stringify([{ id: 'stay_out' }, { id: 'pit_now' }]) };
+    d.as('race', ctx => mod.recordRaceOptions(ctx, { options: o }));
+    expect(() => d.as('race', ctx => mod.recordRaceOptions(ctx, { options: { ...o, optionsJson: '{"recommended":"pit_now"}' } }))).toThrow(/does not recommend/);
+    const e = { entryKey: 'e1', incidentKey: 'i', effectKey: '', memo: 'm', effectiveDate: '2024-11-03', recognition: 'incurred', capRelevant: true,
+      amountCents: 100n, status: 'proposed', evidenceJson: '[]', at: AT };
+    d.as('race', ctx => mod.postRaceEntry(ctx, { entry: e, lines: [{ account: '6050', debitCents: 100n, creditCents: 0n, memo: '' }, { account: '2100', debitCents: 0n, creditCents: 100n, memo: '' }] }));
+    const p = { entryKey: 'e1', incidentKey: 'i', status: 'held', erpEntryId: '', costCapRef: '', reviewRole: 'cfo', reason: 'material', amountCents: 100n, by: 'desk', at: AT };
+    d.as('race', ctx => mod.recordRacePosting(ctx, { posting: p }));
+    expect(() => d.as('race', ctx => mod.recordRacePosting(ctx, { posting: { ...p, status: 'posted', erpEntryId: 'JE-1' } }))).toThrow(/needs a person/);
+    d.as('head', ctx => mod.decideRacePosting(ctx, { entryKey: 'e1', status: 'approved', by: 'cfo', at: AT }));
+    d.as('race', ctx => mod.recordRacePosting(ctx, { posting: { ...p, status: 'posted', erpEntryId: 'JE-1', by: 'desk' } }));
+    expect(d.h.db.racePostings.entryKey.find('e1')?.erpEntryId).toBe('JE-1');
+  });
+});

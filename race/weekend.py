@@ -26,8 +26,8 @@ import time
 from dataclasses import dataclass, field
 from pathlib import Path
 
-from race import cap_forecast, close as close_mod, incidents, ledger, logistics, questions, season_sim
-from race.events import Action, Close, Effect, Entry, Incident, Question, RaceEvent, SimRun, now_iso
+from race import cap_forecast, close as close_mod, erp, incidents, ledger, logistics, questions, season_sim, strategy
+from race.events import Action, Close, Effect, Entry, Incident, OptionSet, Posting, Question, RaceEvent, SimRun, now_iso
 from race.replay import Replay
 from race.sink import RaceSink
 
@@ -59,6 +59,8 @@ class WeekendState:
     results: dict[int, list[dict]] = field(default_factory=dict)  # session_key -> session_result rows, when known
     spares: dict = field(default_factory=dict)  # part -> {"at_track": n, "factory": n}, from logistics.load_manifest
     applied_answers: set = field(default_factory=set)  # question keys whose answer the desk has applied
+    options: dict[str, OptionSet] = field(default_factory=dict)  # the latest priced decisions per car
+    postings: dict[str, Posting] = field(default_factory=dict)  # entry key -> where it went in the books
     close: Close | None = None
     replay: Replay | None = None  # the live session's replay (its EffectsContext, policies, precedents)
 
@@ -103,6 +105,12 @@ class Weekend:
         st.now = ev.at
         if effects:
             st.effects.append((ev, effects))
+        t0 = time.perf_counter()
+        for o in strategy.options_for(st, ev):  # the strategy desk's priced decisions, on every decision point
+            st.options[o.option_key] = o
+            if self.sink:
+                self.sink.options(o)
+        self._time("strategy", t0)
         t0 = time.perf_counter()
         inc = self.book.observe(ev, effects, jev)
         self._time("log", t0)
@@ -167,12 +175,25 @@ class Weekend:
         self.replan(f"result:{replay.session.get('session_key')}")
 
     def book_entries(self, ents: list[Entry]) -> None:
+        fresh = []
         for e in ents:
             if e.entry_key not in self.state.entries:
                 self.state.entries[e.entry_key] = e
+                fresh.append(e)
                 if self.sink:
                     self.sink.entry(e)
                 self.say(f"[account] {e.memo[:90]} ${e.amount_cents / 100:,.0f} ({e.recognition})")
+        if fresh:
+            self.record_postings(erp.post(self.state, fresh, self.sink))
+
+    def record_postings(self, postings: list[Posting]) -> None:
+        t0 = time.perf_counter()
+        for p in postings:
+            self.state.postings[p.entry_key] = p
+            if self.sink:
+                self.sink.posting(p)
+            self.say(f"[books] {p.entry_key[:40]} {p.status}{' ' + p.erp_entry_id if p.erp_entry_id else ''}: {p.reason[:90]}")
+        self._time("books", t0)
 
     # ------------------------------------------------------------------ stages that run on their own clock
     def replan(self, trigger: str) -> None:
@@ -190,7 +211,9 @@ class Weekend:
             self.say(f"[re-plan] {head} ({run.runtime_ms} ms)")
 
     def apply_answers(self) -> None:
-        """Answers a person gave in the dashboard since the last event: apply them and re-decide what they cover."""
+        """Answers a person gave in the dashboard since the last event: apply them and re-decide what they cover.
+        Held entries a person approved are posted to the ERP here too."""
+        self.record_postings(erp.apply_reviews(self.state, self.sink))
         changed = questions.apply_answers(self.state, self.sink, self.book)
         for inc in changed:
             self.state.incidents[inc.incident_key] = inc
@@ -225,7 +248,8 @@ class Weekend:
             stats[key] = r.run()
             booked_before += r.ctx.race_cost_mid
         waited = 0.0
-        while self.linger and waited < self.linger and any(q.status == "open" for q in self.state.questions.values()):
+        while self.linger and waited < self.linger and (any(q.status == "open" for q in self.state.questions.values())
+                                                         or any(p.status == "held" for p in self.state.postings.values())):
             time.sleep(1.0)
             waited += 1.0
             self.apply_answers()

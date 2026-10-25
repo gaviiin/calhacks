@@ -346,3 +346,53 @@ class Close:
         return {"close_key": self.close_key, "meeting_key": self.meeting_key, "closed_at": canonical(self.closed_at), "root_hash": self.root_hash,
                 "totals_json": _j(self.totals)[:8192], "briefs_json": _j(self.briefs)[:32768], "status": self.status,
                 "approved_by": self.approved_by, "leaves": self.leaves}
+
+
+@dataclass
+class OptionSet:
+    """What each decision the pit wall has would do now for one car: stay out, pit now, other compound, the same stop
+    under green. Each option carries its position range, time, money and cap effects; none is recommended."""
+
+    option_key: str
+    session_key: int
+    meeting_key: int
+    driver_number: int
+    lap: int
+    at: str
+    condition: str  # green | sc | vsc | red
+    trigger: str
+    options: list[dict]
+
+    def wire(self) -> dict:
+        return {"option_key": self.option_key, "session_key": self.session_key, "meeting_key": self.meeting_key,
+                "driver_number": self.driver_number, "lap": self.lap, "at": canonical(self.at), "condition": self.condition,
+                "trigger": self.trigger, "options_json": _j(self.options)[:8192]}
+
+
+POSTING_STATUSES = ("posted", "held", "approved", "rejected", "failed")
+
+
+@dataclass
+class Posting:
+    """Where one race entry went in the books: posted to the ERP, held for review, approved, rejected or failed."""
+
+    entry_key: str
+    incident_key: str
+    status: str
+    amount_cents: int
+    reason: str
+    erp_entry_id: str = ""
+    cost_cap_ref: str = ""
+    review_role: str = ""
+    by: str = "race_desk"
+    at: str = ""
+
+    def __post_init__(self) -> None:
+        if self.status not in POSTING_STATUSES:
+            raise ValueError(f"unknown posting status {self.status!r}")
+        self.at = canonical(self.at) if self.at else now_iso()
+
+    def wire(self) -> dict:
+        return {"entry_key": self.entry_key, "incident_key": self.incident_key, "status": self.status, "erp_entry_id": self.erp_entry_id,
+                "cost_cap_ref": self.cost_cap_ref, "review_role": self.review_role, "reason": self.reason[:512],
+                "amount_cents": self.amount_cents, "by": self.by, "at": self.at}

@@ -29,6 +29,7 @@ interface Route {
 
 function parse(hash: string): Route {
   const [, view = '', ...rest] = hash.replace(/^#/, '').split('/');
+  if (view === 'day') return { view: 'overview', arg: rest.join('/') || null };
   const known: View[] = ['race', 'replay', 'inbox', 'books', 'cost-cap', 'risk', 'revenue', 'evidence', 'audit', 'connect', 'pitwall'];
   return { view: (known as string[]).includes(view) ? (view as View) : 'overview', arg: rest.join('/') || null };
 }
@@ -68,7 +69,7 @@ export default function App() {
       <Shell view={route.view} go={(v) => nav(v === 'overview' ? '/' : `/${v}`)} inboxCount={inbox.length} status={status} />
       <main id="main" className="page">
         {route.view === 'overview' ? (
-          <RaceDayView />
+          <RaceDayView role={route.arg} nav={nav} />
         ) : route.view === 'replay' ? (
           <RaceReplayView arg={route.arg} nav={nav} inbox={inbox} status={status} />
         ) : route.view === 'race' ? (

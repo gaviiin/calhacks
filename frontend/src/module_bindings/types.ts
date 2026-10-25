@@ -431,6 +431,32 @@ export const RaceIncidents = __t.object("RaceIncidents", {
 });
 export type RaceIncidents = __Infer<typeof RaceIncidents>;
 
+export const RaceOptions = __t.object("RaceOptions", {
+  optionKey: __t.string(),
+  sessionKey: __t.u32(),
+  meetingKey: __t.u32(),
+  driverNumber: __t.u32(),
+  lap: __t.u32(),
+  at: __t.string(),
+  condition: __t.string(),
+  trigger: __t.string(),
+  optionsJson: __t.string(),
+});
+export type RaceOptions = __Infer<typeof RaceOptions>;
+
+export const RaceOptionsInput = __t.object("RaceOptionsInput", {
+  optionKey: __t.string(),
+  sessionKey: __t.u32(),
+  meetingKey: __t.u32(),
+  driverNumber: __t.u32(),
+  lap: __t.u32(),
+  at: __t.string(),
+  condition: __t.string(),
+  trigger: __t.string(),
+  optionsJson: __t.string(),
+});
+export type RaceOptionsInput = __Infer<typeof RaceOptionsInput>;
+
 export const RacePolicies = __t.object("RacePolicies", {
   policyId: __t.string(),
   parentPolicyId: __t.string(),
@@ -462,6 +488,34 @@ export const RacePolicyInput = __t.object("RacePolicyInput", {
   createdAt: __t.string(),
 });
 export type RacePolicyInput = __Infer<typeof RacePolicyInput>;
+
+export const RacePostingInput = __t.object("RacePostingInput", {
+  entryKey: __t.string(),
+  incidentKey: __t.string(),
+  status: __t.string(),
+  erpEntryId: __t.string(),
+  costCapRef: __t.string(),
+  reviewRole: __t.string(),
+  reason: __t.string(),
+  amountCents: __t.i64(),
+  by: __t.string(),
+  at: __t.string(),
+});
+export type RacePostingInput = __Infer<typeof RacePostingInput>;
+
+export const RacePostings = __t.object("RacePostings", {
+  entryKey: __t.string(),
+  incidentKey: __t.string(),
+  status: __t.string(),
+  erpEntryId: __t.string(),
+  costCapRef: __t.string(),
+  reviewRole: __t.string(),
+  reason: __t.string(),
+  amountCents: __t.i64(),
+  by: __t.string(),
+  at: __t.string(),
+});
+export type RacePostings = __Infer<typeof RacePostings>;
 
 export const RacePrecedents = __t.object("RacePrecedents", {
   precedentKey: __t.string(),
