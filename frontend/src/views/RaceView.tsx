@@ -1,598 +1,653 @@
-import { useMemo, useState, type FormEvent } from 'react';
-import { IconApproved, IconDenied, IconLive, IconWaiting } from '../components/icons';
-import { usdShort } from '../lib/format';
-import { useRace } from '../lib/race';
+import { useEffect, useMemo, useRef, useState } from 'react';
+import { LineChart, type Marker } from '../charts/LineChart';
+import { Attention } from '../components/Attention';
+import { CarStage, Gauges, RunningOrder, SponsorPanel, StatPills } from '../components/RaceHero';
+import { IconArrow, IconBolt, IconPause, IconPlay, IconRadio, IconRestart, IconShield, IconSkip } from '../components/icons';
+import { resolveEntry, type InboxItem } from '../components/inboxModel';
+import type { SeatStatus } from '../components/Shell';
+import { WhyPane } from '../components/Why';
+import { useCostCap } from '../lib/costcap';
+import { pct, usdShort } from '../lib/format';
 import {
-  DRIVERS,
-  TEAM,
-  TRACK_LABEL,
-  band,
-  carLabel,
-  eventDetail,
-  involvesTeam,
-  isTeamCar,
-  kindMeta,
-  ledger,
-  live,
-  readForecast,
-  readJev,
-  signed,
-  sortTime,
-  tierOf,
-  trackStatus,
-  utcClock,
-  type TrackStatus, stepClock } from '../lib/raceModel';
-import type { CarState, RaceEffects, RaceEvents, RaceForecasts } from '../module_bindings/types';
-import { useSeat } from '../lib/seat';
+  FEATURED,
+  SEASONS,
+  SPEEDS,
+  duration,
+  framesOf,
+  manualSeconds,
+  sponsorName,
+  useDerived,
+  usePlayback,
+  useRaces,
+  useReplay,
+  utc,
+  type Crash,
+  type Frame,
+  type RadioCall,
+  type Replay,
+  type SpeedEvent,
+} from '../lib/racedesk';
 
-// The race desk: the live tape of a Grand Prix read as money. Events arrive from the replayer, the
-// agents turn them into cost and revenue bands, a person corrects what they got wrong, and the
-// policies that decided them learn from the correction.
+// The race, as the finance desk sees it. A real race replays lap by lap; every lap the running order is
+// re-priced under Meridian's sponsor contracts and in expected championship prize money. Crashes go to the
+// cost cap forecast the lap they happen, FIA documents are acted on 15 seconds after they are published,
+// and the scoreboard sets each reaction against the month-end close a finance team runs today.
 
-type Filter = 'all' | 'team' | 'money';
+const MATERIALITY_CENTS = 25_000_000; // finance/config.py: $250,000
 
-const TRACK_TONE: Record<TrackStatus, string> = {
-  GREEN: 'flag--ok',
-  SC: 'flag--hold',
-  VSC: 'flag--hold',
-  RED: 'flag--alert',
-  CHEQUERED: '',
-  UNKNOWN: '',
-};
+function signed(c: number): string {
+  if (Math.abs(c) < 50) return '$0';
+  return `${c > 0 ? '+' : ''}${usdShort(c)}`;
+}
 
-const CAR_STATUS: Record<string, { label: string; tone: string }> = {
-  running: { label: 'running', tone: 'flag--ok' },
-  pit: { label: 'in pit', tone: 'flag--hold' },
-  retired_suspected: { label: 'stopped?', tone: 'flag--hold' },
-  retired: { label: 'OUT', tone: 'flag--alert' },
-};
+function parseRoute(arg: string | null): { season: number; round: number } {
+  const m = arg?.match(/^(\d{4})-(\d+)$/);
+  return m ? { season: Number(m[1]), round: Number(m[2]) } : { season: FEATURED[0].season, round: FEATURED[0].round };
+}
 
-// ---------------------------------------------------------------- header + timing
+// ------------------------------------------------------------------------------------------ picker
 
-function Header({ events }: { events: readonly RaceEvents[] }) {
-  const latest = events[0];
-  const lap = events.reduce((m, e) => Math.max(m, e.lap), 0);
-  const status = trackStatus(events);
+function Picker({ season, round, go }: { season: number; round: number; go: (s: number, r: number) => void }) {
+  const { races } = useRaces(season);
   return (
-    <section className="race-head" aria-label="Session">
-      <div>
-        <h1>
-          Race desk <span className="muted">· {TEAM}</span>
-        </h1>
-        <p className="muted">
-          {latest ? (
-            <>
-              Session <span className="mono">{latest.sessionKey}</span> · meeting <span className="mono">{latest.meetingKey}</span> · {events.length.toLocaleString('en-US')}{' '}
-              events on the tape
-            </>
-          ) : (
-            'Waiting for the replayer to write the first event.'
-          )}
-        </p>
-      </div>
-      <div className="race-head-figures">
-        <div className="race-figure">
-          <span className="race-figure-label">Lap</span>
-          <b className="mono">{lap || '—'}</b>
-        </div>
-        <span className={`flag ${TRACK_TONE[status]}`} role="status">
-          {status === 'RED' ? <IconDenied size={12} /> : status === 'GREEN' ? <IconLive size={12} /> : <IconWaiting size={12} />}
-          {status === 'UNKNOWN' ? TRACK_LABEL[status] : `${status} · ${TRACK_LABEL[status]}`}
-        </span>
-      </div>
-    </section>
-  );
-}
-
-function CarCard({ car }: { car: CarState }) {
-  const st = CAR_STATUS[car.status] ?? { label: car.status.replace(/_/g, ' '), tone: '' };
-  const code = DRIVERS[car.driverNumber] ?? '';
-  return (
-    <article className={`car car--${car.status}`} aria-label={`Car ${car.driverNumber} ${code}`}>
-      <div className="car-pos">
-        <b className="mono">P{car.position || '—'}</b>
-        <span className="car-id">
-          <span className="mono">#{car.driverNumber}</span> {code}
-        </span>
-      </div>
-      <span className={`flag ${st.tone}`}>
-        {car.status === 'retired' ? <IconDenied size={12} /> : car.status === 'running' ? <IconLive size={12} /> : <IconWaiting size={12} />}
-        {st.label}
-      </span>
-      <dl className="car-facts">
-        <div>
-          <dt>Tyre</dt>
-          <dd>
-            {car.compound ? car.compound.toUpperCase() : '—'} <span className="muted">age {car.tyreAge}</span>
-          </dd>
-        </div>
-        <div>
-          <dt>Gap</dt>
-          <dd className="mono">{car.gapToLeader || '—'}</dd>
-        </div>
-        <div>
-          <dt>Lap</dt>
-          <dd className="mono">{car.lap}</dd>
-        </div>
-        <div>
-          <dt>Last pit</dt>
-          <dd className="mono">{car.lastPitLap ? `L${car.lastPitLap}` : '—'}</dd>
-        </div>
-      </dl>
-    </article>
-  );
-}
-
-function Timing({ cars }: { cars: readonly CarState[] }) {
-  const team = cars.filter((c) => c.teamName === TEAM || isTeamCar(c.driverNumber)).sort((a, b) => a.driverNumber - b.driverNumber);
-  return (
-    <section className="race-timing" aria-label="Team cars">
-      {team.length ? team.map((c) => <CarCard key={c.driverNumber} car={c} />) : <p className="muted">No car state yet.</p>}
-    </section>
-  );
-}
-
-// ---------------------------------------------------------------- tape
-
-function Tape({ events, moneyKeys }: { events: readonly RaceEvents[]; moneyKeys: ReadonlySet<string> }) {
-  const [filter, setFilter] = useState<Filter>('all');
-  const [all, setAll] = useState(false);
-  const shown = useMemo(() => {
-    const f = events.filter((e) => (filter === 'all' ? true : filter === 'team' ? involvesTeam(e) : moneyKeys.has(e.eventKey)));
-    return { total: f.length, rows: all ? f : f.slice(0, 200) };
-  }, [events, filter, all, moneyKeys]);
-  const teamCount = useMemo(() => events.filter(involvesTeam).length, [events]);
-  return (
-    <section className="race-tape" aria-labelledby="tape-h">
-      <div className="sec-head">
-        <h2 id="tape-h">Event tape</h2>
-        <div className="filters" role="group" aria-label="Filter the tape">
-          {(
-            [
-              ['all', 'All', events.length],
-              ['team', TEAM, teamCount],
-              ['money', 'Money', moneyKeys.size],
-            ] as [Filter, string, number][]
-          ).map(([id, label, n]) => (
-            <button key={id} type="button" className={filter === id ? 'filter filter--on' : 'filter'} aria-pressed={filter === id} onClick={() => setFilter(id)}>
-              {label} <span className="mono">{n}</span>
-            </button>
-          ))}
-        </div>
-      </div>
-      {shown.rows.length ? (
-        <ol className="tape">
-          {shown.rows.map((e) => {
-            const meta = kindMeta(e.kind);
-            const team = involvesTeam(e);
-            const cls = ['tape-row', team && 'tape-row--team', team && meta.loud && 'tape-row--loud', moneyKeys.has(e.eventKey) && 'tape-row--money']
-              .filter(Boolean)
-              .join(' ');
-            return (
-              <li key={e.eventKey} className={cls}>
-                <span className="tape-time mono">{utcClock(e.at)}</span>
-                <span className="tape-lap mono">{e.lap ? `L${e.lap}` : ''}</span>
-                <span className={`tape-car mono ${isTeamCar(e.driverNumber) ? 'tape-car--team' : ''}`}>{carLabel(e.driverNumber)}</span>
-                <span className="tape-kind">
-                  <span className="tape-glyph mono" aria-hidden="true">
-                    {meta.glyph}
-                  </span>
-                  {meta.label}
-                </span>
-                <span className="tape-detail">
-                  {eventDetail(e)}
-                  {moneyKeys.has(e.eventKey) && <span className="tape-tag">$ booked</span>}
-                </span>
-              </li>
-            );
-          })}
-        </ol>
-      ) : (
-        <p className="muted empty">{events.length ? 'Nothing on the tape matches this filter.' : 'The tape is empty until the replayer starts.'}</p>
-      )}
-      {shown.total > 200 && (
-        <button type="button" className="btn tape-more" onClick={() => setAll((v) => !v)}>
-          {all ? 'Show the latest 200' : `Show all ${shown.total.toLocaleString('en-US')}`}
-        </button>
-      )}
-    </section>
-  );
-}
-
-// ---------------------------------------------------------------- money
-
-const TIER_LABEL: Record<string, string> = { policy: 'policy', jev: 'Jev', claude: 'Claude', code: 'code' };
-
-function dollars(cents: bigint): string {
-  return (Number(cents) / 100).toFixed(2);
-}
-
-function toCents(s: string): bigint | null {
-  const n = Number(s.replace(/[$,\s]/g, ''));
-  return Number.isFinite(n) ? BigInt(Math.round(n * 100)) : null;
-}
-
-function CorrectForm({ effect, onDone }: { effect: RaceEffects; onDone: () => void }) {
-  const race = useRace();
-  const { person } = useSeat();
-  const [low, setLow] = useState(dollars(effect.lowCents));
-  const [mid, setMid] = useState(dollars(effect.midCents));
-  const [high, setHigh] = useState(dollars(effect.highCents));
-  const [reason, setReason] = useState('');
-  const [busy, setBusy] = useState(false);
-  const [error, setError] = useState<string | null>(null);
-
-  const submit = async (ev: FormEvent) => {
-    ev.preventDefault();
-    const l = toCents(low);
-    const m = toCents(mid);
-    const h = toCents(high);
-    if (l === null || m === null || h === null) return setError('Each figure needs to be a dollar amount.');
-    if (!(l <= m && m <= h)) return setError('The band must run low ≤ mid ≤ high.');
-    if (!reason.trim()) return setError('Say why: the precedent carries the reason.');
-    setBusy(true);
-    setError(null);
-    try {
-      await race.correct({ effectKey: effect.effectKey, lowCents: l, midCents: m, highCents: h, reason: reason.trim(), by: person.name, at: new Date().toISOString() });
-      onDone();
-    } catch (e) {
-      const msg = e instanceof Error ? e.message : String(e);
-      setError(
-        /race_head|unauthorized/i.test(msg)
-          ? `This browser's pit-wall identity does not hold the Head of Racing Finance seat. Grant it with: uv run python scripts/race_grant.py --role race_head --identity ${race.identityHex ?? '<hex>'}`
-          : msg
-      );
-    } finally {
-      setBusy(false);
-    }
-  };
-
-  return (
-    <form className="correct" onSubmit={submit}>
-      <div className="correct-band">
-        <label className="field">
-          <span>Low $</span>
-          <input inputMode="decimal" value={low} onChange={(e) => setLow(e.target.value)} />
+    <div className="race-picker">
+      <ul className="race-featured" aria-label="Demo races">
+        {FEATURED.map((f) => {
+          const on = f.season === season && f.round === round;
+          return (
+            <li key={`${f.season}-${f.round}`}>
+              <button type="button" className={`race-feat${on ? ' race-feat--on' : ''}`} onClick={() => go(f.season, f.round)} aria-pressed={on}>
+                <span className="race-feat-label">{f.label}</span>
+                <span className="race-feat-story">{f.story}</span>
+              </button>
+            </li>
+          );
+        })}
+      </ul>
+      <div className="race-select">
+        <label>
+          <span className="ctl-label">Season</span>
+          <select value={season} onChange={(e) => go(Number(e.target.value), 1)}>
+            {SEASONS.map((s) => (
+              <option key={s} value={s}>
+                {s}
+              </option>
+            ))}
+          </select>
         </label>
-        <label className="field">
-          <span>Mid $</span>
-          <input inputMode="decimal" value={mid} onChange={(e) => setMid(e.target.value)} />
-        </label>
-        <label className="field">
-          <span>High $</span>
-          <input inputMode="decimal" value={high} onChange={(e) => setHigh(e.target.value)} />
+        <label>
+          <span className="ctl-label">Race</span>
+          <select value={round} onChange={(e) => go(season, Number(e.target.value))}>
+            {races.length === 0 && <option value={round}>Round {round}</option>}
+            {races.map((r) => (
+              <option key={r.round} value={r.round}>
+                R{r.round} · {r.name.replace(' Grand Prix', ' GP')}
+              </option>
+            ))}
+          </select>
         </label>
       </div>
-      <label className="field">
-        <span>Reason</span>
-        <input value={reason} onChange={(e) => setReason(e.target.value)} placeholder="floor was already in spares; only the labour" maxLength={512} />
-      </label>
-      {error && (
-        <p className="outcome outcome--alert" role="alert">
-          <IconDenied size={14} />
-          <span>{error}</span>
-        </p>
-      )}
-      <div className="decide-actions">
-        <button type="submit" className="btn btn--primary" disabled={busy}>
-          {busy ? 'Correcting…' : 'Correct the band'}
-        </button>
-        <button type="button" className="btn" onClick={onDone} disabled={busy}>
-          Cancel
-        </button>
-      </div>
-    </form>
+    </div>
   );
 }
 
-function EffectRow({ effect, connected }: { effect: RaceEffects; connected: boolean }) {
-  const [open, setOpen] = useState(false);
-  const tier = tierOf(effect.decidedBy);
-  const jev = tier === 'jev' ? readJev(effect.jevJson) : null;
-  const corrected = effect.status === 'corrected';
-  const cls = ['effect', `effect--${tier}`, effect.status === 'proposed' && 'effect--proposed', corrected && 'effect--corrected'].filter(Boolean).join(' ');
+// ------------------------------------------------------------------------------------------ header + scrubber
+
+function Header({ r, pb }: { r: Replay; pb: ReturnType<typeof usePlayback> }) {
+  const f = pb.frame;
+  const lap = f ? r.laps[f.lapIndex] : null;
+  const phase = f?.kind === 'after' ? { cls: 'status--hold', t: 'After the flag' } : lap && lap.lap === r.race_laps ? { cls: 'status--ok', t: 'Chequered flag' } : pb.playing ? { cls: 'status--live', t: 'Live' } : { cls: 'status--muted', t: pb.i === 0 ? 'On the grid' : 'Paused' };
   return (
-    <li className={cls}>
-      <div className="effect-top">
-        <span className={`tier tier--${tier}`}>
-          {TIER_LABEL[tier]}
-          {jev && (
-            <span className="tier-note mono">
-              {jev.ms !== null && `${Math.round(jev.ms)}ms`}
-              {jev.topSeverity && ` · ${jev.topSeverity.name} ${Math.round(jev.topSeverity.p * 100)}%`}
-            </span>
-          )}
+    <section className="race-head" aria-label="Race">
+      <nav className="crumbs small muted" aria-label="Breadcrumb">
+        <a href="#/">Pit wall</a> <span aria-hidden>›</span> <a href="#/race">Race desk</a> <span aria-hidden>›</span> <span>
+          {r.season} R{r.round}
         </span>
-        <span className="effect-car mono">{carLabel(effect.driverNumber)}</span>
-        <span className="effect-bucket mono muted">{effect.bucket}</span>
-        {effect.status !== 'autonomous' && <span className={`state state--${effect.status === 'proposed' ? 'proposed' : 'rejected'}`}>{effect.status}</span>}
-        <span className="effect-time mono muted">{utcClock(effect.at)}</span>
-      </div>
-      <div className="effect-line">
-        <span className="effect-memo">{effect.memo || effect.kind.replace(/_/g, ' ')}</span>
-        <span className="effect-amount mono">
-          <b>{effect.kind === 'revenue_projection' ? signed(effect.midCents) : usdShort(effect.midCents)}</b>
-          <small className="muted">{band(effect.lowCents, effect.highCents)}</small>
-        </span>
-      </div>
-      {effect.why && <p className="effect-why muted">{effect.why}</p>}
-      <div className="effect-foot">
-        <span className="muted mono">
-          {effect.basis} · {effect.decidedBy}
-        </span>
-        {!corrected && !open && (
-          <button
-            type="button"
-            className="btn btn--small"
-            onClick={() => setOpen(true)}
-            disabled={!connected}
-            title={connected ? 'Correct this band; the policy that decided it learns' : 'not connected to pit-wall'}
-          >
-            Correct
+      </nav>
+      <div className="race-head-row">
+        <div className="race-head-title">
+          <h1>
+            {r.race} <span className={`status ${phase.cls}`}>{phase.t}</span>
+          </h1>
+          <p className="muted small">
+            {r.date} · {r.race_laps} laps · Meridian cars {Object.entries(r.team_cars).map(([c, code]) => `${c} ${code}`).join(' and ')} · {r.remaining_rounds} rounds left
+          </p>
+        </div>
+        <div className="race-controls">
+          <div className="seg-ctl" role="group" aria-label="Replay speed">
+            {SPEEDS.map((s) => (
+              <button key={s} type="button" className={pb.speed === s ? 'seg-btn seg-btn--on' : 'seg-btn'} onClick={() => pb.setSpeed(s)} aria-pressed={pb.speed === s}>
+                {s}×
+              </button>
+            ))}
+          </div>
+          <button type="button" className="btn pillbtn" onClick={pb.end} disabled={pb.done}>
+            <IconSkip size={13} /> To the end
           </button>
+          <button type="button" className="btn btn--primary pillbtn race-play" onClick={pb.playing ? pb.pause : pb.play} aria-label={pb.playing ? 'Pause' : 'Play'}>
+            {pb.playing ? <IconPause size={14} /> : pb.done ? <IconRestart size={14} /> : <IconPlay size={14} />}
+            {pb.playing ? 'Pause' : pb.done ? 'Replay' : pb.i === 0 ? 'Start the race' : 'Resume'}
+          </button>
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function Scrubber({ r, frames, pb }: { r: Replay; frames: Frame[]; pb: ReturnType<typeof usePlayback> }) {
+  const at = (i: number) => `${(i / Math.max(1, frames.length - 1)) * 100}%`;
+  return (
+    <div className="race-scrub">
+      <input
+        type="range"
+        min={0}
+        max={frames.length - 1}
+        value={pb.i}
+        onChange={(e) => pb.seek(Number(e.target.value))}
+        aria-label="Replay position"
+        style={{ ['--p' as string]: at(pb.i) }}
+      />
+      <div className="race-scrub-ticks" aria-hidden>
+        {frames.map((fr) => (fr.kind === 'after' ? <span key={fr.i} className="race-scrub-tick race-scrub-tick--doc" style={{ left: at(fr.i) }} title={fr.label} /> : null))}
+        {r.crashes.map((c) => {
+          const idx = r.laps.findIndex((l) => l.lap === c.lap);
+          return idx < 0 ? null : <span key={`c${c.car}`} className="race-scrub-tick race-scrub-tick--crash" style={{ left: at(idx) }} title={`${c.driver} crash`} />;
+        })}
+        <span className="race-scrub-flag" style={{ left: at(r.laps.length - 1) }} title="Chequered flag" />
+      </div>
+      <div className="race-scrub-legend small muted">
+        <span>Lights out</span>
+        <span>
+          <i className="lg lg--crash" /> crash <i className="lg lg--doc" /> FIA document <i className="lg lg--flag" /> flag
+        </span>
+      </div>
+    </div>
+  );
+}
+
+// ------------------------------------------------------------------------------------------ telemetry
+
+function Telemetry({ r, upto }: { r: Replay; upto: number }) {
+  const xs = r.laps.map((l) => l.lap);
+  const swing = r.laps.map((l, i) => (i <= upto ? l.total - r.start.total : null));
+  const bonus = r.laps.map((l, i) => (i <= upto ? l.bonus_usd : null));
+  const allSwing = r.laps.map((l) => l.total - r.start.total);
+  const lo = Math.min(0, ...allSwing);
+  const hi = Math.max(0, ...allSwing);
+  const radioByLap = useMemo(() => {
+    const m = new Map<number, RadioCall[]>();
+    for (const c of r.radio) m.set(c.lap, [...(m.get(c.lap) ?? []), c]);
+    return m;
+  }, [r]);
+  const markers: Marker[] = [];
+  for (const c of r.radio) {
+    if (c.lap > (r.laps[upto]?.lap ?? 0)) continue;
+    if (c.kind === 'retirement') markers.push({ x: c.lap, label: `${c.status === 'Collision' || c.status === 'Accident' ? 'Crash' : 'Out'} L${c.lap}`, tone: 'alert' });
+    if (c.kind === 'safety_car') markers.push({ x: c.lap, label: `SC L${c.lap}`, tone: 'hold' });
+  }
+  const tip = (i: number) => {
+    const l = r.laps[i];
+    const calls = (radioByLap.get(l.lap) ?? []).filter((c) => c.kind !== 'lights_out');
+    return (
+      <div className="race-tip">
+        <div className="tooltip-row">
+          <span className="tooltip-line" style={{ background: 'var(--s2)' }} />
+          <span>
+            <b className="mono">{usdShort(l.total)}</b> <span className="muted">on the line</span>{' '}
+            <span className={l.delta >= 0 ? 'tone-ok mono' : 'tone-alert mono'}>{l.lap ? signed(l.delta) : ''}</span>
+          </span>
+        </div>
+        <div className="tooltip-row">
+          <span className="tooltip-line" style={{ background: 'var(--lime)' }} />
+          <span>
+            <b className="mono">{usdShort(l.bonus_usd)}</b> <span className="muted">sponsor bonuses</span>
+          </span>
+        </div>
+        <p className="race-tip-pos mono">
+          {Object.entries(l.cars)
+            .map(([, c]) => `${c.code} ${c.position ? `P${c.position}` : 'out'}`)
+            .join(' · ')}{' '}
+          · {utc(l.clock)}
+        </p>
+        {calls.slice(0, 2).map((c, k) => (
+          <p key={k} className="race-tip-call">
+            {c.text}
+          </p>
+        ))}
+      </div>
+    );
+  };
+  return (
+    <section className="race-telemetry panel" aria-labelledby="tele-h">
+      <div className="sec-head">
+        <h2 id="tele-h">Money telemetry</h2>
+        <p className="muted">
+          What the running order is worth to Meridian against lights out, lap by lap: sponsor bonuses earned at each position, plus expected championship prize money
+          over the {r.remaining_rounds} remaining rounds. Hover a lap for the call.
+        </p>
+      </div>
+      <LineChart
+        xs={xs}
+        series={[{ key: 'swing', label: 'vs lights out', values: swing, color: '--s2', area: 0.08 }]}
+        xLabel={(x) => (x === 0 ? 'Start' : `L${x}`)}
+        yLabel={(y) => signed(y)}
+        yMin={lo - (hi - lo) * 0.08}
+        yMax={hi + (hi - lo) * 0.08 || 1}
+        zero
+        height={250}
+        markers={markers}
+        tooltip={tip}
+        ariaLabel="Change in money on the line since lights out, by lap"
+      />
+      <h3 className="race-sub-h">Sponsor bonuses on the board</h3>
+      <LineChart
+        xs={xs}
+        series={[{ key: 'bonus', label: 'bonuses', values: bonus, color: '--lime', area: 0.1 }]}
+        xLabel={(x) => (x === 0 ? 'Start' : `L${x}`)}
+        yLabel={(y) => usdShort(y)}
+        yMin={0}
+        yMax={Math.max(...r.laps.map((l) => l.bonus_usd)) * 1.1 || 1}
+        height={150}
+        tooltip={tip}
+        ariaLabel="Sponsor bonuses earned at the running order, by lap"
+      />
+    </section>
+  );
+}
+
+// ------------------------------------------------------------------------------------------ radio
+
+const RADIO_LABEL: Record<string, string> = {
+  lights_out: 'Lights out',
+  money: 'Money',
+  retirement: 'Retirement',
+  safety_car: 'Safety car',
+  flag: 'Flag',
+  final_classification: 'FIA final',
+};
+
+function Radio({ calls, after }: { calls: RadioCall[]; after: SpeedEvent[] }) {
+  const items = useMemo(() => {
+    const out: { key: string; clock: string; kind: string; label: string; text: string; delta?: number }[] = calls.map((c, i) => ({
+      key: `r${i}`,
+      clock: c.clock,
+      kind: c.kind,
+      label: c.lap ? `${RADIO_LABEL[c.kind] ?? c.kind} · L${c.lap}` : RADIO_LABEL[c.kind] ?? c.kind,
+      text: c.text,
+      delta: c.delta,
+    }));
+    for (const s of after) {
+      if (s.event.startsWith('Crash')) continue;
+      out.push({ key: `s${s.event}`, clock: s.acted_at ?? '', kind: 'fia', label: s.event, text: `${s.action[0].toUpperCase()}${s.action.slice(1)}.` });
+    }
+    return out.sort((a, b) => (a.clock < b.clock ? 1 : -1));
+  }, [calls, after]);
+  const list = useRef<HTMLOListElement>(null);
+  useEffect(() => {
+    list.current?.scrollTo({ top: 0, behavior: 'smooth' });
+  }, [items.length]);
+  return (
+    <section className="race-radio panel" aria-labelledby="radio-h">
+      <div className="sec-head">
+        <h2 id="radio-h">
+          <IconRadio size={16} /> Finance radio
+        </h2>
+        <p className="muted">Every call the desk makes, newest first, with the race clock.</p>
+      </div>
+      <ol className="radio-list" ref={list} aria-live="polite">
+        {items.length === 0 && <li className="muted radio-empty">Start the race to hear the calls.</li>}
+        {items.map((c) => (
+          <li key={c.key} className={`radio-call radio-call--${c.kind}`}>
+            <span className="radio-time mono">{utc(c.clock)}</span>
+            <span className="radio-kind">{c.label}</span>
+            {c.delta != null && <span className={`radio-delta mono ${c.delta >= 0 ? 'tone-ok' : 'tone-alert'}`}>{signed(c.delta)}</span>}
+            <p className="radio-text">{c.text}</p>
+          </li>
+        ))}
+      </ol>
+    </section>
+  );
+}
+
+// ------------------------------------------------------------------------------------------ crash → cost cap
+
+function RiskBar({ label, p, tone }: { label: string; p: number; tone: 'muted' | 'hold' | 'alert' }) {
+  const w = Math.max(1.5, Math.min(100, (p / 0.15) * 100));
+  return (
+    <div className="riskbar">
+      <span className="riskbar-label">{label}</span>
+      <span className="riskbar-track">
+        <span className={`riskbar-fill riskbar-fill--${tone}`} style={{ width: `${w}%` }} />
+      </span>
+      <b className="mono riskbar-val">{pct(p, 0)}</b>
+    </div>
+  );
+}
+
+function CrashDesk({ r, crashes }: { r: Replay; crashes: Crash[] }) {
+  const all = r.crashes;
+  return (
+    <section className="race-crash panel" aria-labelledby="crash-h">
+      <div className="sec-head">
+        <h2 id="crash-h">
+          <IconBolt size={16} /> Crash to cost cap
+        </h2>
+        <p className="muted">
+          A crash is a repair bill, and repairs count against the cost cap. The desk books an estimate the lap it happens and re-runs the season forecast. Power unit failures
+          are excluded from the cap (D5.1.1.n), so they book nothing.
+        </p>
+      </div>
+      {all.length === 0 ? (
+        <p className="muted empty">No crash for Meridian in this race. Try Spa 2026 or Singapore 2023.</p>
+      ) : crashes.length === 0 ? (
+        <p className="muted empty">
+          {all.length === 1 ? 'A crash is coming in this race.' : `${all.length} crashes are coming in this race.`} Keep the replay running.
+        </p>
+      ) : (
+        crashes.map((c) => (
+          <article key={`${c.car}${c.lap}`} className="crash-card">
+            <header className="crash-head">
+              <span className="crash-who">
+                {c.driver} · <span className="tone-alert">{c.status.toLowerCase()}</span> · lap {c.lap}
+              </span>
+              <span className="mono muted">{utc(c.clock)} UTC</span>
+            </header>
+            <div className="crash-figs">
+              <div>
+                <b className="mono crash-big">{c.damage_estimate != null ? usdShort(c.damage_estimate) : '—'}</b>
+                <span className="small muted">damage estimate booked</span>
+              </div>
+              <div>
+                <b className="mono crash-big tone-ok">{c.lap_ms ? duration(c.lap_ms / 1000) : '—'}</b>
+                <span className="small muted">to book it (the lap it happened on)</span>
+              </div>
+            </div>
+            {c.p_breach_after != null && c.p_breach_before != null ? (
+              <div className="crash-risk">
+                <p className="small muted">Chance Meridian breaks the 2026 cost cap this season</p>
+                <RiskBar label="Before the crash" p={c.p_breach_before} tone="muted" />
+                <RiskBar label="After the crash" p={c.p_breach_after} tone="hold" />
+                {c.p_breach_after_with_final_package != null && <RiskBar label="…and if we still bring the final upgrade" p={c.p_breach_after_with_final_package} tone="alert" />}
+                <a className="link small" href="#/risk">
+                  Open the cap risk model <IconArrow size={12} />
+                </a>
+              </div>
+            ) : (
+              <p className="small muted">The season forecast models the 2026 rules; for {r.season} the desk books the damage estimate only.</p>
+            )}
+          </article>
+        ))
+      )}
+    </section>
+  );
+}
+
+// ------------------------------------------------------------------------------------------ speed
+
+function SpeedBoard({ r, clock, flagged }: { r: Replay; clock: string; flagged: boolean }) {
+  const rows = r.speed;
+  const maxManual = Math.max(86400 * 10, ...rows.map((s) => manualSeconds(s.manual_baseline) ?? 0));
+  const L = (s: number) => Math.log10(Math.max(1, s)) / Math.log10(maxManual);
+  return (
+    <section className="race-speed panel" aria-labelledby="speed-h">
+      <div className="sec-head">
+        <h2 id="speed-h">Speed scoreboard</h2>
+        <p className="muted">
+          Every money event in this race: when it happened, when Pit Wall acted, and when a finance team running a month-end close would have. Bars are on a log scale; a
+          month is long.
+        </p>
+      </div>
+      <div className="table-wrap">
+        <table className="data speed-table">
+          <thead>
+            <tr>
+              <th>Event</th>
+              <th>Happened</th>
+              <th>Acted</th>
+              <th className="speed-bars-h">Pit Wall vs month-end close</th>
+              <th className="num">At stake</th>
+              <th className="num">Kept off invoices</th>
+            </tr>
+          </thead>
+          <tbody>
+            {rows.map((s) => {
+              const reached = s.acted_at ? s.acted_at <= clock : flagged;
+              const manual = manualSeconds(s.manual_baseline);
+              return (
+                <tr key={s.event} className={reached ? 'speed-row speed-row--on' : 'speed-row'}>
+                  <td>
+                    <span className="cell-title">{s.event}</span>
+                    <span className="cell-sub muted">{reached ? s.action : 'not yet'}</span>
+                  </td>
+                  <td className="mono">{utc(s.happened_at)}</td>
+                  <td className="mono">{reached ? utc(s.acted_at) : '—'}</td>
+                  <td className="speed-bars">
+                    <div className="speed-bar">
+                      <span className="speed-bar-who">Pit Wall</span>
+                      <span className="speed-bar-track">
+                        {reached && s.seconds_to_act != null && <span className="speed-bar-fill speed-bar-fill--pw" style={{ width: `${Math.max(2, L(s.seconds_to_act) * 100)}%` }} />}
+                      </span>
+                      <b className="mono tone-ok">{reached && s.seconds_to_act != null ? duration(s.seconds_to_act) : s.seconds_to_act == null && reached ? '—' : ''}</b>
+                    </div>
+                    <div className="speed-bar">
+                      <span className="speed-bar-who">Close</span>
+                      <span className="speed-bar-track">
+                        {manual != null && <span className="speed-bar-fill speed-bar-fill--manual" style={{ width: `${L(manual) * 100}%` }} />}
+                      </span>
+                      <b className="mono muted">{manual != null ? duration(manual) : 'days'}</b>
+                    </div>
+                    <span className="cell-sub muted">{s.manual_baseline}</span>
+                  </td>
+                  <td className="num mono">{s.usd_at_stake != null ? usdShort(s.usd_at_stake) : '—'}</td>
+                  <td className={`num mono ${s.usd_protected && reached ? 'tone-ok' : 'muted'}`}>{s.usd_protected && reached ? usdShort(s.usd_protected) : '—'}</td>
+                </tr>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+      <p className="small muted race-method">{r.method.speed}.</p>
+    </section>
+  );
+}
+
+// ------------------------------------------------------------------------------------------ what it books
+
+function Books({ r, flagged, finalIn, finalKnown }: { r: Replay; flagged: boolean; finalIn: boolean; finalKnown: boolean }) {
+  const road = r.laps[r.laps.length - 1]?.bonuses ?? [];
+  const final = r.final.bonuses;
+  const inFinal = (b: { sponsor: string; clause: string; car: number }) => final.some((f) => f.sponsor === b.sponsor && f.clause === b.clause && f.car === b.car);
+  const booked = finalIn || (!finalKnown && flagged);
+  const lines = [
+    ...road.map((b) => ({ key: `r${b.sponsor}${b.clause}${b.car}`, sponsor: b.sponsor, clause: b.clause, what: b.type.replace('_', ' '), car: b.car, usd: b.usd, kept: inFinal(b) })),
+    ...final
+      .filter((f) => !road.some((b) => b.sponsor === f.sponsor && b.clause === f.clause && b.car === f.car))
+      .map((f) => ({ key: `f${f.sponsor}${f.clause}${f.car}`, sponsor: f.sponsor, clause: f.clause, what: `P${f.position}`, car: f.car, usd: f.usd, kept: true })),
+  ].sort((a, b) => b.usd - a.usd);
+  const status = (l: (typeof lines)[number]) => {
+    if (!flagged) return { cls: 'state--proposed', text: 'Race running' };
+    if (!booked) return { cls: 'state--proposed', text: 'Held for the FIA final' };
+    if (!l.kept) return { cls: 'state--rejected', text: 'Overturned · never invoiced' };
+    return l.usd >= MATERIALITY_CENTS ? { cls: 'state--proposed', text: 'Proposed · Controller approves' } : { cls: 'state--approved', text: 'Booked · straight through' };
+  };
+  const reversed = r.road.bonus_usd - r.final.bonus_usd;
+  return (
+    <section className="race-books panel" aria-labelledby="books-h">
+      <div className="sec-head">
+        <h2 id="books-h">What this race books</h2>
+        <p className="muted">
+          Nothing is invoiced on the road result. Billing is held until the FIA Final Classification; then each bonus is proposed as an entry. Anything over $250k waits for
+          the Controller.
+        </p>
+      </div>
+      <div className="books-sum">
+        <div>
+          <span className="small muted">On the road</span>
+          <b className="mono">{usdShort(r.road.bonus_usd)}</b>
+        </div>
+        <span className="books-arrow" aria-hidden>
+          →
+        </span>
+        <div>
+          <span className="small muted">Booked after the FIA final</span>
+          <b className={`mono ${booked ? '' : 'muted'}`}>{booked ? usdShort(r.final.bonus_usd) : 'pending'}</b>
+        </div>
+        {booked && reversed > 0 && (
+          <div className="books-protected">
+            <IconShield size={15} />
+            <span>
+              <b className="mono">{usdShort(reversed)}</b> would have been invoiced on the road result and credited back days later.
+            </span>
+          </div>
         )}
       </div>
-      {open && <CorrectForm effect={effect} onDone={() => setOpen(false)} />}
-    </li>
-  );
-}
-
-function Money({ effects, connected }: { effects: readonly RaceEffects[]; connected: boolean }) {
-  const led = useMemo(() => ledger(effects), [effects]);
-  const latest = useMemo(() => effects.slice().sort((a, b) => sortTime(b.at) - sortTime(a.at)).slice(0, 20), [effects]);
-  return (
-    <section className="race-money" aria-labelledby="money-h">
-      <div className="sec-head">
-        <h2 id="money-h">Money</h2>
-        <span className="muted">{effects.filter(live).length} live effects</span>
-      </div>
-      <dl className="money-grid">
-        <div className="money-cell money-cell--lead">
-          <dt>Race cost so far</dt>
-          <dd>
-            <b className="mono">{usdShort(led.cost.mid)}</b>
-            <small className="mono muted">{led.cost.n ? band(led.cost.low, led.cost.high) : 'nothing booked yet'}</small>
-          </dd>
-        </div>
-        <div className="money-cell">
-          <dt>Projected prize money</dt>
-          <dd>
-            <b className={`mono ${led.prize.mid < 0n ? 'tone-alert' : led.prize.mid > 0n ? 'tone-ok' : ''}`}>{led.prize.n ? signed(led.prize.mid) : '—'}</b>
-            <small className="muted">constructors' ladder, estimate</small>
-          </dd>
-        </div>
-        <div className="money-cell">
-          <dt>Cap headroom</dt>
-          <dd>
-            <b className={`mono ${led.headroom && led.headroom.midCents < 0n ? 'tone-alert' : ''}`}>{led.headroom ? usdShort(led.headroom.midCents) : '—'}</b>
-            <small className="muted">{led.headroom ? `as of ${utcClock(led.headroom.at)} UTC` : 'no reading yet'}</small>
-          </dd>
-        </div>
-        <div className="money-cell">
-          <dt>Sponsor bonuses</dt>
-          <dd>
-            {led.bonuses.length ? (
-              <ul className="bonus-list">
-                {led.bonuses.slice(0, 4).map((b) => (
-                  <li key={b.effectKey} className={b.status === 'corrected' ? 'struck' : ''}>
-                    <span>{b.memo || b.bucket}</span>
-                    <span className="mono">
-                      {signed(b.midCents)} <span className="muted">{b.status}</span>
-                    </span>
-                  </li>
-                ))}
-              </ul>
-            ) : (
-              <small className="muted">none triggered</small>
-            )}
-          </dd>
-        </div>
-      </dl>
-      <h3>Latest effects</h3>
-      {latest.length ? (
-        <ul className="effects">
-          {latest.map((e) => (
-            <EffectRow key={e.effectKey} effect={e} connected={connected} />
-          ))}
-        </ul>
-      ) : (
-        <p className="muted empty">No effects yet. The first appears when an event costs or earns the team money.</p>
-      )}
-    </section>
-  );
-}
-
-// ---------------------------------------------------------------- forecast
-
-const FORECAST_STATUS: Record<string, { label: string; tone: string; pulse?: boolean }> = {
-  running: { label: 'forecasting', tone: 'flag--hold', pulse: true },
-  ready: { label: 'ready', tone: 'flag--ok' },
-  failed: { label: 'failed', tone: 'flag--alert' },
-  offline: { label: 'deterministic fallback', tone: '' },
-};
-
-function Forecast({ forecast }: { forecast: RaceForecasts | null }) {
-  const f = useMemo(() => (forecast ? readForecast(forecast) : null), [forecast]);
-  if (!forecast || !f) {
-    return (
-      <section className="race-forecast" aria-labelledby="fc-h">
-        <div className="sec-head">
-          <h2 id="fc-h">Incident forecast</h2>
-        </div>
-        <p className="muted empty">No incident forecast yet. One appears when a Williams car is involved in an incident.</p>
-      </section>
-    );
-  }
-  const st = FORECAST_STATUS[forecast.status] ?? { label: forecast.status, tone: '' };
-  const money = (c: number) => usdShort(c);
-  return (
-    <section className="race-forecast" aria-labelledby="fc-h">
-      <div className="sec-head">
-        <h2 id="fc-h">Incident forecast</h2>
-        <span className={`flag ${st.tone} ${st.pulse ? 'flag--pulse' : ''}`} role="status">
-          {forecast.status === 'failed' ? <IconDenied size={12} /> : forecast.status === 'ready' ? <IconApproved size={12} /> : <IconWaiting size={12} />}
-          {st.label}
-        </span>
-        <p className="muted">
-          {carLabel(forecast.driverNumber)} · {utcClock(forecast.createdAt)} UTC{forecast.model ? ` · ${forecast.model}` : ''}
-        </p>
-      </div>
-      {forecast.summary && <p className="forecast-summary">{forecast.summary}</p>}
-      {f.totals && (
-        <p className="forecast-total">
-          <b className="mono">{money(f.totals.mid)}</b> <span className="mono muted">{money(f.totals.low)} – {money(f.totals.high)}</span>
-        </p>
-      )}
-      {f.steps.length > 0 && (
-        <ol className="steps">
-          {f.steps.map((s, i) => (
-            <li key={i}>
-              <span className="step-t mono">{stepClock(s.t)}</span>
-              <span className="step-body">
-                <span className="step-label">{s.label}</span>
-                {s.detail && <span className="muted">{s.detail}</span>}
-              </span>
-              <span className="step-band mono">
-                {money(s.cents_mid)}
-                <small className="muted">
-                  {money(s.cents_low)} – {money(s.cents_high)}
-                </small>
-              </span>
-            </li>
-          ))}
-        </ol>
-      )}
-      {f.parts.length > 0 && (
-        <div className="table-wrap">
-          <table className="mini parts">
-            <thead>
+      <div className="table-wrap">
+        <table className="data">
+          <thead>
+            <tr>
+              <th>Sponsor</th>
+              <th>Clause</th>
+              <th>Car</th>
+              <th className="num">Amount</th>
+              <th>Status</th>
+            </tr>
+          </thead>
+          <tbody>
+            {lines.length === 0 && (
               <tr>
-                <th>Part</th>
-                <th className="num">p</th>
-                <th className="num">Low</th>
-                <th className="num">Mid</th>
-                <th className="num">High</th>
-                <th>Basis</th>
-                <th>Stock</th>
+                <td colSpan={5} className="muted">
+                  No sponsor bonus earned at the final order.
+                </td>
               </tr>
-            </thead>
-            <tbody>
-              {f.parts.map((p, i) => (
-                <tr key={`${p.part}-${i}`}>
-                  <td>{p.label}</td>
-                  <td className="num mono">{Math.round(p.p * 100)}%</td>
-                  <td className="num mono">{money(p.low)}</td>
-                  <td className="num mono">{money(p.mid)}</td>
-                  <td className="num mono">{money(p.high)}</td>
-                  <td className="muted">{p.basis}</td>
-                  <td>{p.in_spares ? 'in spares' : 'order'}</td>
+            )}
+            {lines.map((l) => {
+              const s = status(l);
+              return (
+                <tr key={l.key} className={booked && !l.kept ? 'row--struck' : undefined}>
+                  <td>{sponsorName(l.sponsor)}</td>
+                  <td className="mono">
+                    {l.clause} <span className="muted">{l.what}</span>
+                  </td>
+                  <td className="mono">
+                    {l.car} {r.team_cars[String(l.car)]}
+                  </td>
+                  <td className="num mono">{usdShort(l.usd)}</td>
+                  <td>
+                    <span className={`state ${s.cls}`}>{s.text}</span>
+                  </td>
                 </tr>
-              ))}
-            </tbody>
-          </table>
+              );
+            })}
+          </tbody>
+        </table>
+      </div>
+    </section>
+  );
+}
+
+function Approvals({ inbox, status }: { inbox: InboxItem[]; status: SeatStatus }) {
+  const cc = useCostCap();
+  const revenue = inbox.filter((i) => i.kind === 'entry');
+  const [selected, setSelected] = useState<string | null>(null);
+  const key = selected ?? revenue[0]?.key ?? null;
+  return (
+    <section className="race-approvals" aria-labelledby="appr-h">
+      <div className="sec-head">
+        <h2 id="appr-h">Waiting for a person</h2>
+        <p className="muted">
+          The agents only propose. Material revenue entries from the season so far wait here for the Controller and the CFO; pick your seat at the top right to decide.
+        </p>
+      </div>
+      {revenue.length === 0 ? (
+        <p className="muted empty">
+          Nothing is waiting. Start the revenue desk (<code>uvicorn finance.api:app</code>) and run a season to fill the queue, or open the <a href="#/inbox">inbox</a>.
+        </p>
+      ) : (
+        <div className="split">
+          <Attention inbox={revenue} selected={key} onSelect={setSelected} />
+          <WhyPane entry={resolveEntry(key, revenue, cc)} status={status} />
         </div>
       )}
-      {(f.prize || f.cap) && (
-        <dl className="kv forecast-kv">
-          {f.prize && (
-            <div>
-              <dt>Prize money</dt>
-              <dd className="mono">
-                {f.prize.position_before ? `P${f.prize.position_before} ${money(f.prize.before)}` : '—'} → P{f.prize.position_after} {money(f.prize.after)}{' '}
-                <span className={f.prize.delta < 0 ? 'tone-alert' : 'tone-ok'}>({f.prize.delta > 0 ? '+' : ''}{money(f.prize.delta)})</span>
-              </dd>
-            </div>
-          )}
-          {f.cap && (
-            <div>
-              <dt>Cap headroom</dt>
-              <dd className="mono">
-                {money(f.cap.headroom_before)} → {money(f.cap.headroom_after)}
-              </dd>
-            </div>
-          )}
-        </dl>
-      )}
     </section>
   );
 }
 
-// ---------------------------------------------------------------- learning
+// ------------------------------------------------------------------------------------------ view
 
-const AUTONOMY_TONE: Record<string, string> = { GRANTED: 'state--approved', SHADOW: 'state--proposed', REVOKED: 'state--rejected', SUSPENDED: 'state--rejected' };
+export function RaceView({ arg, nav, inbox, status }: { arg: string | null; nav: (hash: string) => void; inbox: InboxItem[]; status: SeatStatus }) {
+  const { season, round } = parseRoute(arg);
+  const { data: r, loading, error } = useReplay(season, round);
+  const frames = useMemo(() => (r ? framesOf(r) : []), [r]);
+  const pb = usePlayback(frames);
+  const d = useDerived(r, pb.frame);
+  const go = (s: number, n: number) => nav(`/race/${s}-${n}`);
+  const finalKnown = !!r?.speed.some((s) => s.event === 'FIA Final Classification' && s.acted_at);
+  const [carPick, setCar] = useState<string | null>(null);
+  const [sponsor, setSponsor] = useState<string | null>('halcyon');
+  useEffect(() => setCar(null), [season, round]);
+  // default to the car that matters in this race: the one that crashed or was disqualified, else the leader
+  const carSel = useMemo(() => {
+    if (!r) return '';
+    const cars = Object.keys(r.team_cars);
+    if (carPick && cars.includes(carPick)) return carPick;
+    const story = r.crashes[0]?.car ?? Object.entries(r.classification ?? {}).find(([, c]) => c.position_text === 'D')?.[0];
+    return story != null && cars.includes(String(story)) ? String(story) : cars[0];
+  }, [r, carPick]);
+  // once the FIA Final Classification is in, the money shown is what was booked, not the road result
+  const booked = !!d && (d.finalIn || (!finalKnown && d.flagged));
+  const lap = useMemo(() => {
+    if (!r || !d) return null;
+    if (!booked) return d.lap;
+    const typeOf = (sp: string, clause: string) => r.sponsors?.find((x) => x.id === sp)?.clauses.find((c) => c.id === clause)?.type ?? '';
+    const kept = r.final.bonuses.map((f) => ({ sponsor: f.sponsor, clause: f.clause, type: typeOf(f.sponsor, f.clause), car: f.car, usd: f.usd }));
+    return { ...d.lap, bonuses: kept, bonus_usd: r.final.bonus_usd, prize_ev: r.final.prize_ev, total: r.final.total };
+  }, [r, d, booked]);
 
-function Learning() {
-  const race = useRace();
-  const counts = useMemo(() => {
-    const m = new Map<string, number>();
-    for (const p of race.policies) m.set(p.autonomy, (m.get(p.autonomy) ?? 0) + 1);
-    return ['GRANTED', 'SHADOW', 'SUSPENDED', 'REVOKED'].filter((a) => m.has(a)).map((a) => [a, m.get(a) ?? 0] as const);
-  }, [race.policies]);
-  const policies = useMemo(() => race.policies.slice().sort((a, b) => b.hits - a.hits), [race.policies]);
-  const precedents = useMemo(() => race.precedents.slice().sort((a, b) => sortTime(b.at) - sortTime(a.at)).slice(0, 5), [race.precedents]);
-  return (
-    <section className="race-learning" aria-labelledby="learn-h">
-      <div className="sec-head">
-        <h2 id="learn-h">Learning</h2>
-        <span className="muted">
-          {counts.length ? counts.map(([a, n]) => `${n} ${a.toLowerCase()}`).join(' · ') : 'no policies yet'}
-        </span>
-      </div>
-      {policies.length > 0 && (
-        <ul className="policy-list">
-          {policies.map((p) => (
-            <li key={p.policyId} className="policy-line">
-              <span className="policy-title">{p.title || p.policyId}</span>
-              <span className={`state ${AUTONOMY_TONE[p.autonomy] ?? ''}`}>{p.autonomy}</span>
-              <span className="mono muted">
-                {p.hits} hits · {p.contradictions} contradictions
-              </span>
-            </li>
-          ))}
-        </ul>
-      )}
-      <h3>Latest corrections</h3>
-      {precedents.length ? (
-        <ul className="precedents">
-          {precedents.map((p) => (
-            <li key={p.precedentKey}>
-              <span>{p.reason}</span>
-              <span className="muted">
-                {p.by} · <span className="mono">{usdShort(p.correctedMidCents)}</span> · {utcClock(p.at)}
-              </span>
-            </li>
-          ))}
-        </ul>
-      ) : (
-        <p className="muted">No corrections yet. Correct an effect and its policy learns.</p>
-      )}
-    </section>
-  );
-}
-
-// ---------------------------------------------------------------- view
-
-export function RaceView() {
-  const race = useRace();
-  const events = useMemo(() => race.events.slice().sort((a, b) => sortTime(b.at) - sortTime(a.at) || b.eventKey.localeCompare(a.eventKey)), [race.events]);
-  const moneyKeys = useMemo(() => new Set(race.effects.map((e) => e.eventKey)), [race.effects]);
-  const forecast = useMemo(
-    () => race.forecasts.reduce<RaceForecasts | null>((best, f) => (!best || sortTime(f.createdAt) >= sortTime(best.createdAt) ? f : best), null),
-    [race.forecasts]
-  );
   return (
     <div className="race">
-      <Header events={events} />
-      <Timing cars={race.cars} />
-      {!race.connected && (
-        <p className="muted loading race-span">Connecting to pit-wall on SpacetimeDB…</p>
+      <Picker season={season} round={round} go={go} />
+      {error ? (
+        <section className="panel">
+          <h2>Race Desk not reachable</h2>
+          <p className="muted">
+            {error}. Start the API from the repo root with <code>uvicorn finance.api:app --port 8000</code>; the dashboard proxies <code>/api</code> to it.
+          </p>
+        </section>
+      ) : loading || !r || !d ? (
+        <p className="muted loading">Replaying the race and pricing every lap…</p>
+      ) : (
+        <>
+          <Header r={r} pb={pb} />
+          <StatPills r={r} lap={lap!} speed={d.speed} crashes={d.crashes} />
+          <CarStage
+            r={r}
+            lap={lap!}
+            car={carSel}
+            setCar={setCar}
+            sponsor={sponsor}
+            setSponsor={setSponsor}
+            playing={pb.playing}
+            official={d.finalIn}
+            scrubber={<Scrubber r={r} frames={frames} pb={pb} />}
+          />
+          <RunningOrder r={r} lap={lap!} frame={pb.frame} official={d.finalIn} />
+          <Gauges r={r} lap={lap!} crashes={d.crashes} car={carSel} official={d.finalIn} />
+          <div className="race-mid">
+            <SponsorPanel r={r} lap={lap!} car={carSel} sponsor={sponsor} setSponsor={setSponsor} flagged={d.flagged} booked={booked} />
+            <Radio calls={d.radio} after={d.speed} />
+          </div>
+          <Telemetry r={r} upto={pb.frame?.lapIndex ?? 0} />
+          <div className="race-two">
+            <CrashDesk r={r} crashes={d.crashes} />
+            <Books r={r} flagged={d.flagged} finalIn={d.finalIn} finalKnown={finalKnown} />
+          </div>
+          <SpeedBoard r={r} clock={pb.frame?.clock ?? r.start_utc} flagged={d.flagged} />
+          <Approvals inbox={inbox} status={status} />
+          <p className="small muted race-method">
+            {r.method.data}. Bonuses: {r.method.bonuses}. Prize money: {r.method.prize_money}. Clock: {r.method.clock}.
+          </p>
+        </>
       )}
-      <Tape events={events} moneyKeys={moneyKeys} />
-      <Money effects={race.effects} connected={race.connected} />
-      <div className="race-side">
-        <Forecast forecast={forecast} />
-        <Learning />
-      </div>
     </div>
   );
 }
