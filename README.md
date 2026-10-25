@@ -103,13 +103,15 @@ Live runs with Claude on Oct 24; the full tables are in [docs/runs.md](docs/runs
 
 | | Result |
 |---|---|
-| Cost cap proposals matching the truth file (the agents never see it) | 274 of 280 (97.9%); code 255 of 258, Claude 19 of 22 |
-| Cost cap lines asked about instead of guessed | 5 |
+| Cost cap lines decided without a person | 260 of 285, under policies the Head of Cost Cap approved, material lines included |
+| Cost cap lines brought to a person | 25: 22 new scenarios Claude drafted, 3 questions |
+| One correction, remembered | fixed two lines: the second was re-proposed under the taught rule and posted without anyone |
+| Cost cap proposals matching the truth file (the agents never see it) | 277 of 282 (98.2%) after that one correction |
 | Revenue: sponsor bonuses booked correctly, 2024 season | 90 of 90; trial balance ties; $3.74m kept off invoices for overturned results |
 | Independent auditor | unmodified opinion, 0 findings |
-| Red-team probes denied and logged | 12 of 12 on the cost cap module; 200 saboteur proposals refused by the revenue kernel |
+| Red-team probes denied and logged | 15 of 15 on the cost cap module; 200 saboteur proposals refused by the revenue kernel |
 
-Claude's one material miss is a planted trap: Applied Technologies payroll that 2025 practice split 60/40, which the 2026 rules put wholly inside the cap. It proposed Non-F1, said why it was unsure, and the module routed the $636k line to the Head of Cost Cap. Offline, the analyst asks about that line instead.
+Claude's drafts go to a person because no rule covered those lines; where it was wrong (the Applied Technologies payroll trap, building maintenance called Property), the person's correction is the fix, and Remember makes it the rule for the next line.
 
 ## Tests
 
@@ -121,7 +123,7 @@ make test
 make stdb-test
 ```
 
-418 Python tests (both desks, the evidence pipeline, the rulebook and world) and the module's vitest suite. The SpacetimeDB integration tests for `pit-wall` run when a local server is up.
+424 Python tests (both desks, the evidence pipeline, the rulebook and world) and the module's 140 vitest tests. The SpacetimeDB integration tests for `pit-wall` run when a local server is up.
 
 ## What's real and what's simulated
 

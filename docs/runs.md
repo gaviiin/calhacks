@@ -2,6 +2,21 @@
 
 Every end-to-end run of the cost cap desk, newest first, and the revenue desk's season scores. The cost side's company was renamed from Kestrel Grand Prix to Meridian Racing on Oct 24 (names only: the truth file and every amount are unchanged), so runs before that name Kestrel.
 
+## Cost cap desk, January 2026, people decide only what no rule covers, Oct 24 (run 3)
+
+Same pipeline and model, after the flow change: an approved policy carries standing approval, the standing-approval job (`make standing`) approves what policies decided at any amount, and a person sees only the lines no rule covered.
+
+| Measure | Result |
+|---|---|
+| Policies drafted from 2025 history, approved by the Head of Cost Cap | 96 (Claude vetoed 3 of 85 parent drafts) |
+| January lines approved without a person, under an approved policy | 260 of 285, material lines included; 0 refused by the module |
+| Lines brought to a person | 25: 22 new scenarios Claude drafted, 3 questions (run 2: 43 waited, and the Controller approved 240 routine lines by hand) |
+| Proposals matching the truth file | 275 of 282 (97.5%); code 257/260, Claude 18/22 |
+| Dollars on the wrong side of the cap | $108k of $30.6m (run 2: $713k; Claude asked about the $636k Applied Technologies payroll this time) |
+| One correction, taught in the dashboard | the Head of Cost Cap rejected Claude's Property call on Cherwell Building Maintenance (account 6730) as Relevant and ticked Remember: rule `taught:6730\|ven-025` was born approved, the second Cherwell line went back to the analyst, both were re-proposed under the rule, approved without a person and posted |
+| After that one correction | 277 of 282 (98.2%); $55.5k on the wrong side of the cap |
+| Red-team probes denied and logged | 15 of 15 (three new: the standing-approval job approving a Claude proposal, a controller teaching beyond materiality, the analyst teaching itself a rule) |
+
 ## Cost cap desk, January 2026, online with Claude (claude-opus-5-5), Oct 24
 
 Two full runs from a fresh module, `make cost-cap-run` with `ANTHROPIC_API_KEY` set. The Policy Learner's reviews run eight at a time (60 s instead of about 35 min sequentially); the Cap Analyst calls Claude only for lines no approved policy covers.

@@ -397,13 +397,15 @@ function ItemDecision({ item, status, material, trail }: { item: WorkItem; statu
   const [since, setSince] = useState<number | null>(null);
   const outcome = useOutcome(trail, since);
   const taught = useTeachOutcome(since);
+  // a new line resets the bar; the same line changing state (just decided) keeps its outcome on screen
   useEffect(() => {
     setText('');
     setCategory(proposed);
     // a line no rule covered is the case worth remembering
     setRemember(item.proposalSource === 'llm' || item.state === 'NEEDS_INFO');
     setSince(null);
-  }, [item.id, item.state, item.proposalSource, proposed]);
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [item.id]);
   const open = item.state === 'PROPOSED' || item.state === 'NEEDS_INFO';
   const asking = item.state === 'NEEDS_INFO';
   const seated = status === 'seated';
