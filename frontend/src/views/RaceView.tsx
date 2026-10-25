@@ -553,10 +553,11 @@ function Forecast({ forecast }: { forecast: RaceForecasts | null }) {
   }
   const st = FORECAST_STATUS[forecast.status] ?? { label: forecast.status, tone: '' };
   const money = (c: number) => usdShort(c);
+  const hid = `fc-h-${forecast.driverNumber}`;
   return (
-    <section className="race-forecast panel" aria-labelledby="fc-h">
+    <section className="race-forecast panel" aria-labelledby={hid}>
       <div className="sec-head">
-        <h2 id="fc-h">Incident forecast</h2>
+        <h2 id={hid}>Incident forecast</h2>
         <span className={`flag ${st.tone} ${st.pulse ? 'flag--pulse' : ''}`} role="status">
           {forecast.status === 'failed' ? <IconDenied size={12} /> : forecast.status === 'ready' ? <IconApproved size={12} /> : <IconWaiting size={12} />}
           {st.label}
@@ -704,10 +705,15 @@ export function RaceView() {
   const race = useRace();
   const events = useMemo(() => race.events.slice().sort((a, b) => sortTime(b.at) - sortTime(a.at) || b.eventKey.localeCompare(a.eventKey)), [race.events]);
   const moneyKeys = useMemo(() => new Set(race.effects.map((e) => e.eventKey)), [race.effects]);
-  const forecast = useMemo(
-    () => race.forecasts.reduce<RaceForecasts | null>((best, f) => (!best || sortTime(f.createdAt) >= sortTime(best.createdAt) ? f : best), null),
-    [race.forecasts]
-  );
+  // The latest forecast per car, newest car first: a second crash must not hide the first car's plan.
+  const forecasts = useMemo(() => {
+    const byCar = new Map<number, RaceForecasts>();
+    for (const f of race.forecasts) {
+      const b = byCar.get(f.driverNumber);
+      if (!b || sortTime(f.createdAt) >= sortTime(b.createdAt)) byCar.set(f.driverNumber, f);
+    }
+    return [...byCar.values()].sort((a, b) => sortTime(b.createdAt) - sortTime(a.createdAt));
+  }, [race.forecasts]);
   const led = useMemo(() => ledger(race.effects), [race.effects]);
   const status = useMemo(() => trackStatus(events), [events]);
   return (
@@ -723,7 +729,7 @@ export function RaceView() {
         <Tape events={events} moneyKeys={moneyKeys} />
         <div className="race-side">
           <Money effects={race.effects} events={events} led={led} connected={race.connected} />
-          <Forecast forecast={forecast} />
+          {forecasts.length ? forecasts.map((f) => <Forecast key={f.driverNumber} forecast={f} />) : <Forecast forecast={null} />}
           <Learning />
         </div>
       </div>

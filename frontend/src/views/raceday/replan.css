@@ -1,0 +1,119 @@
+/* Stage 6 re-plan. Tokens from styles.css. */
+
+.replan {
+  display: grid;
+  gap: 14px;
+  min-width: 0;
+}
+
+.replan-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+}
+
+.replan-value {
+  font-size: 22px;
+}
+
+.replan-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 1px;
+  margin: 0;
+  border: 1px solid var(--line-soft);
+  background: var(--line-soft);
+}
+
+.replan-grid > div {
+  display: grid;
+  align-content: start;
+  gap: 3px;
+  min-width: 0;
+  padding: 10px 12px;
+  background: var(--panel);
+  font-size: 12.5px;
+}
+
+.replan-grid dt {
+  color: var(--muted);
+  font-size: 12px;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.replan-grid dd {
+  margin: 0;
+}
+
+.replan-big {
+  font-size: 18px;
+}
+
+.replan-bars {
+  display: grid;
+  gap: 6px;
+  margin-top: 2px;
+}
+
+.replan-bar {
+  display: grid;
+  grid-template-columns: 96px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 8px;
+}
+
+.replan-bar-label {
+  color: var(--muted);
+}
+
+.replan-bar-track {
+  height: 8px;
+  background: var(--panel-2);
+}
+
+.replan-bar-fill {
+  display: block;
+  height: 100%;
+  background: var(--steel);
+}
+
+.replan-bar-fill--loss {
+  background: var(--alert);
+}
+
+.replan-dist caption {
+  padding: 0 0 6px;
+  text-align: left;
+  font-size: 12px;
+}
+
+.replan-us td {
+  font-weight: 600;
+}
+
+.replan-notes {
+  display: grid;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  font-size: 12.5px;
+}
+
+@media (max-width: 900px) {
+  .replan-grid {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+}
+
+@media (max-width: 520px) {
+  .replan-grid {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
+
+.replan-dist th.num {
+  text-align: right;
+}

@@ -19,6 +19,7 @@ from datetime import timedelta
 from pathlib import Path
 
 from race import prices as P
+from race import prize as prize_mod
 from race.effects import EffectsContext, damage_band
 from race.events import Effect, RaceEvent, iso, now_iso, parse_iso
 from race.jev import JevAnswers
@@ -71,28 +72,52 @@ class ForecastAgent:
             "spares": self.spares.get("spares", {}),
             "spares_note": self.spares.get("_note", ""),
             "next_race": {"days": self.ctx.next_race_days, "flyaway": self.ctx.next_race_flyaway},
-            "cap": {"cap_cents": __import__("race.effects", fromlist=["CAP_USD_CENTS"]).CAP_USD_CENTS,
+            # the cap the effects module measured headroom against, so the two always agree
+            "cap": {"cap_cents": self.ctx.cap_headroom_cents() + self.ctx.cap_relevant_cents + self.ctx.race_cost_mid,
                     "relevant_to_date_cents": self.ctx.cap_relevant_cents, "race_cost_mid_cents": self.ctx.race_cost_mid,
                     "headroom_cents": self.ctx.cap_headroom_cents()},
-            "prize": self._prize(),
+            "prize": self._prize(event),
             "race_cost_cents": {"low": sum(e.low_cents for e in cost), "mid": sum(e.mid_cents for e in cost), "high": sum(e.high_cents for e in cost)},
             "month_end": iso((at.replace(day=1) + timedelta(days=32)).replace(day=1)),
         }
 
-    def _prize(self) -> dict:
+    def _prize(self, event: RaceEvent) -> dict:
         from race.points import position_of, projected_standings
 
         if not self.ctx.standings_start:
             return {}
         standings = projected_standings(self.ctx.standings_start, self.ctx.positions, self.ctx.team_of, self.ctx.sprint)
         pos = position_of(self.ctx.team, standings)
-        table = self.ctx.world.prize_table
-        ladder = {str(k): v for k, v in table.items()}
+        # Before = the same table with the car where it was running when the incident happened.
+        held = event.state.position if event.state and event.state.position else None
+        before = self.ctx.prize_position_before
+        if held:
+            before = position_of(self.ctx.team, projected_standings(self.ctx.standings_start, {**self.ctx.positions, event.driver_number: held},
+                                                                    self.ctx.team_of, self.ctx.sprint))
+        ladder = {str(k): v for k, v in prize_mod.ladder(self.year).items()}
         return {
-            "projected_position": pos, "projected_prize_cents": self.ctx.world.prize(pos) if pos else None, "ladder_cents": ladder,
+            "projected_position": pos, "projected_prize_cents": self.prize_of(pos), "position_before": before, "ladder_cents": ladder,
             "standings": [{"team": t, "points": p} for t, p in standings],
-            "note": "synthetic ladder; real constructors' payouts are confidential, about $8-9m per place in press estimates",
+            "note": prize_mod.basis(self.year),
         }
+
+    @property
+    def year(self) -> int:
+        try:
+            return int(self.ctx.fx_date[:4])
+        except (TypeError, ValueError):
+            return 2026
+
+    def prize_of(self, position: int | None) -> int | None:
+        return prize_mod.prize(self.year, position) if position else None
+
+    def prize_block(self, position_before: int | None, position_after: int | None, ladder: dict | None) -> dict:
+        """Before and after the incident on the season's prize ladder, and the change (what the dashboard shows)."""
+        pb = position_before or self.ctx.prize_position_before
+        before, after = self.prize_of(pb), self.prize_of(position_after)
+        return {"position_before": pb, "before": before, "position_after": position_after, "after": after,
+                "delta": (after - before) if (before is not None and after is not None) else 0, "ladder": ladder,
+                "basis": prize_mod.basis(self.year)}
 
     # ------------------------------------------------------------------ deterministic plan
     def offline_plan(self, f: dict) -> dict:
@@ -153,8 +178,7 @@ class ForecastAgent:
         return {
             "summary": summary[:1024], "steps": steps, "parts": parts,
             "totals": {"low": total[0], "mid": total[1], "high": total[2]},
-            "prize": {"position_before": self.ctx.prize_position_before, "before": self.ctx.world.prize(self.ctx.prize_position_before) if self.ctx.prize_position_before else None,
-                      "position_after": prize.get("projected_position"), "after": prize.get("projected_prize_cents"), "ladder": prize.get("ladder_cents")},
+            "prize": self.prize_block(prize.get("position_before"), prize.get("projected_position"), prize.get("ladder_cents")),
             "cap": {"headroom_before": cap["headroom_cents"] + f["race_cost_cents"]["mid"], "headroom_after": cap["headroom_cents"]},
         }
 
@@ -222,10 +246,7 @@ class ForecastAgent:
             result.update({
                 "summary": summary[:1024], "steps": steps, "parts": parts,
                 "totals": {"low": total_low_cents, "mid": total_mid_cents, "high": total_high_cents},
-                "prize": {"position_before": self.ctx.prize_position_before,
-                          "before": self.ctx.world.prize(self.ctx.prize_position_before) if self.ctx.prize_position_before else None,
-                          "position_after": prize_position_after, "after": self.ctx.world.prize(prize_position_after) if prize_position_after else None,
-                          "ladder": f["prize"].get("ladder_cents")},
+                "prize": self.prize_block(f["prize"].get("position_before"), prize_position_after or None, f["prize"].get("ladder_cents")),
                 "cap": {"headroom_before": f["cap"]["headroom_cents"] + f["race_cost_cents"]["mid"], "headroom_after": cap_headroom_after_cents},
             })
             return "recorded"

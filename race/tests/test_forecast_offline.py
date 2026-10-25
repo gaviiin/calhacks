@@ -39,6 +39,9 @@ def test_offline_forecast_has_a_timeline_and_ordered_bands():
     assert plan["parts"] and all({"part", "p", "low", "mid", "high", "basis", "in_spares", "lead_days"} <= set(p) for p in plan["parts"])
     assert plan["cap"]["headroom_after"] < plan["cap"]["headroom_before"]
     assert plan["prize"]["position_after"] == 4  # retired from P8: Williams drops behind Haas
+    pr = plan["prize"]
+    assert pr["position_before"] == 3 and pr["delta"] == pr["after"] - pr["before"] < 0  # the dashboard showed $0 without it
+    assert pr["ladder"]["1"] > pr["ladder"]["10"] and pr["basis"]
     labels = " ".join(s["label"] for s in plan["steps"])
     assert "Fit before next race" in labels and "Month-end cap position" in labels and "Season-end prize money" in labels
     assert "$" in row["summary"] and "m mid" in row["summary"]
