@@ -1,6 +1,6 @@
 import { useMemo } from 'react';
 import { useRace, type RaceData } from '../../lib/race';
-import { carLabel, eventDetail, isTeamCar, kindMeta, payloadOf, sortTime } from '../../lib/raceModel';
+import { TEAM, carLabel, eventDetail, kindMeta, payloadOf, sortTime } from '../../lib/raceModel';
 import type { RaceEvents } from '../../module_bindings/types';
 import { clock, type Headline } from './shared';
 import './detect.css';
@@ -36,7 +36,7 @@ export function leads(race: Pick<RaceData, 'events'>): Lead[] {
   const evs = race.events.slice().sort((a, b) => sortTime(a.at) - sortTime(b.at));
   const first = (from: number, within: number, test: (e: RaceEvents) => boolean) => evs.find((e) => sortTime(e.at) >= from && sortTime(e.at) - from <= within && test(e))?.at ?? null;
   return evs
-    .filter((e) => e.kind === 'car_stopped' && isTeamCar(e.driverNumber))
+    .filter((e) => e.kind === 'car_stopped' && e.teamName === TEAM)
     .map((s) => {
       const t = sortTime(s.at);
       const same = (e: RaceEvents) => e.sessionKey === s.sessionKey;
@@ -93,7 +93,7 @@ export function DetectPanel() {
   const tape = useMemo(
     () =>
       race.events
-        .filter((e) => (isTeamCar(e.driverNumber) && TAPE_KINDS.includes(e.kind)) || (FIELD_KINDS.includes(e.kind) && (e.kind === 'red_flag' || payloadOf(e).deployed === true)))
+        .filter((e) => (e.teamName === TEAM && TAPE_KINDS.includes(e.kind)) || (FIELD_KINDS.includes(e.kind) && (e.kind === 'red_flag' || payloadOf(e).deployed === true)))
         .sort((a, b) => sortTime(b.at) - sortTime(a.at))
         .slice(0, 14),
     [race.events]
