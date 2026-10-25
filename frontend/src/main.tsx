@@ -1,5 +1,5 @@
 import { StrictMode, useMemo, type ReactNode } from 'react';
-import { createRoot } from 'react-dom/client';
+import { createRoot, type Root } from 'react-dom/client';
 import { SpacetimeDBProvider } from 'spacetimedb/react';
 import { DbConnection as CostCapConnection } from './cost_cap_bindings';
 import { DbConnection as EvidenceConnection } from './module_bindings';
@@ -51,7 +51,13 @@ function CostCapRoot({ children }: { children: ReactNode }) {
   );
 }
 
-createRoot(document.getElementById('root')!).render(
+// This module mounts the app. When it, or a data module without its own HMR boundary (the race bridge, the
+// generated bindings), changes in development, Vite runs it again; a second createRoot on the same container makes
+// React tear the page down mid-render and the tab freezes. Keep one root per container and render into it again.
+const container = document.getElementById('root')! as HTMLElement & { __pitWallRoot?: Root };
+const root = container.__pitWallRoot ?? (container.__pitWallRoot = createRoot(container));
+
+root.render(
   <StrictMode>
     <SeatProvider>
       <SeatConnectionProvider>

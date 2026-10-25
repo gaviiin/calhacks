@@ -172,7 +172,6 @@ race-reset:       ## a clean pit-wall for the demo: wipe it, reload the FIA evid
 	uv run python scripts/race_grant.py
 	$(if $(BROWSER_ID),uv run python scripts/race_grant.py --role race_head --identity $(BROWSER_ID),@echo "  (pass BROWSER_ID=<hex> to let the dashboard decide: the hex is in the error a refused click shows)")
 	$(ENV) uv run python -m race.policy_learner --onboard --era 2024 --offline
-	$(MAKE) bindings
 
 race-test:        ## race desk tests: pytest race/tests + the module's vitest
 	uv run pytest -q race/tests

@@ -32,7 +32,9 @@ The journal entry (POST /erp/journal_entries on the world API, :8010, header X-G
       category: RELEVANT when the entry counts against the cap, else the account's own default (6910 -> FINES), so
       after classification every acct-* nets to zero and every dollar sits in exactly one category.
 
-work_item_id is the entry key, so the ERP is idempotent: posting the same entry twice returns the same ERP id.
+work_item_id is the entry key plus a hash of its lines, so the ERP is idempotent: posting the same entry twice returns the
+same ERP id, while a rebuilt weekend whose entry under the same key carries other amounts posts as its own entry
+(the ERP mock's journal outlives a pit-wall reset).
 
 Works offline: with no pit-wall sink (or a disabled one) nothing is sent to the ERP, because a posting the desk cannot
 record would be an ERP entry without its audit row; the entry comes back `failed` with that reason and is retried
@@ -45,6 +47,9 @@ an approval and the gateway's own `post`, which would book a second ERP entry fo
 """
 
 from __future__ import annotations
+
+import hashlib
+import json
 
 import os
 import time
@@ -183,7 +188,8 @@ def journal_entry(entry: Entry, year: int = 2026) -> dict:
         raise ValueError(f"journal entry for {entry.entry_key} does not balance: {d} != {c}")
     day = entry.effective_date or (entry.at or now_iso())[:10]
     refs = list(dict.fromkeys([*entry.evidence, f"race_entry:{entry.entry_key}"] + ([f"incident:{entry.incident_key}"] if entry.incident_key else [])))
-    return {"work_item_id": entry.entry_key, "period_key": day[:7], "lines": lines,
+    digest = hashlib.sha256(json.dumps(lines, sort_keys=True).encode()).hexdigest()[:12]
+    return {"work_item_id": f"{entry.entry_key}#{digest}", "period_key": day[:7], "lines": lines,
             "memo": f"Race desk {entry.recognition}: {entry.memo}"[:500], "evidence_refs": refs}
 
 

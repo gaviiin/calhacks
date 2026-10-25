@@ -148,7 +148,7 @@ def test_a_small_entry_posts_with_an_erp_id_and_balanced_lines(fake_erp):
     assert p.status == "posted" and p.erp_entry_id == "JE-2024-000001" and p.by == "race_desk"
     assert "under the $250,000 review threshold" in p.reason
     [rec] = fake_erp.journal
-    assert rec["work_item_id"] == x.entry_key and rec["period_key"] == "2024-11"
+    assert rec["work_item_id"].split("#")[0] == x.entry_key and rec["period_key"] == "2024-11"  # key plus a hash of its lines
     assert lines_of(rec) == [("acct-6050", 3_000_000, 0), ("capadj-RACE_SPARES_INVENTORY_1400", 0, 3_000_000),
                              ("capcat-RELEVANT", 3_000_000, 0), ("acct-6050", 0, 3_000_000)]
     assert sum(l[1] for l in lines_of(rec)) == sum(l[2] for l in lines_of(rec))
@@ -204,7 +204,7 @@ def test_approving_posts_it_and_rejecting_keeps_it_out(fake_erp):
     assert out[a.entry_key].status == "posted" and out[a.entry_key].erp_entry_id == "JE-2024-000001"
     assert out[a.entry_key].by == "race_desk after Dana Okafor (CFO)" and out[a.entry_key].review_role == "cfo"
     assert out[b.entry_key].status == "rejected" and not out[b.entry_key].erp_entry_id
-    assert [r["work_item_id"] for r in fake_erp.journal] == [a.entry_key]
+    assert [r["work_item_id"].split("#")[0] for r in fake_erp.journal] == [a.entry_key]
     assert review(st, sink) == []  # nothing changes on the next call
 
 
