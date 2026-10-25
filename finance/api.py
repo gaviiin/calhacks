@@ -518,3 +518,8 @@ app.include_router(build_agent_router(get_run))
 from capsim.api import router as capsim_router  # noqa: E402
 
 app.include_router(capsim_router)
+
+# --------------------------------------------------------------------------- Race Desk: race-day money telemetry
+from racedesk.api import router as racedesk_router  # noqa: E402
+
+app.include_router(racedesk_router)

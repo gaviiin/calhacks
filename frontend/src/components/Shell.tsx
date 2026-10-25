@@ -7,15 +7,15 @@ import { PEOPLE, fetchSeatCodes, sha256Hex, useSeat, type SeatId } from '../lib/
 import { useSeatConnection } from '../lib/seatConnection';
 import { IconLive } from './icons';
 
-export type View = 'overview' | 'inbox' | 'cost-cap' | 'revenue' | 'race' | 'evidence' | 'audit';
+export type View = 'overview' | 'race' | 'inbox' | 'cost-cap' | 'risk' | 'revenue' | 'evidence' | 'audit' | 'connect';
 
 const NAV: { id: View; label: string }[] = [
   { id: 'overview', label: 'Pit wall' },
+  { id: 'race', label: 'Race' },
   { id: 'inbox', label: 'Inbox' },
   { id: 'cost-cap', label: 'Cost cap' },
   { id: 'risk', label: 'Cap risk' },
   { id: 'revenue', label: 'Revenue' },
-  { id: 'race', label: 'Race' },
   { id: 'evidence', label: 'Evidence' },
   { id: 'audit', label: 'Audit' },
   { id: 'connect', label: 'Connect' },

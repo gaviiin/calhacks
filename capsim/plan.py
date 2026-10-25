@@ -151,27 +151,28 @@ class Event:
     month: int
     what: str
     amount: int  # USD added to that month's Relevant Costs (negative = saving)
+    real: bool = False  # True: the incident happened in the real 2026 season (race data); the amount is still an estimate
 
 
-# Meridian's 2026 so far (illustrative): what moved the actuals away from the plan, month by month.
+# Meridian's 2026 so far, month by month. Incidents marked real are Mercedes' actual 2026 retirements (world/race_data/2026.json);
+# their cap cost is an estimate. Routine wing and floor damage is booked at the budget rate (crash reserve).
 EVENTS_2026 = [
-    Event(3, "Melbourne: car 63 heavy crash in FP2 (chassis and gearbox)", 2_300_000),
-    Event(3, "Shanghai and Suzuka: two front wing and floor repairs", 420_000),
-    Event(5, "Miami floor and sidepods ran 9% over", 290_000),
-    Event(6, "Monaco: car 12 hit the barrier at Massenet (suspension, floor, nose)", 1_150_000),
-    Event(7, "Silverstone floor evolution: second iteration after correlation miss", 640_000),
-    Event(7, "Hungary: first-lap contact, front wing and floor", 260_000),
-    Event(8, "Summer shutdown: overtime and contractors below plan", -350_000),
-    Event(9, "Baku: car 12 wall contact (corner assembly and floor)", 980_000),
-    Event(9, "Madring: two minor front wing changes", 210_000),
-    Event(9, "Monza low-drag package came in under budget", -120_000),
+    Event(5, "Miami floor and sidepods ran 9% over (illustrative)", 290_000),
+    Event(5, "Canadian GP: Russell retired, engine. Power Unit Supply Perimeter costs are excluded up to the regulated price "
+             "(D5.1.1.n), so no cap cost", 0, real=True),
+    Event(6, "Barcelona GP: Antonelli retired, engine (D5.1.1.n: no cap cost)", 0, real=True),
+    Event(7, "Silverstone floor evolution: second iteration after a correlation miss (illustrative)", 640_000),
+    Event(7, "Belgian GP: Russell retired after a collision; chassis, floor and suspension (estimate: 'if a wheel hits the wall, "
+             "you can almost certainly expect a million', Vowles)", 900_000, real=True),
+    Event(8, "Summer shutdown: overtime and contractors below plan (illustrative)", -350_000),
+    Event(9, "Monza low-drag package came in under budget (illustrative)", -120_000),
 ]
 
 
 def actuals(plan: Plan, through_month: int, events: list[Event] | None = None) -> dict[int, int]:
-    """Relevant Costs actually booked per closed month: the plan without the crash reserve, plus what happened."""
+    """Relevant Costs booked per closed month: the plan (routine damage at the crash-reserve rate) plus what happened."""
     events = EVENTS_2026 if events is None else events
     out = {}
     for m in range(1, through_month + 1):
-        out[m] = plan.month_budget(m, with_crash_reserve=False) + sum(e.amount for e in events if e.month == m)
+        out[m] = plan.month_budget(m) + sum(e.amount for e in events if e.month == m)
     return out

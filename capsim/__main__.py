@@ -16,7 +16,7 @@ import argparse
 
 from . import regulations as R
 from .assumptions import Assumptions
-from .decide import Option, evaluate, headroom, pu_allocation
+from .decide import Option, default_standings, evaluate, headroom, pu_allocation
 from .sim import Scenario, forecast
 from .sources import load
 
@@ -36,6 +36,7 @@ def main() -> None:
     ap.add_argument("--option", default="U5")
     ap.add_argument("--points-per-race", type=float, default=2.0)
     ap.add_argument("--target", type=float, default=0.10)
+    ap.add_argument("--team", default="mercedes", help="value the decision from this team's real 2026 championship position")
     ap.add_argument("--runs", type=int, default=4000)
     args = ap.parse_args()
     a = Assumptions(runs=args.runs)
@@ -60,7 +61,9 @@ def main() -> None:
         print(f"Headroom at p95: {usd(f['headroom_at_p95'])}; crash damage still to come: mean {usd(f['crash_damage_remaining']['mean'])}, "
               f"p95 {usd(f['crash_damage_remaining']['p95'])}")
     elif args.cmd == "decide":
-        r = evaluate(plan, sc, Option(args.option, args.points_per_race), a=a)
+        st = default_standings(args.as_of, args.team)
+        r = evaluate(plan, sc, Option(args.option, args.points_per_race), st, a=a)
+        print(f"Championship: {st.us} ({st.source})")
         d = r["delta"]
         print(f"{r['decision']['name']}: {usd(r['decision']['planned_cost'])}, runs {r['decision']['races_it_runs']} races, "
               f"~{r['decision']['expected_points_gain']} points expected")

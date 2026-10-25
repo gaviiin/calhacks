@@ -6,14 +6,14 @@ import { useRevenue } from './lib/revenue';
 import { AuditView } from './views/AuditView';
 import { ConnectView } from './views/ConnectView';
 import { RiskView } from './views/RiskView';
+import { RaceView } from './views/RaceView';
 import { CostCapView } from './views/CostCapView';
 import { EvidenceView } from './views/EvidenceView';
 import { InboxView } from './views/InboxView';
 import { Overview } from './views/Overview';
-import { RaceView } from './views/RaceView';
 import { RevenueView } from './views/RevenueView';
 
-// #/ · #/inbox/<key> · #/cost-cap · #/revenue · #/race · #/evidence · #/audit/<from>-<to>
+// #/ · #/race/<season>-<round> · #/inbox/<key> · #/cost-cap · #/revenue · #/evidence · #/audit/<from>-<to>
 
 interface Route {
   view: View;
@@ -22,7 +22,7 @@ interface Route {
 
 function parse(hash: string): Route {
   const [, view = '', ...rest] = hash.replace(/^#/, '').split('/');
-  const known: View[] = ['inbox', 'cost-cap', 'revenue', 'race', 'evidence', 'audit'];
+  const known: View[] = ['race', 'inbox', 'cost-cap', 'risk', 'revenue', 'evidence', 'audit', 'connect'];
   return { view: (known as string[]).includes(view) ? (view as View) : 'overview', arg: rest.join('/') || null };
 }
 
@@ -59,7 +59,9 @@ export default function App() {
       </a>
       <Shell view={route.view} go={(v) => nav(v === 'overview' ? '/' : `/${v}`)} inboxCount={inbox.length} status={status} />
       <main id="main" className="page">
-        {!cc.ready && route.view !== 'revenue' && route.view !== 'evidence' && route.view !== 'race' ? (
+        {route.view === 'race' ? (
+          <RaceView arg={route.arg} nav={nav} inbox={inbox} status={status} />
+        ) : !cc.ready && route.view !== 'revenue' && route.view !== 'evidence' && route.view !== 'connect' ? (
           <p className="muted loading">Connecting to the cost cap desk on SpacetimeDB…</p>
         ) : route.view === 'overview' ? (
           <Overview inbox={inbox} status={status} />
@@ -73,8 +75,6 @@ export default function App() {
           <ConnectView />
         ) : route.view === 'revenue' ? (
           <RevenueView />
-        ) : route.view === 'race' ? (
-          <RaceView />
         ) : route.view === 'evidence' ? (
           <EvidenceView />
         ) : (
@@ -83,7 +83,7 @@ export default function App() {
       </main>
       <footer className="colophon">
         <p>
-          Real: 2024 F1 results (Jolpica), FIA documents (Apify captures of fia.com), the FIA Financial Regulations. Synthetic: Meridian Racing, its ledgers,
+          Real: 2023, 2024 and 2026 F1 results and lap charts (Jolpica, TracingInsights RaceData), FIA documents (Apify captures of fia.com), the FIA Financial Regulations. Synthetic: Meridian Racing, its ledgers,
           sponsors, vendors and people.
         </p>
       </footer>

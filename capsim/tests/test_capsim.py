@@ -14,7 +14,7 @@ sys.path.insert(0, str(REPO))
 
 from capsim import regulations as R  # noqa: E402
 from capsim.assumptions import Assumptions  # noqa: E402
-from capsim.decide import Option, evaluate, headroom, pu_allocation  # noqa: E402
+from capsim.decide import Option, Standings, evaluate, headroom, pu_allocation  # noqa: E402
 from capsim.plan import CALENDAR_2026, Plan, actuals  # noqa: E402
 from capsim.sim import Scenario, forecast  # noqa: E402
 from capsim.sources import cost_cap_desk_actuals, load  # noqa: E402
@@ -209,9 +209,10 @@ def test_assumptions_validation():
 
 def test_final_upgrade_depends_on_the_pu_allocation():
     p, sc = base(pu=0)
-    no = evaluate(p, sc, Option("U5"), a=Assumptions(runs=1500))
+    tight = Standings()  # the hand-made close fight, where points can still move Meridian up
+    no = evaluate(p, sc, Option("U5"), tight, a=Assumptions(runs=1500))
     _, sc3 = base(pu=3_000_000)
-    yes = evaluate(p, sc3, Option("U5"), a=Assumptions(runs=1500))
+    yes = evaluate(p, sc3, Option("U5"), tight, a=Assumptions(runs=1500))
     assert no["verdict"] == "do_not" and any("D10.3.4" in r for r in no["reasons"])
     assert yes["verdict"] == "do_it"
     assert no["delta"]["breach_probability"] > yes["delta"]["breach_probability"]
@@ -282,3 +283,14 @@ def test_api(monkeypatch):
     assert c.post("/api/capsim/forecast", json={"extra_spend": {"3": 1}}).status_code == 400  # a closed month
     assert c.post("/api/capsim/pu-allocation", json=small).json()["deadline"] == "declare by 30 November 2026"
     assert c.get("/api/capsim/sources").json()["illustrative"]
+
+
+def test_real_2026_table_makes_the_upgrade_worthless():
+    from capsim.decide import default_standings
+
+    st = default_standings(9)
+    assert st.us == "Mercedes" and "real 2026 standings" in st.source
+    assert max(st.teams, key=lambda t: t.points).name == "Mercedes"
+    _, sc3 = base(pu=3_000_000)
+    r = evaluate(Plan(), sc3, Option("U5"), st, a=FAST)
+    assert r["verdict"] == "do_not" and r["delta"]["expected_prize_money"] < 1_000  # P1 already safe: points buy nothing

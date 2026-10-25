@@ -137,3 +137,40 @@ export const IconMail = (p: P) => (
     <path d="M2.5 4h11v8.5h-11zM2.5 4.5L8 9l5.5-4.5" />
   </Svg>
 );
+
+export const IconPause = (p: P) => (
+  <Svg {...p}>
+    <path d="M5.5 3.5v9M10.5 3.5v9" />
+  </Svg>
+);
+
+export const IconSkip = (p: P) => (
+  <Svg {...p}>
+    <path d="M3.5 3.5l6 4.5-6 4.5zM12.5 3.5v9" />
+  </Svg>
+);
+
+export const IconRestart = (p: P) => (
+  <Svg {...p}>
+    <path d="M3.5 8a4.5 4.5 0 1 0 1.4-3.3M3.5 2.5v2.5H6" />
+  </Svg>
+);
+
+export const IconFlag = (p: P) => (
+  <Svg {...p}>
+    <path d="M3.5 14V2.5M3.5 3h8l-1.6 2.8L11.5 8.5h-8" />
+  </Svg>
+);
+
+export const IconBolt = (p: P) => (
+  <Svg {...p}>
+    <path d="M9 1.8L3.8 9h4l-1 5.2L12.2 7h-4z" />
+  </Svg>
+);
+
+export const IconRadio = (p: P) => (
+  <Svg {...p}>
+    <path d="M8 9.5v4.5M5.6 7.6a3.4 3.4 0 0 1 4.8 0M3.4 5.4a6.5 6.5 0 0 1 9.2 0" />
+    <path d="M8 9.6h0" />
+  </Svg>
+);

@@ -40,12 +40,49 @@ class Team:
 
 @dataclass
 class Standings:
-    """HYPOTHETICAL constructors' fight around Meridian at the as-of date (not the real 2026 table)."""
+    """The constructors' fight. Default: the real 2026 table at the as-of date (see real_standings); this
+    hand-made fallback is used only when world/race_data/2026.json is missing."""
 
     teams_ahead_fixed: int = 2  # teams out of reach above the fight
     teams: list[Team] = field(default_factory=lambda: [
         Team("Rival A", 312, 15.4), Team("Meridian Racing", 296, 15.0), Team("Rival B", 281, 14.2)])
     us: str = "Meridian Racing"
+    source: str = "hypothetical"
+
+
+RACE_DATA = REPO / "world" / "race_data" / "2026.json"
+
+
+def real_standings(as_of_month: int, team: str = "mercedes", path: Path = RACE_DATA) -> Standings:
+    """The real 2026 constructors' table after the last race in or before the as-of month, every team with its
+    average points per round and round-to-round spread so far. Meridian mirrors Mercedes; any team can be 'us'."""
+    data = json.loads(Path(path).read_text())
+    rounds = sorted((r for r in data["rounds"] if int(r["date"][5:7]) <= as_of_month), key=lambda r: r["round"])
+    if not rounds:
+        raise ValueError(f"no 2026 races before the end of month {as_of_month}")
+    names = {}
+    for r in rounds:
+        for c in r["classification"]:
+            names[c["constructor"]] = c["constructor_name"]
+    if team not in names:
+        raise ValueError(f"unknown constructor {team!r}; known: {sorted(names)}")
+    prev: dict[str, float] = {}
+    hist: dict[str, list[float]] = {t: [] for t in names}
+    for r in rounds:
+        for t in names:
+            hist[t].append(r["standings_after"].get(t, 0) - prev.get(t, 0))
+        prev = r["standings_after"]
+    teams = []
+    for t, h in hist.items():
+        mean = statistics.fmean(h)
+        sd = statistics.stdev(h) if len(h) > 2 else max(5.0, mean / 2)
+        teams.append(Team(names[t], prev.get(t, 0), round(mean, 2), round(max(2.0, sd), 2)))
+    return Standings(0, sorted(teams, key=lambda x: -x.points), names[team],
+                     source=f"real 2026 standings after R{rounds[-1]['round']} {rounds[-1]['name']} (TracingInsights RaceData, CC0)")
+
+
+def default_standings(as_of_month: int, team: str = "mercedes") -> Standings:
+    return real_standings(as_of_month, team) if RACE_DATA.exists() else Standings()
 
 
 @dataclass
@@ -75,7 +112,7 @@ def _position(points: dict[str, float], standings: Standings) -> int:
 def evaluate(plan: Plan, base: Scenario, option: Option, standings: Standings | None = None, a: Assumptions | None = None,
              max_material_risk: float = 0.01) -> dict:
     a = a or Assumptions()
-    standings = standings or Standings()
+    standings = standings or default_standings(base.as_of_month)
     year = plan.season
     upg = next((u for u in plan.upgrades if u.key == option.key), None)
     if upg is None:

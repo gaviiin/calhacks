@@ -129,7 +129,7 @@ export function LineChart({ xs, series, xLabel, yLabel, yMin, yMax, height = 220
             </text>
           </g>
         ))}
-        {xs.filter((_, i) => i % Math.max(1, Math.round(xs.length / 6)) === 0 || i === xs.length - 1).map((x) => (
+        {xs.filter((_, i, a) => { const k = Math.max(1, Math.round(a.length / 6)); return i === a.length - 1 || (i % k === 0 && a.length - 1 - i >= k / 2); }).map((x) => (
           <text key={x} x={X(x)} y={H - 6} textAnchor="middle" className="axis-label">
             {xLabel(x)}
           </text>

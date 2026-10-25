@@ -4,6 +4,7 @@ import { Attention } from '../components/Attention';
 import { CapTrack, useCapFigures } from '../components/CapTrack';
 import { CapTrajectory, useTrajectory } from '../components/CapTrajectory';
 import { Figure } from '../components/Figure';
+import { RaceStrip } from '../components/RaceStrip';
 import { IconArrow, IconChart } from '../components/icons';
 import { resolveEntry, type InboxItem } from '../components/inboxModel';
 import type { SeatStatus } from '../components/Shell';
@@ -11,9 +12,7 @@ import { Simulations } from '../components/Simulations';
 import { WhyPane } from '../components/Why';
 import { DEFAULTS, evaluate } from '../lib/caprisk';
 import { useCostCap } from '../lib/costcap';
-import { usdShort } from '../lib/format';
-import { useRace } from '../lib/race';
-import { TEAM, band, carLabel, eventDetail, kindMeta, ledger, sortTime, utcClock } from '../lib/raceModel';
+import { pct, usdShort } from '../lib/format';
 import { useRevenue } from '../lib/revenue';
 
 interface Scorecard {
@@ -42,38 +41,8 @@ function useScorecard(): Scorecard | null {
   return s;
 }
 
-/** The race desk in one line: the newest event on the tape and what the race has cost so far. */
-function RaceLine() {
-  const race = useRace();
-  const latest = race.events.reduce<(typeof race.events)[number] | null>((best, e) => (!best || sortTime(e.at) >= sortTime(best.at) ? e : best), null);
-  const led = ledger(race.effects);
-  return (
-    <dl className="deskline">
-      <dt>
-        <a className="link" href="#/race">
-          Race desk · {TEAM} <IconArrow size={13} />
-        </a>
-      </dt>
-      {latest ? (
-        <>
-          <dd>
-            <span className="mono">{utcClock(latest.at)}</span> {latest.lap ? `L${latest.lap} ` : ''}
-            <span className="mono">{carLabel(latest.driverNumber)}</span> {kindMeta(latest.kind).label.toLowerCase()}: {eventDetail(latest)}
-          </dd>
-          <dd>
-            race cost <b>{usdShort(led.cost.mid)}</b>
-            {led.cost.n > 0 && <span className="mono muted"> {band(led.cost.low, led.cost.high)}</span>}
-          </dd>
-        </>
-      ) : (
-        <dd className="muted">{race.connected ? 'no race on the tape: run the replayer' : 'pit-wall not reachable'}</dd>
-      )}
-    </dl>
-  );
-}
-
-/** One line of figures per desk: what the agents did, what people decided, how it scores. */
-function DeskLines() {
+/** The results, as tiles: what the agents did, what people decided, how it scores. */
+function Results() {
   const cc = useCostCap();
   const rev = useRevenue();
   const card = useScorecard();
@@ -98,70 +67,14 @@ function DeskLines() {
     tiles.push({ label: 'Kept off invoices', value: s.dollars_protected_cents, format: usdShort, sub: 'overturned results, not billed' });
   }
   return (
-    <section className="desklines" aria-label="Both desks at a glance">
-      <dl className="deskline">
-        <dt>Cost cap desk · January 2026</dt>
-        <dd>
-          <b>{items.filter((w) => w.proposalSource === 'deterministic').length}</b> decided by code under a policy
-        </dd>
-        <dd>
-          <b>{items.filter((w) => w.proposalSource === 'llm').length}</b> by Claude
-        </dd>
-        <dd>
-          <b>{standing}</b> approved under an approved rule, no person
-        </dd>
-        <dd>
-          <b>{byPeople}</b> decisions by people
-        </dd>
-        <dd>
-          <b>{count((x) => x === 'NEEDS_INFO')}</b> asked a person
-        </dd>
-        <dd>
-          <b>{count((x) => x === 'POSTED')}</b> posted
-        </dd>
-        <dd>
-          <b>{refused}</b> refused and logged
-        </dd>
-        {card?.accuracy != null && (
-          <dd>
-            <b>
-              {card.matched}/{card.decided}
-            </b>{' '}
-            right against the answer key the agents never see
-          </dd>
-        )}
-      </dl>
-      <dl className="deskline">
-        <dt>Revenue desk · 2024 season</dt>
-        {rev.online && s ? (
-          <>
-            <dd>
-              <b>{finalRounds}</b> of {rev.timeline.length} rounds final
-            </dd>
-            <dd>
-              <b>
-                {s.bonuses.correct}/{s.bonuses.truth}
-              </b>{' '}
-              sponsor bonuses booked right
-            </dd>
-            <dd>
-              <b>{usdShort(s.dollars_protected_cents)}</b> kept off invoices
-            </dd>
-            <dd>
-              <b>{s.router.code}</b> by code, <b>{s.router.agent}</b> by Claude
-            </dd>
-            <dd>books {s.books_tie ? 'tie' : 'do not tie'}</dd>
-            {rev.audit && (
-              <dd>
-                auditor: <b>{rev.audit.opinion}</b>
-              </dd>
-            )}
-          </>
-        ) : (
-          <dd className="muted">{rev.online ? 'no season running: open Revenue to replay 2024' : 'revenue API not reachable (make revenue-api)'}</dd>
-        )}
-      </dl>
-      <RaceLine />
+    <section className="results" aria-label="Results">
+      {tiles.map((t) => (
+        <div key={t.label} className={`tile${t.tone ? ` tile--${t.tone}` : ''}`}>
+          <Figure value={t.value} format={t.format} className="tile-figure" />
+          <span className="tile-label">{t.label}</span>
+          <span className="tile-sub muted">{t.sub}</span>
+        </div>
+      ))}
     </section>
   );
 }
@@ -202,6 +115,7 @@ export function Overview({ inbox, status }: { inbox: InboxItem[]; status: SeatSt
   const key = selected ?? inbox[0]?.key ?? null;
   return (
     <div className="overview">
+      <RaceStrip />
       <Results />
       <div className="split">
         <Attention inbox={inbox} selected={key} onSelect={setSelected} />
