@@ -6,33 +6,55 @@
 import { type Infer as __Infer } from "spacetimedb";
 
 // Import all reducer arg schemas
+import AnswerRaceQuestionReducer from "../answer_race_question_reducer";
+import ApproveRaceCloseReducer from "../approve_race_close_reducer";
+import AskRaceQuestionReducer from "../ask_race_question_reducer";
 import ConfirmRaceEffectReducer from "../confirm_race_effect_reducer";
 import CorrectRaceEffectReducer from "../correct_race_effect_reducer";
+import DefaultRaceQuestionReducer from "../default_race_question_reducer";
 import IngestDecisionReducer from "../ingest_decision_reducer";
 import IngestDocumentReducer from "../ingest_document_reducer";
+import MarkRaceCloseSentReducer from "../mark_race_close_sent_reducer";
 import MirrorEntryReducer from "../mirror_entry_reducer";
 import MirrorItemReducer from "../mirror_item_reducer";
+import PostRaceEntryReducer from "../post_race_entry_reducer";
 import ProposeRacePolicyReducer from "../propose_race_policy_reducer";
 import RecordForecastReducer from "../record_forecast_reducer";
+import RecordRaceActionsReducer from "../record_race_actions_reducer";
+import RecordRaceCloseReducer from "../record_race_close_reducer";
 import RecordRaceEffectsReducer from "../record_race_effects_reducer";
 import RecordRaceEventReducer from "../record_race_event_reducer";
+import RecordRaceSimReducer from "../record_race_sim_reducer";
 import SetIngestorReducer from "../set_ingestor_reducer";
+import SetRaceActionStatusReducer from "../set_race_action_status_reducer";
 import SetRacePolicyAutonomyReducer from "../set_race_policy_autonomy_reducer";
 import SetReviewStatusReducer from "../set_review_status_reducer";
 import SetWriterReducer from "../set_writer_reducer";
+import UpsertRaceIncidentReducer from "../upsert_race_incident_reducer";
 
+export type AnswerRaceQuestionParams = __Infer<typeof AnswerRaceQuestionReducer>;
+export type ApproveRaceCloseParams = __Infer<typeof ApproveRaceCloseReducer>;
+export type AskRaceQuestionParams = __Infer<typeof AskRaceQuestionReducer>;
 export type ConfirmRaceEffectParams = __Infer<typeof ConfirmRaceEffectReducer>;
 export type CorrectRaceEffectParams = __Infer<typeof CorrectRaceEffectReducer>;
+export type DefaultRaceQuestionParams = __Infer<typeof DefaultRaceQuestionReducer>;
 export type IngestDecisionParams = __Infer<typeof IngestDecisionReducer>;
 export type IngestDocumentParams = __Infer<typeof IngestDocumentReducer>;
+export type MarkRaceCloseSentParams = __Infer<typeof MarkRaceCloseSentReducer>;
 export type MirrorEntryParams = __Infer<typeof MirrorEntryReducer>;
 export type MirrorItemParams = __Infer<typeof MirrorItemReducer>;
+export type PostRaceEntryParams = __Infer<typeof PostRaceEntryReducer>;
 export type ProposeRacePolicyParams = __Infer<typeof ProposeRacePolicyReducer>;
 export type RecordForecastParams = __Infer<typeof RecordForecastReducer>;
+export type RecordRaceActionsParams = __Infer<typeof RecordRaceActionsReducer>;
+export type RecordRaceCloseParams = __Infer<typeof RecordRaceCloseReducer>;
 export type RecordRaceEffectsParams = __Infer<typeof RecordRaceEffectsReducer>;
 export type RecordRaceEventParams = __Infer<typeof RecordRaceEventReducer>;
+export type RecordRaceSimParams = __Infer<typeof RecordRaceSimReducer>;
 export type SetIngestorParams = __Infer<typeof SetIngestorReducer>;
+export type SetRaceActionStatusParams = __Infer<typeof SetRaceActionStatusReducer>;
 export type SetRacePolicyAutonomyParams = __Infer<typeof SetRacePolicyAutonomyReducer>;
 export type SetReviewStatusParams = __Infer<typeof SetReviewStatusReducer>;
 export type SetWriterParams = __Infer<typeof SetWriterReducer>;
+export type UpsertRaceIncidentParams = __Infer<typeof UpsertRaceIncidentReducer>;
 

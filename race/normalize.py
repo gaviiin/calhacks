@@ -23,6 +23,7 @@ from dataclasses import dataclass, field
 from datetime import timedelta
 
 from race.events import CarState, RaceEvent, iso, parse_iso
+from race.telemetry import detect_all
 
 INCIDENT_RE = re.compile(
     r"^(?:FIA STEWARDS: )?(?:UPDATE: )?(?:(?P<turn>TURN \d+|LAP \d+ TURN \d+|PIT (?:LANE|EXIT|ENTRY)) )?"
@@ -267,6 +268,19 @@ class Normalizer:
             return [self._ev("penalty", at, parsed["car"], lap, payload, extra_key=parsed["what"] + str(parsed["served"]))]
         return [self._ev("flag", at, driver, lap, base)] if flag else [self._ev("notice", at, driver, lap, base)]
 
+    def _on_car_stop(self, row: dict) -> list[RaceEvent]:
+        """The telemetry tripwire (race/telemetry.py): one of our cars stopped hard. Seconds ahead of race control."""
+        n = int(row["car"])
+        if not self.is_team_car(n):
+            return []
+        d = self._driver(n)
+        g = f", {row['decel_g']}g" if row.get("decel_g") else ""
+        summary = (f"telemetry: {row['peak_kph']} to 0 km/h in {row['seconds']}s{g}" if row["signature"] == "stop"
+                   else f"telemetry froze at {row['impact_kph']} km/h after {row['peak_kph']} km/h")
+        payload = {**{k: row.get(k) for k in ("signature", "peak_kph", "impact_kph", "decel_g", "seconds")},
+                   "track_status": self.track_status, "team_involved": True, "summary": summary, "source": "car_data"}
+        return [self._ev("car_stopped", row["at"], n, d.lap, payload)]
+
     def _on_championship_teams(self, row: dict) -> list[RaceEvent]:
         at = row.get("_t") or self.session_end or self.session_start
         payload = {k: row.get(k) for k in ("team_name", "points_start", "points_current", "position_start", "position_current")}
@@ -332,6 +346,10 @@ def stamped_rows(rows: dict[str, list[dict]]) -> list[tuple[str, str, dict]]:
         out.append((t, "stints", {**r, "_t": t}))
     for r in rows.get("championship_teams", []):
         out.append((end, "championship_teams", {**r, "_t": end}))
+    car_data = rows.get("car_data") or {}
+    if isinstance(car_data, dict):
+        for stop in detect_all(car_data):
+            out.append((stop["at"], "car_stop", stop))
     for r in rows.get("session_result", []):
         t = iso(parse_iso(end) + timedelta(minutes=2)) if end else end
         out.append((t, "session_result", {**r, "_t": t}))

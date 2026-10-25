@@ -217,6 +217,76 @@ export const PitWallItems = __t.object("PitWallItems", {
 });
 export type PitWallItems = __Infer<typeof PitWallItems>;
 
+export const RaceActionInput = __t.object("RaceActionInput", {
+  actionKey: __t.string(),
+  incidentKey: __t.string(),
+  kind: __t.string(),
+  title: __t.string(),
+  detailJson: __t.string(),
+  dueAt: __t.string(),
+  status: __t.string(),
+  ownerRole: __t.string(),
+  reversible: __t.bool(),
+  outward: __t.bool(),
+  decidedBy: __t.string(),
+  updatedAt: __t.string(),
+});
+export type RaceActionInput = __Infer<typeof RaceActionInput>;
+
+export const RaceActions = __t.object("RaceActions", {
+  actionKey: __t.string(),
+  incidentKey: __t.string(),
+  kind: __t.string(),
+  title: __t.string(),
+  detailJson: __t.string(),
+  dueAt: __t.string(),
+  status: __t.string(),
+  ownerRole: __t.string(),
+  reversible: __t.bool(),
+  outward: __t.bool(),
+  decidedBy: __t.string(),
+  updatedAt: __t.string(),
+});
+export type RaceActions = __Infer<typeof RaceActions>;
+
+export const RaceBeliefs = __t.object("RaceBeliefs", {
+  beliefKey: __t.string(),
+  incidentKey: __t.string(),
+  version: __t.u32(),
+  status: __t.string(),
+  beliefJson: __t.string(),
+  at: __t.string(),
+  recordedAt: __t.string(),
+  cause: __t.string(),
+});
+export type RaceBeliefs = __Infer<typeof RaceBeliefs>;
+
+export const RaceCloseInput = __t.object("RaceCloseInput", {
+  closeKey: __t.string(),
+  meetingKey: __t.u32(),
+  closedAt: __t.string(),
+  rootHash: __t.string(),
+  totalsJson: __t.string(),
+  briefsJson: __t.string(),
+  status: __t.string(),
+  approvedBy: __t.string(),
+  leaves: __t.u32(),
+});
+export type RaceCloseInput = __Infer<typeof RaceCloseInput>;
+
+export const RaceCloses = __t.object("RaceCloses", {
+  closeKey: __t.string(),
+  meetingKey: __t.u32(),
+  closedAt: __t.string(),
+  rootHash: __t.string(),
+  totalsJson: __t.string(),
+  briefsJson: __t.string(),
+  status: __t.string(),
+  approvedBy: __t.string(),
+  leaves: __t.u32(),
+});
+export type RaceCloses = __Infer<typeof RaceCloses>;
+
 export const RaceEffects = __t.object("RaceEffects", {
   effectKey: __t.string(),
   eventKey: __t.string(),
@@ -236,6 +306,55 @@ export const RaceEffects = __t.object("RaceEffects", {
   at: __t.string(),
 });
 export type RaceEffects = __Infer<typeof RaceEffects>;
+
+export const RaceEntries = __t.object("RaceEntries", {
+  entryKey: __t.string(),
+  incidentKey: __t.string(),
+  effectKey: __t.string(),
+  memo: __t.string(),
+  effectiveDate: __t.string(),
+  recognition: __t.string(),
+  capRelevant: __t.bool(),
+  amountCents: __t.i64(),
+  status: __t.string(),
+  evidenceJson: __t.string(),
+  at: __t.string(),
+});
+export type RaceEntries = __Infer<typeof RaceEntries>;
+
+export const RaceEntryInput = __t.object("RaceEntryInput", {
+  entryKey: __t.string(),
+  incidentKey: __t.string(),
+  effectKey: __t.string(),
+  memo: __t.string(),
+  effectiveDate: __t.string(),
+  recognition: __t.string(),
+  capRelevant: __t.bool(),
+  amountCents: __t.i64(),
+  status: __t.string(),
+  evidenceJson: __t.string(),
+  at: __t.string(),
+});
+export type RaceEntryInput = __Infer<typeof RaceEntryInput>;
+
+export const RaceEntryLineInput = __t.object("RaceEntryLineInput", {
+  account: __t.string(),
+  debitCents: __t.i64(),
+  creditCents: __t.i64(),
+  memo: __t.string(),
+});
+export type RaceEntryLineInput = __Infer<typeof RaceEntryLineInput>;
+
+export const RaceEntryLines = __t.object("RaceEntryLines", {
+  lineKey: __t.string(),
+  entryKey: __t.string(),
+  lineNo: __t.u32(),
+  account: __t.string(),
+  debitCents: __t.i64(),
+  creditCents: __t.i64(),
+  memo: __t.string(),
+});
+export type RaceEntryLines = __Infer<typeof RaceEntryLines>;
 
 export const RaceEventInput = __t.object("RaceEventInput", {
   eventKey: __t.string(),
@@ -279,6 +398,38 @@ export const RaceForecasts = __t.object("RaceForecasts", {
   model: __t.string(),
 });
 export type RaceForecasts = __Infer<typeof RaceForecasts>;
+
+export const RaceIncidentInput = __t.object("RaceIncidentInput", {
+  incidentKey: __t.string(),
+  meetingKey: __t.u32(),
+  sessionKey: __t.u32(),
+  driverNumber: __t.u32(),
+  teamName: __t.string(),
+  firstSeenAt: __t.string(),
+  status: __t.string(),
+  version: __t.u32(),
+  beliefJson: __t.string(),
+  evidenceJson: __t.string(),
+  updatedAt: __t.string(),
+  cause: __t.string(),
+});
+export type RaceIncidentInput = __Infer<typeof RaceIncidentInput>;
+
+export const RaceIncidents = __t.object("RaceIncidents", {
+  incidentKey: __t.string(),
+  meetingKey: __t.u32(),
+  sessionKey: __t.u32(),
+  driverNumber: __t.u32(),
+  teamName: __t.string(),
+  firstSeenAt: __t.string(),
+  status: __t.string(),
+  version: __t.u32(),
+  beliefJson: __t.string(),
+  evidenceJson: __t.string(),
+  updatedAt: __t.string(),
+  cause: __t.string(),
+});
+export type RaceIncidents = __Infer<typeof RaceIncidents>;
 
 export const RacePolicies = __t.object("RacePolicies", {
   policyId: __t.string(),
@@ -325,6 +476,52 @@ export const RacePrecedents = __t.object("RacePrecedents", {
   at: __t.string(),
 });
 export type RacePrecedents = __Infer<typeof RacePrecedents>;
+
+export const RaceQuestionInput = __t.object("RaceQuestionInput", {
+  questionKey: __t.string(),
+  incidentKey: __t.string(),
+  kind: __t.string(),
+  prompt: __t.string(),
+  optionsJson: __t.string(),
+  routeRole: __t.string(),
+  expectedLossCents: __t.i64(),
+  deadlineAt: __t.string(),
+  effectKeys: __t.string(),
+  defaultOption: __t.string(),
+  status: __t.string(),
+  answerJson: __t.string(),
+  answeredBy: __t.string(),
+  createdAt: __t.string(),
+});
+export type RaceQuestionInput = __Infer<typeof RaceQuestionInput>;
+
+export const RaceQuestions = __t.object("RaceQuestions", {
+  questionKey: __t.string(),
+  incidentKey: __t.string(),
+  kind: __t.string(),
+  prompt: __t.string(),
+  optionsJson: __t.string(),
+  routeRole: __t.string(),
+  expectedLossCents: __t.i64(),
+  deadlineAt: __t.string(),
+  effectKeys: __t.string(),
+  defaultOption: __t.string(),
+  status: __t.string(),
+  answerJson: __t.string(),
+  answeredBy: __t.string(),
+  createdAt: __t.string(),
+});
+export type RaceQuestions = __Infer<typeof RaceQuestions>;
+
+export const RaceSims = __t.object("RaceSims", {
+  simKey: __t.string(),
+  meetingKey: __t.u32(),
+  trigger: __t.string(),
+  at: __t.string(),
+  payloadJson: __t.string(),
+  runtimeMs: __t.u32(),
+});
+export type RaceSims = __Infer<typeof RaceSims>;
 
 export const Writers = __t.object("Writers", {
   who: __t.identity(),

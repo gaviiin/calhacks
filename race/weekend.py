@@ -1,0 +1,236 @@
+"""Replay a whole race weekend through the race-day flow: qualifying, then the race, then the close.
+
+    uv run python -m race.weekend --meeting 1249 --pace 60          # São Paulo 2024: three Williams crashes
+    uv run python -m race.weekend --meeting 1249 --pace 0 --offline  # as fast as possible, no Jev, no Claude
+
+The tape and the money effects come from race/replay.py, one session at a time. This module owns what happens
+after each event, across the sessions of the weekend:
+
+    1 detect     race/telemetry.py (car_stopped) and race/normalize.py, inside the replay
+    2 log        race/incidents.py   one incident per crash, its belief versioned as evidence arrives
+    3 respond    race/logistics.py   spares, work orders, freight, the withdraw decision, FIA paperwork
+    4 account    race/ledger.py      balanced provisional entries, recognised when the cap counts them
+    5 ask        race/questions.py   a person is asked when a wrong answer would cost more than the question
+    6 re-plan    race/season_sim.py + race/cap_forecast.py   the season and the cap re-run after each change
+    7 close      race/close.py       the sealed weekend and a brief per role
+
+Every stage writes its rows to pit-wall through RaceSink, so the dashboard's Race day page moves live.
+"""
+
+from __future__ import annotations
+
+import argparse
+import json
+import os
+import time
+from dataclasses import dataclass, field
+from pathlib import Path
+
+from race import cap_forecast, close as close_mod, incidents, ledger, logistics, questions, season_sim
+from race.events import Action, Close, Effect, Entry, Incident, Question, RaceEvent, SimRun, now_iso
+from race.replay import Replay
+from race.sink import RaceSink
+
+DATA = Path(__file__).resolve().parent / "data"
+
+
+def weekend_info(meeting_key: int) -> dict:
+    return json.loads((DATA / "weekends.json").read_text())[str(meeting_key)]
+
+
+@dataclass
+class WeekendState:
+    """Everything the stages share across the sessions of one weekend. Plain data: each stage reads it and
+    returns rows; only this module writes them to the sink."""
+
+    meeting_key: int
+    info: dict
+    team: str
+    offline: bool = True
+    session: dict = field(default_factory=dict)  # the session now replaying
+    session_type: str = "Race"
+    now: str = ""  # time of the latest event (race time, not wall time)
+    incidents: dict[str, Incident] = field(default_factory=dict)
+    actions: dict[str, Action] = field(default_factory=dict)
+    entries: dict[str, Entry] = field(default_factory=dict)
+    questions: dict[str, Question] = field(default_factory=dict)
+    sims: list[SimRun] = field(default_factory=list)
+    effects: list[tuple[RaceEvent, list[Effect]]] = field(default_factory=list)  # every money effect this weekend
+    results: dict[int, list[dict]] = field(default_factory=dict)  # session_key -> session_result rows, when known
+    spares: dict = field(default_factory=dict)  # part -> {"at_track": n, "factory": n}, from logistics.load_manifest
+    close: Close | None = None
+    replay: Replay | None = None  # the live session's replay (its EffectsContext, policies, precedents)
+
+    @property
+    def year(self) -> int:
+        return int(self.info["year"])
+
+    @property
+    def round(self) -> int:
+        return int(self.info["round"])
+
+    def cars(self) -> list[int]:
+        return sorted(int(c) for c in self.info.get("cars", {}))
+
+
+class Weekend:
+    def __init__(self, meeting_key: int, *, pace: float, sink: RaceSink | None, offline: bool, forecast: bool,
+                 fixtures_only: bool = True, max_sleep: float = 5.0, quiet: bool = False, from_at: dict[int, str] | None = None,
+                 sessions: list[int] | None = None):
+        self.info = weekend_info(meeting_key)
+        self.state = WeekendState(meeting_key=meeting_key, info=self.info, team=self.info.get("team", "Williams"), offline=offline)
+        self.state.spares = logistics.load_manifest(self.state)
+        self.sessions = sessions or [int(s) for s in self.info["sessions"]]
+        self.pace, self.sink, self.offline, self.forecast = pace, sink, offline, forecast
+        self.fixtures_only, self.max_sleep, self.quiet = fixtures_only, max_sleep, quiet
+        self.from_at = from_at or {}
+        self.book = incidents.IncidentBook(self.state)
+        self.timings: dict[str, list[float]] = {}
+
+    # ------------------------------------------------------------------ helpers
+    def _time(self, stage: str, t0: float) -> None:
+        self.timings.setdefault(stage, []).append((time.perf_counter() - t0) * 1000)
+
+    def say(self, line: str) -> None:
+        if not self.quiet:
+            print(f"      {line}"[:220])
+
+    # ------------------------------------------------------------------ hooks called by Replay
+    def after_event(self, replay: Replay, ev: RaceEvent, effects: list[Effect], jev, policy, precedent) -> None:
+        st = self.state
+        st.now = ev.at
+        if effects:
+            st.effects.append((ev, effects))
+        t0 = time.perf_counter()
+        inc = self.book.observe(ev, effects, jev)
+        self._time("log", t0)
+        if inc is None:
+            self.apply_answers()
+            return
+        st.incidents[inc.incident_key] = inc
+        if self.sink:
+            self.sink.incident(inc)
+        self.say(f"[log] {inc.incident_key} v{inc.version} {inc.status}: {inc.cause}")
+
+        t0 = time.perf_counter()
+        acts = logistics.plan(inc, st)
+        self._time("respond", t0)
+        fresh = [a for a in acts if st.actions.get(a.action_key) != a]
+        for a in acts:
+            st.actions[a.action_key] = a
+        if fresh and self.sink:
+            self.sink.actions(fresh)
+        for a in fresh:
+            self.say(f"[respond] {a.kind}: {a.title} ({a.status})")
+
+        t0 = time.perf_counter()
+        ents = ledger.entries_for(inc, effects, st)
+        self._time("account", t0)
+        for e in ents:
+            if e.entry_key not in st.entries:
+                st.entries[e.entry_key] = e
+                if self.sink:
+                    self.sink.entry(e)
+                self.say(f"[account] {e.memo} ${e.amount_cents / 100:,.0f} ({e.recognition})")
+
+        t0 = time.perf_counter()
+        qs = questions.questions_for(inc, effects, st)
+        self._time("ask", t0)
+        for q in qs:
+            if q.question_key not in st.questions:
+                st.questions[q.question_key] = q
+                if self.sink:
+                    self.sink.ask(q)
+                self.say(f"[ask] {q.route_role}: {q.prompt}")
+
+        self.replan(f"incident:{inc.incident_key}@v{inc.version}")
+        self.apply_answers()
+
+    def after_session(self, replay: Replay) -> None:
+        st = self.state
+        st.results[int(replay.session.get("session_key") or 0)] = replay.rows.get("session_result", [])
+        for inc in self.book.end_of_session(replay):
+            st.incidents[inc.incident_key] = inc
+            if self.sink:
+                self.sink.incident(inc)
+            for a in logistics.plan(inc, st):
+                if st.actions.get(a.action_key) != a:
+                    st.actions[a.action_key] = a
+                    if self.sink:
+                        self.sink.actions([a])
+        self.replan(f"result:{replay.session.get('session_key')}")
+
+    # ------------------------------------------------------------------ stages that run on their own clock
+    def replan(self, trigger: str) -> None:
+        t0 = time.perf_counter()
+        run = season_sim.run(self.state, trigger)
+        self._time("replan", t0)
+        if run is None:
+            return
+        run.runtime_ms = int((time.perf_counter() - t0) * 1000)
+        self.state.sims.append(run)
+        if self.sink:
+            self.sink.sim(run)
+        head = run.payload.get("headline") or ""
+        if head:
+            self.say(f"[re-plan] {head} ({run.runtime_ms} ms)")
+
+    def apply_answers(self) -> None:
+        """Answers a person gave in the dashboard since the last event: apply them and re-decide what they cover."""
+        changed = questions.apply_answers(self.state, self.sink, self.book)
+        for inc in changed:
+            self.state.incidents[inc.incident_key] = inc
+            if self.sink:
+                self.sink.incident(inc)
+            self.say(f"[ask] answered: {inc.incident_key} re-decided ({inc.cause})")
+            self.replan(f"answer:{inc.incident_key}@v{inc.version}")
+
+    # ------------------------------------------------------------------ run
+    def run(self) -> dict:
+        stats = {}
+        for key in self.sessions:
+            r = Replay(key, self.state.team, pace=self.pace, from_lap=0, sink=self.sink, offline=self.offline, forecast=self.forecast,
+                       fixtures_only=self.fixtures_only, max_sleep=self.max_sleep, quiet=self.quiet, hooks=self,
+                       from_at=self.from_at.get(key, ""))
+            self.state.replay = r
+            self.state.session = r.session
+            self.state.session_type = r.session_type
+            if key == self.sessions[0]:
+                self.replan("baseline")
+            stats[key] = r.run()
+        t0 = time.perf_counter()
+        c = close_mod.close_weekend(self.state, offline=self.offline)
+        self._time("close", t0)
+        if c is not None:
+            self.state.close = c
+            if self.sink:
+                self.sink.close(c)
+            self.say(f"[close] sealed {c.leaves} rows, root {c.root_hash[:12]}…, briefs for {', '.join(c.briefs)}")
+        stats["timings_ms"] = {k: round(sum(v) / len(v), 2) for k, v in self.timings.items() if v}
+        if not self.quiet:
+            print("weekend:", {k: v for k, v in stats.items() if k == "timings_ms"},
+                  f"{len(self.state.incidents)} incidents, {len(self.state.actions)} actions, {len(self.state.entries)} entries, "
+                  f"{len(self.state.questions)} questions, {len(self.state.sims)} sims")
+        return stats
+
+
+def main() -> None:
+    ap = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
+    ap.add_argument("--meeting", type=int, default=int(os.environ.get("RACE_MEETING", "1249")))
+    ap.add_argument("--pace", type=float, default=60.0)
+    ap.add_argument("--max-sleep", type=float, default=5.0)
+    ap.add_argument("--from", dest="from_at", action="append", default=[], help="SESSION=ISO: events before it land instantly")
+    ap.add_argument("--sessions", help="comma-separated session keys (default: the weekend's)")
+    ap.add_argument("--no-sink", action="store_true")
+    ap.add_argument("--offline", action="store_true", default=os.environ.get("RACE_OFFLINE", "") in ("1", "true"))
+    ap.add_argument("--no-forecast", action="store_true")
+    ap.add_argument("--quiet", action="store_true")
+    args = ap.parse_args()
+    from_at = {int(k): v for k, v in (x.split("=", 1) for x in args.from_at)}
+    sink = None if args.no_sink else RaceSink()
+    Weekend(args.meeting, pace=args.pace, sink=sink, offline=args.offline, forecast=not args.no_forecast, max_sleep=args.max_sleep,
+            quiet=args.quiet, from_at=from_at, sessions=[int(s) for s in args.sessions.split(",")] if args.sessions else None).run()
+
+
+if __name__ == "__main__":
+    main()

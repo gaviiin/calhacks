@@ -168,4 +168,5 @@ def load_fixture(session_key: int, fixtures_dir: Path) -> dict[str, list[dict]]:
         raise OpenF1Error(f"no fixture for session {session_key} under {fixtures_dir}")
     out = {ep: json.loads((d / f"{ep}.json").read_text()) for ep in SESSION_ENDPOINTS if (d / f"{ep}.json").exists()}
     out["session"] = [json.loads((d / "session.json").read_text())] if (d / "session.json").exists() else []
+    out["car_data"] = load_car_data(session_key, fixtures_dir)  # car -> rows (a dict, not a list: only our cars)
     return out

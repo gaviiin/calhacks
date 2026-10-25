@@ -174,7 +174,18 @@ def offline_decide(event: RaceEvent, context: dict) -> JevAnswers:
     pit_within = context.get("pit_within_laps")
     reason = (event.payload.get("reason") or "").upper()
 
-    if event.kind in ("incident", "retirement_suspected", "retirement_confirmed") and ours:
+    if event.kind == "car_stopped" and ours:
+        # The tripwire: how fast the car was going before it stopped is the best early read of the damage.
+        kph = int(event.payload.get("peak_kph") or 0)
+        if kph >= 250:
+            sev = {"heavy": 0.7, "moderate": 0.2, "light": 0.08, "none": 0.02}
+        elif kph >= 150:
+            sev = {"heavy": 0.4, "moderate": 0.4, "light": 0.15, "none": 0.05}
+        else:
+            sev = {"heavy": 0.1, "moderate": 0.35, "light": 0.45, "none": 0.1}
+        a.relevant = 1 - sev["none"]
+        a.needs_forecast = sev["heavy"] + 0.5 * sev["moderate"]
+    elif event.kind in ("incident", "retirement_suspected", "retirement_confirmed") and ours:
         if event.kind.startswith("retirement") or (retired_within is not None and retired_within <= 2):
             sev = {"heavy": 0.6, "moderate": 0.3, "light": 0.08, "none": 0.02}
         elif pit_within is not None and pit_within <= 2:

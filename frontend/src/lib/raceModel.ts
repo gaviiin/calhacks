@@ -6,7 +6,7 @@ import { parseJson, usdShort } from './format';
 // to be well formed.
 
 export const TEAM = 'Williams';
-export const DRIVERS: Record<number, string> = { 23: 'ALB', 55: 'SAI' };
+export const DRIVERS: Record<number, string> = { 23: 'ALB', 43: 'COL', 55: 'SAI' };
 
 type Payload = Record<string, unknown>;
 

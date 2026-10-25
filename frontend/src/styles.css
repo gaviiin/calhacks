@@ -5728,3 +5728,314 @@ code {
   overflow-x: auto;
   max-width: 100%;
 }
+
+/* ---------------------------------------------------------------- race day: the flow on one rail */
+
+.raceday {
+  display: grid;
+  gap: 12px;
+  max-width: 1180px;
+  margin: 0 auto;
+}
+
+.raceday-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: flex-end;
+  justify-content: space-between;
+  gap: 8px 24px;
+}
+
+.raceday-head h1 {
+  margin: 2px 0 0;
+  font: 800 clamp(26px, 4vw, 40px) / 1 var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.01em;
+}
+
+.raceday .eyebrow {
+  margin: 0;
+  color: var(--lime);
+  font: 600 12px var(--mono);
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+.rail {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 6px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.rail-step a {
+  display: grid;
+  gap: 2px;
+  height: 100%;
+  padding: 10px 10px 12px;
+  border: 1px solid var(--line);
+  border-top: 3px solid var(--line);
+  background: var(--panel);
+  color: var(--ink);
+  text-decoration: none;
+}
+
+.rail-step a:hover,
+.rail-step a:focus-visible {
+  border-top-color: var(--lime);
+}
+
+.rail-n {
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.rail-title {
+  font: 800 15px/1 var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.rail-value {
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
+.stage {
+  padding: 0;
+  border: 1px solid var(--line);
+  background: var(--panel);
+}
+
+.stage-head {
+  display: grid;
+  grid-template-columns: 28px 110px minmax(90px, auto) 1fr 20px;
+  align-items: baseline;
+  gap: 10px;
+  width: 100%;
+  padding: 12px 14px;
+  border: 0;
+  background: none;
+  color: var(--ink);
+  text-align: left;
+  cursor: pointer;
+}
+
+.stage-head:focus-visible {
+  outline: 2px solid var(--lime);
+  outline-offset: -2px;
+}
+
+.stage-n {
+  color: var(--muted);
+}
+
+.stage-title {
+  font: 800 18px/1 var(--display);
+  text-transform: uppercase;
+  letter-spacing: 0.03em;
+}
+
+.stage-value {
+  font-variant-numeric: tabular-nums;
+  font-weight: 600;
+}
+
+.stage-note {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.stage-caret {
+  color: var(--muted);
+  font: 600 16px var(--mono);
+  text-align: right;
+}
+
+.stage-body {
+  padding: 2px 14px 16px 52px;
+  border-top: 1px solid var(--line-soft);
+}
+
+.stage-grid {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(0, 1fr);
+  gap: 16px;
+}
+
+.leads,
+.mini-tape,
+.incidents,
+.beliefs,
+.actions,
+.questions {
+  display: grid;
+  gap: 8px;
+  margin: 10px 0 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mini-tape li,
+.beliefs li {
+  font-size: 13px;
+}
+
+.incident,
+.action,
+.question {
+  padding: 10px 12px;
+  border-left: 3px solid var(--line);
+  background: var(--panel-2);
+}
+
+.incident-top,
+.action-top {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 6px 12px;
+}
+
+.action--awaiting_approval,
+.question--open {
+  border-left-color: var(--hold);
+}
+
+.question-prompt {
+  margin: 0 0 4px;
+}
+
+.question-options {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.option--chosen {
+  color: var(--lime);
+  font-weight: 600;
+}
+
+.act {
+  display: inline-flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 6px;
+}
+
+.entries {
+  width: 100%;
+  margin-top: 10px;
+  border-collapse: collapse;
+  font-size: 14px;
+}
+
+.entries th,
+.entries td {
+  padding: 6px 8px;
+  border-bottom: 1px solid var(--line-soft);
+  text-align: left;
+  vertical-align: top;
+}
+
+.entries .num {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+}
+
+.brief {
+  margin-top: 14px;
+}
+
+.brief h3 {
+  margin: 0 0 6px;
+  font: 800 16px var(--display);
+  text-transform: uppercase;
+}
+
+.brief-text {
+  margin: 0;
+  white-space: pre-wrap;
+  font: 14px/1.5 var(--body, inherit);
+}
+
+.raceday-foot {
+  font-size: 12px;
+}
+
+@media (max-width: 900px) {
+  .rail {
+    grid-template-columns: repeat(4, minmax(0, 1fr));
+  }
+  .stage-grid {
+    grid-template-columns: 1fr;
+  }
+}
+
+@media (max-width: 560px) {
+  .rail {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+  .stage-head {
+    grid-template-columns: 22px 1fr auto 18px;
+  }
+  .stage-note {
+    grid-column: 2 / 4;
+    white-space: normal;
+  }
+  .stage-body {
+    padding-left: 14px;
+  }
+}
+
+/* ---------------------------------------------------------------- four tabs: sub-tabs and the gear */
+
+.subtabs {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+  margin: 0 0 12px;
+  border-bottom: 1px solid var(--line);
+}
+
+.subtab {
+  padding: 8px 12px;
+  border-bottom: 2px solid transparent;
+  color: var(--muted);
+  font: 700 14px var(--display);
+  letter-spacing: 0.04em;
+  text-decoration: none;
+  text-transform: uppercase;
+}
+
+.subtab:hover {
+  color: var(--ink);
+}
+
+.subtab--on {
+  border-bottom-color: var(--lime);
+  color: var(--ink);
+}
+
+.gear {
+  display: inline-grid;
+  place-items: center;
+  width: 30px;
+  height: 30px;
+  border: 1px solid var(--line);
+  color: var(--muted);
+}
+
+.gear:hover,
+.gear--on {
+  border-color: var(--lime);
+  color: var(--ink);
+}

@@ -13,8 +13,13 @@ import { EvidenceView } from './views/EvidenceView';
 import { InboxView } from './views/InboxView';
 import { Overview } from './views/Overview';
 import { RevenueView } from './views/RevenueView';
+import { AuditTabsView } from './views/AuditTabsView';
+import { BooksView } from './views/BooksView';
+import { RaceDayView } from './views/RaceDayView';
 
-// #/ · #/race (live, SpacetimeDB) · #/replay/<season>-<round> · #/inbox/<key> · #/cost-cap · #/revenue · #/evidence · #/audit/<from>-<to>
+// #/ race day (the flow) · #/inbox/<key> · #/books/<race|cost-cap|revenue> · #/audit[/evidence|/<from>-<to>]
+// still routable, off the nav: #/race (the full live desk) · #/replay/<season>-<round> · #/risk · #/pitwall (old overview)
+// · #/cost-cap · #/revenue · #/evidence · #/connect (the gear)
 
 interface Route {
   view: View;
@@ -23,7 +28,7 @@ interface Route {
 
 function parse(hash: string): Route {
   const [, view = '', ...rest] = hash.replace(/^#/, '').split('/');
-  const known: View[] = ['race', 'replay', 'inbox', 'cost-cap', 'risk', 'revenue', 'evidence', 'audit', 'connect'];
+  const known: View[] = ['race', 'replay', 'inbox', 'books', 'cost-cap', 'risk', 'revenue', 'evidence', 'audit', 'connect', 'pitwall'];
   return { view: (known as string[]).includes(view) ? (view as View) : 'overview', arg: rest.join('/') || null };
 }
 
@@ -60,13 +65,19 @@ export default function App() {
       </a>
       <Shell view={route.view} go={(v) => nav(v === 'overview' ? '/' : `/${v}`)} inboxCount={inbox.length} status={status} />
       <main id="main" className="page">
-        {route.view === 'replay' ? (
+        {route.view === 'overview' ? (
+          <RaceDayView />
+        ) : route.view === 'replay' ? (
           <RaceReplayView arg={route.arg} nav={nav} inbox={inbox} status={status} />
         ) : route.view === 'race' ? (
           <RaceView />
+        ) : route.view === 'books' ? (
+          <BooksView tab={route.arg} nav={nav} status={status} inbox={inbox} costCapReady={cc.ready} />
+        ) : route.view === 'audit' && !auditWindow ? (
+          <AuditTabsView tab={route.arg} nav={nav} window={auditWindow} costCapReady={cc.ready} />
         ) : !cc.ready && route.view !== 'revenue' && route.view !== 'evidence' && route.view !== 'connect' ? (
           <p className="muted loading">Connecting to the cost cap desk on SpacetimeDB…</p>
-        ) : route.view === 'overview' ? (
+        ) : route.view === 'pitwall' ? (
           <Overview inbox={inbox} status={status} />
         ) : route.view === 'inbox' ? (
           <InboxView inbox={inbox} selected={route.arg} select={(k) => nav(`/inbox/${k}`)} status={status} />
@@ -86,8 +97,8 @@ export default function App() {
       </main>
       <footer className="colophon">
         <p>
-          Real: 2023, 2024 and 2026 F1 results and lap charts (Jolpica, TracingInsights RaceData), FIA documents (Apify captures of fia.com), the FIA Financial Regulations. Synthetic: Meridian Racing, its ledgers,
-          sponsors, vendors and people.
+          Not affiliated with Williams Racing. Real: OpenF1 timing and car telemetry, Jolpica results, FIA documents (Apify captures of fia.com), the FIA Financial Regulations. Money on race day is press
+          estimates and stated assumptions; the cost cap and revenue desks behind Books run on Meridian Racing, a synthetic team with its own ledgers, sponsors and people.
         </p>
       </footer>
     </>

@@ -231,6 +231,144 @@ const racePrecedents = table(
   }
 );
 
+
+// ---------------------------------------------------------------- race-day flow (log, respond, account, ask, re-plan, close)
+// One incident per crash or stoppage of a team car, across every message about it. Current belief here; every
+// version is also appended to race_beliefs (valid time `at`, system time `recordedAt`): what we believed when.
+const raceIncidents = table(
+  { name: 'race_incidents', public: true },
+  {
+    incidentKey: t.string().primaryKey(),
+    meetingKey: t.u32().index('btree'),
+    sessionKey: t.u32(),
+    driverNumber: t.u32(),
+    teamName: t.string(),
+    firstSeenAt: t.string(),
+    status: t.string(), // suspected | corroborated | confirmed | assessed | closed
+    version: t.u32(),
+    beliefJson: t.string(),
+    evidenceJson: t.string(),
+    updatedAt: t.string(),
+    cause: t.string(),
+  }
+);
+
+const raceBeliefs = table(
+  { name: 'race_beliefs', public: true },
+  {
+    beliefKey: t.string().primaryKey(), // `${incidentKey}@v${version}`
+    incidentKey: t.string().index('btree'),
+    version: t.u32(),
+    status: t.string(),
+    beliefJson: t.string(),
+    at: t.string(), // valid time: when the evidence is from
+    recordedAt: t.string(), // system time: when the desk learned it
+    cause: t.string(),
+  }
+);
+
+// What the playbook sets off. `auto` runs on its own (reversible, internal); outward-facing or irreversible
+// actions wait for ownerRole and are approved through setRaceActionStatus.
+const raceActions = table(
+  { name: 'race_actions', public: true },
+  {
+    actionKey: t.string().primaryKey(),
+    incidentKey: t.string().index('btree'),
+    kind: t.string(),
+    title: t.string(),
+    detailJson: t.string(),
+    dueAt: t.string(),
+    status: t.string(), // auto | awaiting_approval | approved | rejected | done | cancelled
+    ownerRole: t.string(),
+    reversible: t.bool(),
+    outward: t.bool(),
+    decidedBy: t.string(),
+    updatedAt: t.string(),
+  }
+);
+
+// Provisional, balanced accruals for an incident, with when each counts against the cap.
+const raceEntries = table(
+  { name: 'race_entries', public: true },
+  {
+    entryKey: t.string().primaryKey(),
+    incidentKey: t.string().index('btree'),
+    effectKey: t.string(),
+    memo: t.string(),
+    effectiveDate: t.string(),
+    recognition: t.string(), // first_use | incurred | excluded | already_expensed
+    capRelevant: t.bool(),
+    amountCents: t.i64(),
+    status: t.string(), // proposed | approved | sealed
+    evidenceJson: t.string(),
+    at: t.string(),
+  }
+);
+
+const raceEntryLines = table(
+  { name: 'race_entry_lines', public: true },
+  {
+    lineKey: t.string().primaryKey(), // `${entryKey}:${n}`
+    entryKey: t.string().index('btree'),
+    lineNo: t.u32(),
+    account: t.string(),
+    debitCents: t.i64(),
+    creditCents: t.i64(),
+    memo: t.string(),
+  }
+);
+
+// A question for a person, with the answers on its buttons (for damage: the two nearest precedents that ended
+// differently). Answered through answerRaceQuestion; the desk applies the answer and learns from it.
+const raceQuestions = table(
+  { name: 'race_questions', public: true },
+  {
+    questionKey: t.string().primaryKey(),
+    incidentKey: t.string().index('btree'),
+    kind: t.string(), // damage | decision | approval
+    prompt: t.string(),
+    optionsJson: t.string(),
+    routeRole: t.string(),
+    expectedLossCents: t.i64(),
+    deadlineAt: t.string(),
+    effectKeys: t.string(),
+    defaultOption: t.string(),
+    status: t.string(), // open | answered | defaulted
+    answerJson: t.string(),
+    answeredBy: t.string(),
+    createdAt: t.string(),
+  }
+);
+
+// The season re-run after each change in the evidence.
+const raceSims = table(
+  { name: 'race_sims', public: true },
+  {
+    simKey: t.string().primaryKey(),
+    meetingKey: t.u32().index('btree'),
+    trigger: t.string(),
+    at: t.string(),
+    payloadJson: t.string(),
+    runtimeMs: t.u32(),
+  }
+);
+
+// The sealed weekend: Merkle root over its rows, totals, and one brief per role.
+const raceCloses = table(
+  { name: 'race_closes', public: true },
+  {
+    closeKey: t.string().primaryKey(),
+    meetingKey: t.u32(),
+    closedAt: t.string(),
+    rootHash: t.string(),
+    totalsJson: t.string(),
+    briefsJson: t.string(),
+    status: t.string(), // draft | approved | sent
+    approvedBy: t.string(),
+    leaves: t.u32(),
+  }
+);
+
 const spacetimedb = schema({
   fiaDocuments,
   config,
@@ -245,6 +383,14 @@ const spacetimedb = schema({
   raceForecasts,
   racePolicies,
   racePrecedents,
+  raceIncidents,
+  raceBeliefs,
+  raceActions,
+  raceEntries,
+  raceEntryLines,
+  raceQuestions,
+  raceSims,
+  raceCloses,
 });
 export default spacetimedb;
 
@@ -469,7 +615,7 @@ export const ingestDecision = spacetimedb.reducer(
 
 const RACE_EVENT_KINDS = [
   'session_status', 'flag', 'safety_car', 'vsc', 'red_flag', 'position', 'overtake', 'pit_stop', 'stint', 'lap',
-  'incident', 'penalty', 'retirement_suspected', 'retirement_confirmed', 'standings', 'notice',
+  'incident', 'penalty', 'retirement_suspected', 'retirement_confirmed', 'standings', 'notice', 'car_stopped',
 ];
 const RACE_SOURCES = ['openf1_replay', 'openf1_live', 'test_fixture'];
 const CAR_STATUSES = ['running', 'pit', 'retired_suspected', 'retired'];
@@ -687,5 +833,234 @@ export const confirmRaceEffect = spacetimedb.reducer(
       correctedMidCents: eff.midCents, correctedHighCents: eff.highCents, reason, by, at,
     });
     ctx.db.raceEffects.effectKey.update({ ...eff, status: 'confirmed' });
+  }
+);
+
+// ---------------------------------------------------------------- race-day flow reducers
+
+const INCIDENT_STATUSES = ['suspected', 'corroborated', 'confirmed', 'assessed', 'closed'];
+const ACTION_KINDS = ['garage_check', 'spares_reserve', 'work_order', 'freight', 'hand_carry', 'withdraw_car', 'parc_ferme_list',
+  'pu_check', 'td017_move', 'fia_notice', 'evidence_pack'];
+const ACTION_STATUSES = ['auto', 'awaiting_approval', 'approved', 'rejected', 'done', 'cancelled'];
+const RECOGNITION = ['first_use', 'incurred', 'excluded', 'already_expensed'];
+const QUESTION_KINDS = ['damage', 'decision', 'approval'];
+
+function requireLen(field: string, value: string, max: number) {
+  if (value.length > max) throw new SenderError(`invalid ${field}: longer than ${max}`);
+}
+
+const IncidentInput = t.object('RaceIncidentInput', {
+  incidentKey: t.string(), meetingKey: t.u32(), sessionKey: t.u32(), driverNumber: t.u32(), teamName: t.string(), firstSeenAt: t.string(),
+  status: t.string(), version: t.u32(), beliefJson: t.string(), evidenceJson: t.string(), updatedAt: t.string(), cause: t.string(),
+});
+
+// A newer version replaces the current belief and is appended to race_beliefs; an older or equal one is ignored,
+// so a replay is idempotent and a late writer never rolls the belief back.
+export const upsertRaceIncident = spacetimedb.reducer(
+  { incident: IncidentInput },
+  (ctx, { incident }) => {
+    requireRole(ctx, 'race');
+    if (incident.incidentKey.length === 0 || incident.incidentKey.length > 128) throw new SenderError('invalid incident: key');
+    if (!INCIDENT_STATUSES.includes(incident.status)) throw new SenderError('invalid incident: unknown status');
+    requireIso('incident.firstSeenAt', incident.firstSeenAt);
+    requireIso('incident.updatedAt', incident.updatedAt);
+    requireLen('incident.beliefJson', incident.beliefJson, 4096);
+    requireLen('incident.evidenceJson', incident.evidenceJson, 4096);
+    requireLen('incident.cause', incident.cause, 512);
+    const cur = ctx.db.raceIncidents.incidentKey.find(incident.incidentKey);
+    if (cur && cur.version >= incident.version) return;
+    if (cur) ctx.db.raceIncidents.incidentKey.update(incident);
+    else ctx.db.raceIncidents.insert(incident);
+    const beliefKey = `${incident.incidentKey}@v${incident.version}`;
+    if (!ctx.db.raceBeliefs.beliefKey.find(beliefKey)) {
+      ctx.db.raceBeliefs.insert({
+        beliefKey, incidentKey: incident.incidentKey, version: incident.version, status: incident.status, beliefJson: incident.beliefJson,
+        at: incident.updatedAt, recordedAt: ctx.timestamp.toISOString(), cause: incident.cause,
+      });
+    }
+  }
+);
+
+const ActionInput = t.object('RaceActionInput', {
+  actionKey: t.string(), incidentKey: t.string(), kind: t.string(), title: t.string(), detailJson: t.string(), dueAt: t.string(),
+  status: t.string(), ownerRole: t.string(), reversible: t.bool(), outward: t.bool(), decidedBy: t.string(), updatedAt: t.string(),
+});
+
+// The playbook's actions. An outward-facing or irreversible action can only be recorded as awaiting approval:
+// the desk never sends, withdraws or orders on its own authority. A person's decision is never overwritten.
+export const recordRaceActions = spacetimedb.reducer(
+  { actions: t.array(ActionInput) },
+  (ctx, { actions }) => {
+    requireRole(ctx, 'race');
+    for (const a of actions) {
+      if (!ACTION_KINDS.includes(a.kind)) throw new SenderError(`invalid action: unknown kind ${a.kind}`);
+      if (!ACTION_STATUSES.includes(a.status)) throw new SenderError('invalid action: unknown status');
+      if ((a.outward || !a.reversible) && a.status !== 'awaiting_approval' && a.status !== 'cancelled') {
+        throw new SenderError('invalid action: an outward-facing or irreversible action must wait for approval');
+      }
+      if (a.status === 'approved' || a.status === 'rejected') throw new SenderError('invalid action: only a person approves or rejects');
+      requireLen('action.title', a.title, 256);
+      requireLen('action.detailJson', a.detailJson, 4096);
+      if (a.dueAt !== '') requireIso('action.dueAt', a.dueAt);
+      requireIso('action.updatedAt', a.updatedAt);
+      const cur = ctx.db.raceActions.actionKey.find(a.actionKey);
+      if (cur) {
+        if (cur.status === 'approved' || cur.status === 'rejected') continue;
+        ctx.db.raceActions.actionKey.update(a);
+      } else {
+        ctx.db.raceActions.insert(a);
+      }
+    }
+  }
+);
+
+export const setRaceActionStatus = spacetimedb.reducer(
+  { actionKey: t.string(), status: t.string(), by: t.string(), at: t.string() },
+  (ctx, { actionKey, status, by, at }) => {
+    requireRole(ctx, 'race_head');
+    if (!['approved', 'rejected', 'done', 'cancelled'].includes(status)) throw new SenderError('invalid status');
+    requireIso('at', at);
+    const cur = ctx.db.raceActions.actionKey.find(actionKey);
+    if (!cur) throw new SenderError('no such action');
+    if ((status === 'approved' || status === 'rejected') && cur.status !== 'awaiting_approval') {
+      throw new SenderError('invalid decision: action is not awaiting approval');
+    }
+    ctx.db.raceActions.actionKey.update({ ...cur, status, decidedBy: `person:${by}`, updatedAt: at });
+  }
+);
+
+const EntryLineInput = t.object('RaceEntryLineInput', { account: t.string(), debitCents: t.i64(), creditCents: t.i64(), memo: t.string() });
+const RaceEntryInput = t.object('RaceEntryInput', {
+  entryKey: t.string(), incidentKey: t.string(), effectKey: t.string(), memo: t.string(), effectiveDate: t.string(), recognition: t.string(),
+  capRelevant: t.bool(), amountCents: t.i64(), status: t.string(), evidenceJson: t.string(), at: t.string(),
+});
+
+// A balanced provisional accrual. Lines are immutable; a sealed entry is final.
+export const postRaceEntry = spacetimedb.reducer(
+  { entry: RaceEntryInput, lines: t.array(EntryLineInput) },
+  (ctx, { entry, lines }) => {
+    requireRole(ctx, 'race');
+    if (!RECOGNITION.includes(entry.recognition)) throw new SenderError('invalid entry: unknown recognition');
+    if (entry.status !== 'proposed') throw new SenderError('invalid entry: the desk only proposes');
+    let dr = 0n;
+    let cr = 0n;
+    for (const l of lines) {
+      if (l.debitCents < 0n || l.creditCents < 0n) throw new SenderError('invalid entry: negative amount');
+      dr += l.debitCents;
+      cr += l.creditCents;
+    }
+    if (lines.length < 2 || dr !== cr) throw new SenderError(`invalid entry: debits ${dr} != credits ${cr}`);
+    if (entry.amountCents !== dr) throw new SenderError('invalid entry: amount differs from its lines');
+    requireIso('entry.at', entry.at);
+    requireLen('entry.memo', entry.memo, 512);
+    if (ctx.db.raceEntries.entryKey.find(entry.entryKey)) return; // idempotent replay
+    ctx.db.raceEntries.insert(entry);
+    lines.forEach((l, i) => ctx.db.raceEntryLines.insert({ ...l, lineKey: `${entry.entryKey}:${i}`, entryKey: entry.entryKey, lineNo: i }));
+  }
+);
+
+const QuestionInput = t.object('RaceQuestionInput', {
+  questionKey: t.string(), incidentKey: t.string(), kind: t.string(), prompt: t.string(), optionsJson: t.string(), routeRole: t.string(),
+  expectedLossCents: t.i64(), deadlineAt: t.string(), effectKeys: t.string(), defaultOption: t.string(), status: t.string(),
+  answerJson: t.string(), answeredBy: t.string(), createdAt: t.string(),
+});
+
+export const askRaceQuestion = spacetimedb.reducer(
+  { question: QuestionInput },
+  (ctx, { question }) => {
+    requireRole(ctx, 'race');
+    if (!QUESTION_KINDS.includes(question.kind)) throw new SenderError('invalid question: unknown kind');
+    if (question.status !== 'open') throw new SenderError('invalid question: the desk only opens questions');
+    requireLen('question.prompt', question.prompt, 1024);
+    requireLen('question.optionsJson', question.optionsJson, 4096);
+    requireIso('question.createdAt', question.createdAt);
+    if (question.deadlineAt !== '') requireIso('question.deadlineAt', question.deadlineAt);
+    if (ctx.db.raceQuestions.questionKey.find(question.questionKey)) return; // never ask twice
+    ctx.db.raceQuestions.insert(question);
+  }
+);
+
+// A person picks an option (or "neither", with their own band in answerJson). The desk reads the answer, applies
+// it and learns from it.
+export const answerRaceQuestion = spacetimedb.reducer(
+  { questionKey: t.string(), answerJson: t.string(), by: t.string(), at: t.string() },
+  (ctx, { questionKey, answerJson, by, at }) => {
+    requireRole(ctx, 'race_head');
+    requireIso('at', at);
+    requireLen('answerJson', answerJson, 2048);
+    const q = ctx.db.raceQuestions.questionKey.find(questionKey);
+    if (!q) throw new SenderError('no such question');
+    if (q.status !== 'open') throw new SenderError('invalid answer: question is no longer open');
+    ctx.db.raceQuestions.questionKey.update({ ...q, status: 'answered', answerJson, answeredBy: by });
+  }
+);
+
+// Past its deadline, the desk takes the stated default (the conservative, reversible option) and says so.
+export const defaultRaceQuestion = spacetimedb.reducer(
+  { questionKey: t.string(), at: t.string() },
+  (ctx, { questionKey, at }) => {
+    requireRole(ctx, 'race');
+    requireIso('at', at);
+    const q = ctx.db.raceQuestions.questionKey.find(questionKey);
+    if (!q) throw new SenderError('no such question');
+    if (q.status !== 'open') return;
+    if (q.deadlineAt === '' || q.deadlineAt > at) throw new SenderError('invalid default: deadline not reached');
+    ctx.db.raceQuestions.questionKey.update({ ...q, status: 'defaulted', answerJson: JSON.stringify({ option: q.defaultOption, defaulted: true }), answeredBy: 'deadline' });
+  }
+);
+
+export const recordRaceSim = spacetimedb.reducer(
+  { simKey: t.string(), meetingKey: t.u32(), trigger: t.string(), at: t.string(), payloadJson: t.string(), runtimeMs: t.u32() },
+  (ctx, row) => {
+    requireRole(ctx, 'race');
+    requireIso('at', row.at);
+    requireLen('payloadJson', row.payloadJson, 16384);
+    if (ctx.db.raceSims.simKey.find(row.simKey)) return;
+    ctx.db.raceSims.insert(row);
+  }
+);
+
+const CloseInput = t.object('RaceCloseInput', {
+  closeKey: t.string(), meetingKey: t.u32(), closedAt: t.string(), rootHash: t.string(), totalsJson: t.string(), briefsJson: t.string(),
+  status: t.string(), approvedBy: t.string(), leaves: t.u32(),
+});
+
+// A draft close may be re-sealed (new root) until a person approves it; an approved close is final.
+export const recordRaceClose = spacetimedb.reducer(
+  { close: CloseInput },
+  (ctx, { close }) => {
+    requireRole(ctx, 'race');
+    if (close.status !== 'draft') throw new SenderError('invalid close: the desk only drafts');
+    if (!HEX64.test(close.rootHash)) throw new SenderError('invalid close: rootHash must be 64 hex chars');
+    requireIso('close.closedAt', close.closedAt);
+    requireLen('close.briefsJson', close.briefsJson, 32768);
+    const cur = ctx.db.raceCloses.closeKey.find(close.closeKey);
+    if (cur && cur.status !== 'draft') throw new SenderError('invalid close: already approved');
+    if (cur) ctx.db.raceCloses.closeKey.update(close);
+    else ctx.db.raceCloses.insert(close);
+  }
+);
+
+export const approveRaceClose = spacetimedb.reducer(
+  { closeKey: t.string(), by: t.string(), at: t.string() },
+  (ctx, { closeKey, by, at }) => {
+    requireRole(ctx, 'race_head');
+    requireIso('at', at);
+    const cur = ctx.db.raceCloses.closeKey.find(closeKey);
+    if (!cur) throw new SenderError('no such close');
+    if (cur.status !== 'draft') throw new SenderError('invalid approval: not a draft');
+    ctx.db.raceCloses.closeKey.update({ ...cur, status: 'approved', approvedBy: by });
+  }
+);
+
+export const markRaceCloseSent = spacetimedb.reducer(
+  { closeKey: t.string(), at: t.string() },
+  (ctx, { closeKey, at }) => {
+    requireRole(ctx, 'race');
+    requireIso('at', at);
+    const cur = ctx.db.raceCloses.closeKey.find(closeKey);
+    if (!cur) throw new SenderError('no such close');
+    if (cur.status !== 'approved') throw new SenderError('invalid send: a person must approve the close first');
+    ctx.db.raceCloses.closeKey.update({ ...cur, status: 'sent' });
   }
 );

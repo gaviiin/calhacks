@@ -324,7 +324,7 @@ def effects_for(event: RaceEvent, jev: JevAnswers, policy: Policy | None, ctx: E
         ctx.standings_start.setdefault(event.payload["team"], float(event.payload["points_start"]))
 
     out: list[Effect] = []
-    if event.kind in ("incident", "retirement_suspected", "retirement_confirmed") and involved:
+    if event.kind in ("car_stopped", "incident", "retirement_suspected", "retirement_confirmed") and involved:
         out += crash_effects(event, jev, policy, ctx, precedent)
     if event.kind == "pit_stop" and team_car:
         out += pit_stop_effects(event, policy, precedent, ctx)

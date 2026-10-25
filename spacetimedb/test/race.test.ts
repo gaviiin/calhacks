@@ -206,3 +206,57 @@ describe('asking a person when Jev is unsure', () => {
     expect(() => d.as('head', ctx => mod.confirmRaceEffect(ctx, { ...args, effectKey: `${KEY_A}:1`, at: '2026-05-25T09:01:00Z' }))).toThrow(/not waiting/);
   });
 });
+
+describe('the race-day flow tables', () => {
+  const inc = (over: Partial<Parameters<typeof mod.upsertRaceIncident>[1]['incident']> = {}) => ({
+    incidentKey: '1249-9627-23-1', meetingKey: 1249, sessionKey: 9627, driverNumber: 23, teamName: 'Williams', firstSeenAt: AT,
+    status: 'suspected', version: 1, beliefJson: '{}', evidenceJson: '[]', updatedAt: AT, cause: 'telemetry stop', ...over,
+  });
+  it('versions an incident: newer replaces and is appended, older is ignored', () => {
+    const d = makeDesk();
+    expect(() => d.as('head', ctx => mod.upsertRaceIncident(ctx, { incident: inc() }))).toThrow(/unauthorized/);
+    d.as('race', ctx => mod.upsertRaceIncident(ctx, { incident: inc() }));
+    d.as('race', ctx => mod.upsertRaceIncident(ctx, { incident: inc({ version: 2, status: 'corroborated', cause: 'red flag' }) }));
+    d.as('race', ctx => mod.upsertRaceIncident(ctx, { incident: inc({ version: 1, status: 'suspected' }) }));
+    expect(d.h.db.raceIncidents.incidentKey.find('1249-9627-23-1')?.status).toBe('corroborated');
+    expect(d.h.db.raceBeliefs.count()).toBe(2n);
+  });
+  it('never records an outward action as done, and only a person approves it', () => {
+    const d = makeDesk();
+    const a = { actionKey: 'a1', incidentKey: 'i', kind: 'withdraw_car', title: 'Withdraw car 23', detailJson: '{}', dueAt: '', status: 'auto',
+      ownerRole: 'team_principal', reversible: false, outward: true, decidedBy: 'code', updatedAt: AT };
+    expect(() => d.as('race', ctx => mod.recordRaceActions(ctx, { actions: [a] }))).toThrow(/must wait for approval/);
+    d.as('race', ctx => mod.recordRaceActions(ctx, { actions: [{ ...a, status: 'awaiting_approval' }] }));
+    expect(() => d.as('race', ctx => mod.setRaceActionStatus(ctx, { actionKey: 'a1', status: 'approved', by: 'tp', at: AT }))).toThrow(/unauthorized/);
+    d.as('head', ctx => mod.setRaceActionStatus(ctx, { actionKey: 'a1', status: 'approved', by: 'tp', at: AT }));
+    d.as('race', ctx => mod.recordRaceActions(ctx, { actions: [{ ...a, status: 'awaiting_approval', title: 'replayed' }] }));
+    expect(d.h.db.raceActions.actionKey.find('a1')?.status).toBe('approved');
+    expect(d.h.db.raceActions.actionKey.find('a1')?.decidedBy).toBe('person:tp');
+  });
+  it('posts only balanced entries', () => {
+    const d = makeDesk();
+    const e = { entryKey: 'e1', incidentKey: 'i', effectKey: '', memo: 'front wing from spares', effectiveDate: '2024-11-03', recognition: 'first_use',
+      capRelevant: true, amountCents: 100n, status: 'proposed', evidenceJson: '[]', at: AT };
+    const lines = [{ account: '6050', debitCents: 100n, creditCents: 0n, memo: '' }, { account: '1400', debitCents: 0n, creditCents: 100n, memo: '' }];
+    expect(() => d.as('race', ctx => mod.postRaceEntry(ctx, { entry: e, lines: [lines[0]!] }))).toThrow(/debits/);
+    d.as('race', ctx => mod.postRaceEntry(ctx, { entry: e, lines }));
+    expect(d.h.db.raceEntryLines.count()).toBe(2n);
+  });
+  it('asks once, takes one answer, and seals a close only after a person approves', () => {
+    const d = makeDesk();
+    const q = { questionKey: 'q1', incidentKey: 'i', kind: 'damage', prompt: 'More like A or B?', optionsJson: '[]', routeRole: 'chief_mechanic',
+      expectedLossCents: 5n, deadlineAt: '', effectKeys: '', defaultOption: 'a', status: 'open', answerJson: '', answeredBy: '', createdAt: AT };
+    d.as('race', ctx => mod.askRaceQuestion(ctx, { question: q }));
+    d.as('race', ctx => mod.askRaceQuestion(ctx, { question: { ...q, prompt: 'again' } }));
+    d.as('head', ctx => mod.answerRaceQuestion(ctx, { questionKey: 'q1', answerJson: '{"option":"b"}', by: 'cm', at: AT }));
+    expect(() => d.as('head', ctx => mod.answerRaceQuestion(ctx, { questionKey: 'q1', answerJson: '{"option":"a"}', by: 'cm', at: AT }))).toThrow(/no longer open/);
+    expect(d.h.db.raceQuestions.questionKey.find('q1')?.prompt).toBe('More like A or B?');
+    const c = { closeKey: 'c1', meetingKey: 1249, closedAt: AT, rootHash: 'c'.repeat(64), totalsJson: '{}', briefsJson: '{}', status: 'draft', approvedBy: '', leaves: 3 };
+    d.as('race', ctx => mod.recordRaceClose(ctx, { close: c }));
+    expect(() => d.as('race', ctx => mod.markRaceCloseSent(ctx, { closeKey: 'c1', at: AT }))).toThrow(/approve the close first/);
+    d.as('head', ctx => mod.approveRaceClose(ctx, { closeKey: 'c1', by: 'cfo', at: AT }));
+    expect(() => d.as('race', ctx => mod.recordRaceClose(ctx, { close: c }))).toThrow(/already approved/);
+    d.as('race', ctx => mod.markRaceCloseSent(ctx, { closeKey: 'c1', at: AT }));
+    expect(d.h.db.raceCloses.closeKey.find('c1')?.status).toBe('sent');
+  });
+});

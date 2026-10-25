@@ -13,7 +13,7 @@ import threading
 import httpx
 
 from finance.spacetime_mirror import cli_token
-from race.events import Effect, RaceEvent, now_iso
+from race.events import Action, Close, Effect, Entry, Incident, Question, RaceEvent, SimRun, now_iso
 
 
 class RaceSink:
@@ -66,6 +66,38 @@ class RaceSink:
 
     def propose_policy(self, policy: dict) -> bool:
         return self.call("propose_race_policy", [policy])
+
+    # ---------------------------------------------------------------- the race-day flow
+    def incident(self, inc: Incident) -> bool:
+        return self.call("upsert_race_incident", [inc.wire()])
+
+    def actions(self, actions: list[Action]) -> bool:
+        return self.call("record_race_actions", [[a.wire() for a in actions]]) if actions else True
+
+    def entry(self, e: Entry) -> bool:
+        return self.call("post_race_entry", [e.wire(), e.wire_lines()])
+
+    def ask(self, q: Question) -> bool:
+        return self.call("ask_race_question", [q.wire()])
+
+    def default_question(self, question_key: str, at: str) -> bool:
+        return self.call("default_race_question", [question_key, at])
+
+    def sim(self, run: SimRun) -> bool:
+        w = run.wire()
+        return self.call("record_race_sim", [w["sim_key"], w["meeting_key"], w["trigger"], w["at"], w["payload_json"], w["runtime_ms"]])
+
+    def close(self, c: Close) -> bool:
+        return self.call("record_race_close", [c.wire()])
+
+    def close_sent(self, close_key: str, at: str) -> bool:
+        return self.call("mark_race_close_sent", [close_key, at])
+
+    def correct(self, effect_key: str, low: int, mid: int, high: int, reason: str, by: str, at: str) -> bool:
+        return self.call("correct_race_effect", [effect_key, low, mid, high, reason, by, at])
+
+    def confirm(self, effect_key: str, reason: str, by: str, at: str) -> bool:
+        return self.call("confirm_race_effect", [effect_key, reason, by, at])
 
     def sql(self, query: str) -> list[dict]:
         """Read a public table (rows as dicts). Empty on any failure."""

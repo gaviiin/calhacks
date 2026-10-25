@@ -34,20 +34,31 @@ import {
 } from "spacetimedb";
 
 // Import all reducer arg schemas
+import AnswerRaceQuestionReducer from "./answer_race_question_reducer";
+import ApproveRaceCloseReducer from "./approve_race_close_reducer";
+import AskRaceQuestionReducer from "./ask_race_question_reducer";
 import ConfirmRaceEffectReducer from "./confirm_race_effect_reducer";
 import CorrectRaceEffectReducer from "./correct_race_effect_reducer";
+import DefaultRaceQuestionReducer from "./default_race_question_reducer";
 import IngestDecisionReducer from "./ingest_decision_reducer";
 import IngestDocumentReducer from "./ingest_document_reducer";
+import MarkRaceCloseSentReducer from "./mark_race_close_sent_reducer";
 import MirrorEntryReducer from "./mirror_entry_reducer";
 import MirrorItemReducer from "./mirror_item_reducer";
+import PostRaceEntryReducer from "./post_race_entry_reducer";
 import ProposeRacePolicyReducer from "./propose_race_policy_reducer";
 import RecordForecastReducer from "./record_forecast_reducer";
+import RecordRaceActionsReducer from "./record_race_actions_reducer";
+import RecordRaceCloseReducer from "./record_race_close_reducer";
 import RecordRaceEffectsReducer from "./record_race_effects_reducer";
 import RecordRaceEventReducer from "./record_race_event_reducer";
+import RecordRaceSimReducer from "./record_race_sim_reducer";
 import SetIngestorReducer from "./set_ingestor_reducer";
+import SetRaceActionStatusReducer from "./set_race_action_status_reducer";
 import SetRacePolicyAutonomyReducer from "./set_race_policy_autonomy_reducer";
 import SetReviewStatusReducer from "./set_review_status_reducer";
 import SetWriterReducer from "./set_writer_reducer";
+import UpsertRaceIncidentReducer from "./upsert_race_incident_reducer";
 
 // Import all procedure arg schemas
 
@@ -58,11 +69,19 @@ import FiaDocumentsRow from "./fia_documents_table";
 import JeLinesRow from "./je_lines_table";
 import JournalEntriesRow from "./journal_entries_table";
 import PitWallItemsRow from "./pit_wall_items_table";
+import RaceActionsRow from "./race_actions_table";
+import RaceBeliefsRow from "./race_beliefs_table";
+import RaceClosesRow from "./race_closes_table";
 import RaceEffectsRow from "./race_effects_table";
+import RaceEntriesRow from "./race_entries_table";
+import RaceEntryLinesRow from "./race_entry_lines_table";
 import RaceEventsRow from "./race_events_table";
 import RaceForecastsRow from "./race_forecasts_table";
+import RaceIncidentsRow from "./race_incidents_table";
 import RacePoliciesRow from "./race_policies_table";
 import RacePrecedentsRow from "./race_precedents_table";
+import RaceQuestionsRow from "./race_questions_table";
+import RaceSimsRow from "./race_sims_table";
 
 /** Type-only namespace exports for generated type groups. */
 
@@ -138,6 +157,45 @@ const tablesSchema = __schema({
       { name: 'pit_wall_items_item_id_key', constraint: 'unique', columns: ['itemId'] },
     ],
   }, PitWallItemsRow),
+  raceActions: __table({
+    name: 'race_actions',
+    indexes: [
+      { accessor: 'actionKey', name: 'race_actions_action_key_idx_btree', algorithm: 'btree', columns: [
+        'actionKey',
+      ] },
+      { accessor: 'incidentKey', name: 'race_actions_incident_key_idx_btree', algorithm: 'btree', columns: [
+        'incidentKey',
+      ] },
+    ],
+    constraints: [
+      { name: 'race_actions_action_key_key', constraint: 'unique', columns: ['actionKey'] },
+    ],
+  }, RaceActionsRow),
+  raceBeliefs: __table({
+    name: 'race_beliefs',
+    indexes: [
+      { accessor: 'beliefKey', name: 'race_beliefs_belief_key_idx_btree', algorithm: 'btree', columns: [
+        'beliefKey',
+      ] },
+      { accessor: 'incidentKey', name: 'race_beliefs_incident_key_idx_btree', algorithm: 'btree', columns: [
+        'incidentKey',
+      ] },
+    ],
+    constraints: [
+      { name: 'race_beliefs_belief_key_key', constraint: 'unique', columns: ['beliefKey'] },
+    ],
+  }, RaceBeliefsRow),
+  raceCloses: __table({
+    name: 'race_closes',
+    indexes: [
+      { accessor: 'closeKey', name: 'race_closes_close_key_idx_btree', algorithm: 'btree', columns: [
+        'closeKey',
+      ] },
+    ],
+    constraints: [
+      { name: 'race_closes_close_key_key', constraint: 'unique', columns: ['closeKey'] },
+    ],
+  }, RaceClosesRow),
   raceEffects: __table({
     name: 'race_effects',
     indexes: [
@@ -152,6 +210,34 @@ const tablesSchema = __schema({
       { name: 'race_effects_effect_key_key', constraint: 'unique', columns: ['effectKey'] },
     ],
   }, RaceEffectsRow),
+  raceEntries: __table({
+    name: 'race_entries',
+    indexes: [
+      { accessor: 'entryKey', name: 'race_entries_entry_key_idx_btree', algorithm: 'btree', columns: [
+        'entryKey',
+      ] },
+      { accessor: 'incidentKey', name: 'race_entries_incident_key_idx_btree', algorithm: 'btree', columns: [
+        'incidentKey',
+      ] },
+    ],
+    constraints: [
+      { name: 'race_entries_entry_key_key', constraint: 'unique', columns: ['entryKey'] },
+    ],
+  }, RaceEntriesRow),
+  raceEntryLines: __table({
+    name: 'race_entry_lines',
+    indexes: [
+      { accessor: 'entryKey', name: 'race_entry_lines_entry_key_idx_btree', algorithm: 'btree', columns: [
+        'entryKey',
+      ] },
+      { accessor: 'lineKey', name: 'race_entry_lines_line_key_idx_btree', algorithm: 'btree', columns: [
+        'lineKey',
+      ] },
+    ],
+    constraints: [
+      { name: 'race_entry_lines_line_key_key', constraint: 'unique', columns: ['lineKey'] },
+    ],
+  }, RaceEntryLinesRow),
   raceEvents: __table({
     name: 'race_events',
     indexes: [
@@ -186,6 +272,20 @@ const tablesSchema = __schema({
       { name: 'race_forecasts_forecast_key_key', constraint: 'unique', columns: ['forecastKey'] },
     ],
   }, RaceForecastsRow),
+  raceIncidents: __table({
+    name: 'race_incidents',
+    indexes: [
+      { accessor: 'incidentKey', name: 'race_incidents_incident_key_idx_btree', algorithm: 'btree', columns: [
+        'incidentKey',
+      ] },
+      { accessor: 'meetingKey', name: 'race_incidents_meeting_key_idx_btree', algorithm: 'btree', columns: [
+        'meetingKey',
+      ] },
+    ],
+    constraints: [
+      { name: 'race_incidents_incident_key_key', constraint: 'unique', columns: ['incidentKey'] },
+    ],
+  }, RaceIncidentsRow),
   racePolicies: __table({
     name: 'race_policies',
     indexes: [
@@ -214,24 +314,63 @@ const tablesSchema = __schema({
       { name: 'race_precedents_precedent_key_key', constraint: 'unique', columns: ['precedentKey'] },
     ],
   }, RacePrecedentsRow),
+  raceQuestions: __table({
+    name: 'race_questions',
+    indexes: [
+      { accessor: 'incidentKey', name: 'race_questions_incident_key_idx_btree', algorithm: 'btree', columns: [
+        'incidentKey',
+      ] },
+      { accessor: 'questionKey', name: 'race_questions_question_key_idx_btree', algorithm: 'btree', columns: [
+        'questionKey',
+      ] },
+    ],
+    constraints: [
+      { name: 'race_questions_question_key_key', constraint: 'unique', columns: ['questionKey'] },
+    ],
+  }, RaceQuestionsRow),
+  raceSims: __table({
+    name: 'race_sims',
+    indexes: [
+      { accessor: 'meetingKey', name: 'race_sims_meeting_key_idx_btree', algorithm: 'btree', columns: [
+        'meetingKey',
+      ] },
+      { accessor: 'simKey', name: 'race_sims_sim_key_idx_btree', algorithm: 'btree', columns: [
+        'simKey',
+      ] },
+    ],
+    constraints: [
+      { name: 'race_sims_sim_key_key', constraint: 'unique', columns: ['simKey'] },
+    ],
+  }, RaceSimsRow),
 });
 
 /** The schema information for all reducers in this module. This is defined the same way as the reducers would have been defined in the server, except the body of the reducer is omitted in code generation. */
 const reducersSchema = __reducers(
+  __reducerSchema("answer_race_question", AnswerRaceQuestionReducer),
+  __reducerSchema("approve_race_close", ApproveRaceCloseReducer),
+  __reducerSchema("ask_race_question", AskRaceQuestionReducer),
   __reducerSchema("confirm_race_effect", ConfirmRaceEffectReducer),
   __reducerSchema("correct_race_effect", CorrectRaceEffectReducer),
+  __reducerSchema("default_race_question", DefaultRaceQuestionReducer),
   __reducerSchema("ingest_decision", IngestDecisionReducer),
   __reducerSchema("ingest_document", IngestDocumentReducer),
+  __reducerSchema("mark_race_close_sent", MarkRaceCloseSentReducer),
   __reducerSchema("mirror_entry", MirrorEntryReducer),
   __reducerSchema("mirror_item", MirrorItemReducer),
+  __reducerSchema("post_race_entry", PostRaceEntryReducer),
   __reducerSchema("propose_race_policy", ProposeRacePolicyReducer),
   __reducerSchema("record_forecast", RecordForecastReducer),
+  __reducerSchema("record_race_actions", RecordRaceActionsReducer),
+  __reducerSchema("record_race_close", RecordRaceCloseReducer),
   __reducerSchema("record_race_effects", RecordRaceEffectsReducer),
   __reducerSchema("record_race_event", RecordRaceEventReducer),
+  __reducerSchema("record_race_sim", RecordRaceSimReducer),
   __reducerSchema("set_ingestor", SetIngestorReducer),
+  __reducerSchema("set_race_action_status", SetRaceActionStatusReducer),
   __reducerSchema("set_race_policy_autonomy", SetRacePolicyAutonomyReducer),
   __reducerSchema("set_review_status", SetReviewStatusReducer),
   __reducerSchema("set_writer", SetWriterReducer),
+  __reducerSchema("upsert_race_incident", UpsertRaceIncidentReducer),
 );
 
 /** The schema information for all procedures in this module. This is defined the same way as the procedures would have been defined in the server. */

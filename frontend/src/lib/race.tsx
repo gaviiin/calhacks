@@ -1,7 +1,22 @@
 import { createContext, useCallback, useContext, useMemo, type ReactNode } from 'react';
 import { useSpacetimeDB, useTable } from 'spacetimedb/react';
 import { tables, type DbConnection } from '../module_bindings';
-import type { CarState, RaceEffects, RaceEvents, RaceForecasts, RacePolicies, RacePrecedents } from '../module_bindings/types';
+import type {
+  CarState,
+  RaceActions,
+  RaceBeliefs,
+  RaceCloses,
+  RaceEffects,
+  RaceEntries,
+  RaceEntryLines,
+  RaceEvents,
+  RaceForecasts,
+  RaceIncidents,
+  RacePolicies,
+  RacePrecedents,
+  RaceQuestions,
+  RaceSims,
+} from '../module_bindings/types';
 
 // The race desk's six tables live in the pit-wall database, subscribed inside the same provider as
 // the evidence bridge and handed down through this context for the same reason: the cost cap
@@ -38,6 +53,21 @@ export interface RaceData {
   forecasts: readonly RaceForecasts[];
   policies: readonly RacePolicies[];
   precedents: readonly RacePrecedents[];
+  // the race-day flow after the tape
+  incidents: readonly RaceIncidents[];
+  beliefs: readonly RaceBeliefs[];
+  actions: readonly RaceActions[];
+  entries: readonly RaceEntries[];
+  entryLines: readonly RaceEntryLines[];
+  questions: readonly RaceQuestions[];
+  sims: readonly RaceSims[];
+  closes: readonly RaceCloses[];
+  /** A person decides an action that waits for them (approved | rejected | done | cancelled). */
+  decideAction: (args: { actionKey: string; status: string; by: string; at: string }) => Promise<void>;
+  /** A person answers a question: answerJson is {"option": id} or {"option": "neither", "band": [lo, mid, hi], "note": ...}. */
+  answer: (args: { questionKey: string; answerJson: string; by: string; at: string }) => Promise<void>;
+  /** A person approves the sealed weekend so its briefs may go out. */
+  approveClose: (args: { closeKey: string; by: string; at: string }) => Promise<void>;
   /** Calls the correct_race_effect reducer; rejects with the module's refusal when not permitted. */
   correct: (args: CorrectArgs) => Promise<void>;
   /** Calls confirm_race_effect: the band stands as booked, the precedent records that a person checked it. */
@@ -55,6 +85,17 @@ const Ctx = createContext<RaceData>({
   precedents: [],
   correct: () => Promise.reject(new Error('not connected to pit-wall')),
   confirm: () => Promise.reject(new Error('not connected to pit-wall')),
+  incidents: [],
+  beliefs: [],
+  actions: [],
+  entries: [],
+  entryLines: [],
+  questions: [],
+  sims: [],
+  closes: [],
+  decideAction: () => Promise.reject(new Error('not connected to pit-wall')),
+  answer: () => Promise.reject(new Error('not connected to pit-wall')),
+  approveClose: () => Promise.reject(new Error('not connected to pit-wall')),
 });
 
 export function RaceBridge({ children }: { children: ReactNode }) {
@@ -65,6 +106,14 @@ export function RaceBridge({ children }: { children: ReactNode }) {
   const [forecasts] = useTable(tables.raceForecasts);
   const [policies] = useTable(tables.racePolicies);
   const [precedents] = useTable(tables.racePrecedents);
+  const [incidents] = useTable(tables.raceIncidents);
+  const [beliefs] = useTable(tables.raceBeliefs);
+  const [actions] = useTable(tables.raceActions);
+  const [entries] = useTable(tables.raceEntries);
+  const [entryLines] = useTable(tables.raceEntryLines);
+  const [questions] = useTable(tables.raceQuestions);
+  const [sims] = useTable(tables.raceSims);
+  const [closes] = useTable(tables.raceCloses);
   const identityHex = conn.identity?.toHexString() ?? null;
   const getConnection = conn.getConnection;
 
@@ -86,9 +135,26 @@ export function RaceBridge({ children }: { children: ReactNode }) {
     [getConnection]
   );
 
+  const withConn = useCallback(
+    <A,>(fn: (c: DbConnection, args: A) => Promise<void>) =>
+      async (args: A) => {
+        const c = getConnection() as DbConnection | null;
+        if (!c) throw new Error('not connected to pit-wall');
+        await fn(c, args);
+      },
+    [getConnection]
+  );
+  const decideAction = useMemo(() => withConn((c, a: { actionKey: string; status: string; by: string; at: string }) => c.reducers.setRaceActionStatus(a)), [withConn]);
+  const answer = useMemo(() => withConn((c, a: { questionKey: string; answerJson: string; by: string; at: string }) => c.reducers.answerRaceQuestion(a)), [withConn]);
+  const approveClose = useMemo(() => withConn((c, a: { closeKey: string; by: string; at: string }) => c.reducers.approveRaceClose(a)), [withConn]);
+
   const value = useMemo<RaceData>(
-    () => ({ connected: conn.isActive, identityHex, events, cars, effects, forecasts, policies, precedents, correct, confirm }),
-    [conn.isActive, identityHex, events, cars, effects, forecasts, policies, precedents, correct, confirm]
+    () => ({
+      connected: conn.isActive, identityHex, events, cars, effects, forecasts, policies, precedents, correct, confirm,
+      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, decideAction, answer, approveClose,
+    }),
+    [conn.isActive, identityHex, events, cars, effects, forecasts, policies, precedents, correct, confirm,
+      incidents, beliefs, actions, entries, entryLines, questions, sims, closes, decideAction, answer, approveClose]
   );
   return <Ctx.Provider value={value}>{children}</Ctx.Provider>;
 }

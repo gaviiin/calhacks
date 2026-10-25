@@ -5,22 +5,20 @@ import { useEvidence } from '../lib/evidence';
 import { useRevenue } from '../lib/revenue';
 import { PEOPLE, fetchSeatCodes, sha256Hex, useSeat, type SeatId } from '../lib/seat';
 import { useSeatConnection } from '../lib/seatConnection';
-import { IconLive } from './icons';
+import { IconLive, IconPlug } from './icons';
 
-export type View = 'overview' | 'race' | 'replay' | 'inbox' | 'cost-cap' | 'risk' | 'revenue' | 'evidence' | 'audit' | 'connect';
+export type View = 'overview' | 'race' | 'replay' | 'inbox' | 'books' | 'cost-cap' | 'risk' | 'revenue' | 'evidence' | 'audit' | 'connect' | 'pitwall';
 
+// Four tabs keep the race-day flow in front. Everything else is still routable: #/race (the full live desk),
+// #/replay, #/risk, #/pitwall (the old overview), #/cost-cap, #/revenue, #/evidence; Connect sits behind the gear.
 const NAV: { id: View; label: string }[] = [
-  { id: 'overview', label: 'Pit wall' },
-  { id: 'race', label: 'Race' },
-  { id: 'replay', label: 'Replay' },
+  { id: 'overview', label: 'Race day' },
   { id: 'inbox', label: 'Inbox' },
-  { id: 'cost-cap', label: 'Cost cap' },
-  { id: 'risk', label: 'Cap risk' },
-  { id: 'revenue', label: 'Revenue' },
-  { id: 'evidence', label: 'Evidence' },
+  { id: 'books', label: 'Books' },
   { id: 'audit', label: 'Audit' },
-  { id: 'connect', label: 'Connect' },
 ];
+
+const NAV_OF: Partial<Record<View, View>> = { race: 'overview', 'cost-cap': 'books', revenue: 'books', evidence: 'audit' };
 
 export type SeatStatus = 'readonly' | 'connecting' | 'claiming' | 'seated' | 'no-code';
 
@@ -89,13 +87,13 @@ export function Shell({ view, go, inboxCount, status }: { view: View; go: (v: Vi
 
   return (
     <header className="shell">
-      <a className="brand" href="#/" onClick={() => go('overview')} aria-label="Pit Wall, Meridian Racing finance desk">
+      <a className="brand" href="#/" onClick={() => go('overview')} aria-label="Pit Wall, race-day finance for Williams Racing">
         <span className="brandmark">PW</span>
         <span>
           <span className="brandword">
             PIT <span>WALL</span>
           </span>
-          <small>MERIDIAN RACING · FINANCE DESK</small>
+          <small>WILLIAMS RACING · RACE-DAY FINANCE</small>
         </span>
       </a>
       <nav className="nav" aria-label="Desks">
@@ -103,8 +101,8 @@ export function Shell({ view, go, inboxCount, status }: { view: View; go: (v: Vi
           <a
             key={n.id}
             href={`#/${n.id === 'overview' ? '' : n.id}`}
-            className={view === n.id ? 'nav-item nav-item--on' : 'nav-item'}
-            aria-current={view === n.id ? 'page' : undefined}
+            className={(NAV_OF[view] ?? view) === n.id ? 'nav-item nav-item--on' : 'nav-item'}
+            aria-current={(NAV_OF[view] ?? view) === n.id ? 'page' : undefined}
           >
             {n.label}
             {n.id === 'inbox' && inboxCount > 0 && <span className="nav-count">{inboxCount}</span>}
@@ -112,6 +110,9 @@ export function Shell({ view, go, inboxCount, status }: { view: View; go: (v: Vi
         ))}
       </nav>
       <div className="shell-right">
+        <a className={`gear ${view === 'connect' ? 'gear--on' : ''}`} href="#/connect" aria-label="Connections and settings" title="Connections and settings">
+          <IconPlug size={16} />
+        </a>
         <div className="sources" aria-label="Live sources">
           <Source ok={costCap.isActive} label="cost-cap-desk" />
           <Source ok={evidence.connected} label="pit-wall" />

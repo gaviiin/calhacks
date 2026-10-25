@@ -13,9 +13,10 @@ from datetime import datetime, timezone
 
 KINDS = (
     "session_status", "flag", "safety_car", "vsc", "red_flag", "position", "overtake", "pit_stop", "stint", "lap",
-    "incident", "penalty", "retirement_suspected", "retirement_confirmed", "standings", "notice",
+    "incident", "penalty", "retirement_suspected", "retirement_confirmed", "standings", "notice", "car_stopped",
 )
-MONEY_KINDS = ("incident", "penalty", "retirement_suspected", "retirement_confirmed", "position", "pit_stop", "standings")
+MONEY_KINDS = ("incident", "penalty", "retirement_suspected", "retirement_confirmed", "position", "pit_stop", "standings",
+               "car_stopped")
 
 
 def iso(dt: datetime) -> str:
@@ -137,3 +138,211 @@ class Effect:
             "jev_json": json.dumps(self.jev, separators=(",", ":"))[:2048], "why": self.why[:512], "status": self.status,
             "at": event.at,
         }
+
+
+# ---------------------------------------------------------------------- the race-day flow
+# One row shape per stage after the tape: an incident whose belief evolves (log), the actions it sets off
+# (respond), the provisional entries (account), the questions for a person (ask), the season re-run (re-plan)
+# and the sealed weekend (close). Each mirrors a pit-wall table; `wire()` is the reducer's argument.
+
+def _j(v) -> str:
+    return json.dumps(v, separators=(",", ":"), default=str)
+
+
+INCIDENT_STATUSES = ("suspected", "corroborated", "confirmed", "assessed", "closed")
+
+
+@dataclass
+class Incident:
+    """One crash or stoppage of one of our cars, across every message about it. `belief` is what we think now:
+    {"severity": {...P}, "parts": {...P}, "impact_kph": int, "where": str, "cause": str, "out_of_session": bool}.
+    Every change bumps `version` and writes a race_beliefs row (valid time = `at`, system time = recorded_at)."""
+
+    incident_key: str
+    meeting_key: int
+    session_key: int
+    driver_number: int
+    team_name: str
+    first_seen_at: str
+    status: str = "suspected"
+    version: int = 1
+    belief: dict = field(default_factory=dict)
+    evidence: list[dict] = field(default_factory=list)  # [{"event_key", "kind", "at", "source", "note"}]
+    updated_at: str = ""
+    cause: str = ""  # what changed in this version, one line
+
+    def __post_init__(self) -> None:
+        if self.status not in INCIDENT_STATUSES:
+            raise ValueError(f"unknown incident status {self.status!r}")
+        self.first_seen_at = canonical(self.first_seen_at)
+        self.updated_at = canonical(self.updated_at or self.first_seen_at)
+
+    def wire(self) -> dict:
+        return {"incident_key": self.incident_key, "meeting_key": self.meeting_key, "session_key": self.session_key,
+                "driver_number": self.driver_number, "team_name": self.team_name, "first_seen_at": self.first_seen_at,
+                "status": self.status, "version": self.version, "belief_json": _j(self.belief)[:4096],
+                "evidence_json": _j(self.evidence[-24:])[:4096], "updated_at": self.updated_at, "cause": self.cause[:512]}
+
+
+ACTION_KINDS = ("garage_check", "spares_reserve", "work_order", "freight", "hand_carry", "withdraw_car", "parc_ferme_list",
+                "pu_check", "td017_move", "fia_notice", "evidence_pack")
+ACTION_STATUSES = ("auto", "awaiting_approval", "approved", "rejected", "done", "cancelled")
+
+
+@dataclass
+class Action:
+    """Something the playbook sets off. Reversible, internal actions run on their own (`auto`); anything
+    outward-facing or irreversible waits for the role named in `owner_role`."""
+
+    action_key: str
+    incident_key: str
+    kind: str
+    title: str
+    detail: dict = field(default_factory=dict)
+    due_at: str = ""
+    status: str = "auto"
+    owner_role: str = ""
+    reversible: bool = True
+    outward: bool = False
+    decided_by: str = "code"
+    updated_at: str = ""
+
+    def __post_init__(self) -> None:
+        if self.kind not in ACTION_KINDS:
+            raise ValueError(f"unknown action kind {self.kind!r}")
+        if self.status not in ACTION_STATUSES:
+            raise ValueError(f"unknown action status {self.status!r}")
+        self.due_at = canonical(self.due_at) if self.due_at else ""
+        self.updated_at = canonical(self.updated_at) if self.updated_at else now_iso()
+
+    def wire(self) -> dict:
+        return {"action_key": self.action_key, "incident_key": self.incident_key, "kind": self.kind, "title": self.title[:256],
+                "detail_json": _j(self.detail)[:4096], "due_at": self.due_at, "status": self.status, "owner_role": self.owner_role,
+                "reversible": self.reversible, "outward": self.outward, "decided_by": self.decided_by, "updated_at": self.updated_at}
+
+
+RECOGNITION = ("first_use", "incurred", "excluded", "already_expensed")
+
+
+@dataclass
+class EntryLine:
+    account: str
+    debit_cents: int = 0
+    credit_cents: int = 0
+    memo: str = ""
+
+    def wire(self) -> dict:
+        return {"account": self.account, "debit_cents": self.debit_cents, "credit_cents": self.credit_cents, "memo": self.memo[:256]}
+
+
+@dataclass
+class Entry:
+    """A provisional, balanced accrual for an incident. `recognition` says when it counts against the cap:
+    a spare counts when first fitted, labour and freight when incurred, fines never (D5.1.1.m / Issue 22 Art. 3.1(m)),
+    a destroyed part that was already in use was expensed when first used."""
+
+    entry_key: str
+    incident_key: str
+    memo: str
+    effective_date: str
+    recognition: str
+    cap_relevant: bool
+    lines: list[EntryLine]
+    effect_key: str = ""
+    status: str = "proposed"  # proposed | approved | sealed
+    evidence: list[str] = field(default_factory=list)  # event keys and URLs behind the entry
+    at: str = ""
+
+    def __post_init__(self) -> None:
+        if self.recognition not in RECOGNITION:
+            raise ValueError(f"unknown recognition {self.recognition!r}")
+        dr = sum(line.debit_cents for line in self.lines)
+        cr = sum(line.credit_cents for line in self.lines)
+        if len(self.lines) < 2 or dr != cr:
+            raise ValueError(f"entry {self.entry_key} does not balance: {dr} != {cr}")
+        self.at = canonical(self.at) if self.at else now_iso()
+
+    @property
+    def amount_cents(self) -> int:
+        return sum(line.debit_cents for line in self.lines)
+
+    def wire(self) -> dict:
+        return {"entry_key": self.entry_key, "incident_key": self.incident_key, "effect_key": self.effect_key, "memo": self.memo[:512],
+                "effective_date": self.effective_date, "recognition": self.recognition, "cap_relevant": self.cap_relevant,
+                "amount_cents": self.amount_cents, "status": self.status, "evidence_json": _j(self.evidence)[:2048], "at": self.at}
+
+    def wire_lines(self) -> list[dict]:
+        return [line.wire() for line in self.lines]
+
+
+QUESTION_STATUSES = ("open", "answered", "defaulted")
+
+
+@dataclass
+class Question:
+    """A question for a person. `options` are the answers on the buttons; for a damage question they are the two
+    nearest precedents that ended differently, each with its band: [{"id", "label", "case_id", "severity", "band"}]."""
+
+    question_key: str
+    incident_key: str
+    kind: str  # damage | decision | approval
+    prompt: str
+    options: list[dict]
+    route_role: str
+    expected_loss_cents: int = 0
+    deadline_at: str = ""
+    effect_keys: list[str] = field(default_factory=list)
+    default_option: str = ""
+    status: str = "open"
+    answer: dict = field(default_factory=dict)
+    answered_by: str = ""
+    created_at: str = ""
+
+    def __post_init__(self) -> None:
+        if self.status not in QUESTION_STATUSES:
+            raise ValueError(f"unknown question status {self.status!r}")
+        self.deadline_at = canonical(self.deadline_at) if self.deadline_at else ""
+        self.created_at = canonical(self.created_at) if self.created_at else now_iso()
+
+    def wire(self) -> dict:
+        return {"question_key": self.question_key, "incident_key": self.incident_key, "kind": self.kind, "prompt": self.prompt[:1024],
+                "options_json": _j(self.options)[:4096], "route_role": self.route_role, "expected_loss_cents": self.expected_loss_cents,
+                "deadline_at": self.deadline_at, "effect_keys": ",".join(self.effect_keys)[:1024], "default_option": self.default_option,
+                "status": self.status, "answer_json": _j(self.answer)[:2048], "answered_by": self.answered_by, "created_at": self.created_at}
+
+
+@dataclass
+class SimRun:
+    """One re-run of the season after the evidence changed. `payload` holds the position distribution, prize band,
+    attribution, ATR, bonus and cap forecast (race/season_sim.py, race/cap_forecast.py)."""
+
+    sim_key: str
+    meeting_key: int
+    trigger: str  # baseline | incident:<key> | result:<session> | answer:<key>
+    at: str
+    payload: dict
+    runtime_ms: int = 0
+
+    def wire(self) -> dict:
+        return {"sim_key": self.sim_key, "meeting_key": self.meeting_key, "trigger": self.trigger[:256], "at": canonical(self.at),
+                "payload_json": _j(self.payload)[:16384], "runtime_ms": self.runtime_ms}
+
+
+@dataclass
+class Close:
+    """The sealed weekend: a Merkle root over every effect, entry and action, totals, and one brief per role."""
+
+    close_key: str
+    meeting_key: int
+    closed_at: str
+    root_hash: str
+    totals: dict
+    briefs: dict  # role -> markdown
+    status: str = "draft"  # draft | approved | sent
+    approved_by: str = ""
+    leaves: int = 0
+
+    def wire(self) -> dict:
+        return {"close_key": self.close_key, "meeting_key": self.meeting_key, "closed_at": canonical(self.closed_at), "root_hash": self.root_hash,
+                "totals_json": _j(self.totals)[:8192], "briefs_json": _j(self.briefs)[:32768], "status": self.status,
+                "approved_by": self.approved_by, "leaves": self.leaves}
