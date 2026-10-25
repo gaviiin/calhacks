@@ -5703,3 +5703,15 @@ code {
     grid-column: 1 / -1;
   }
 }
+
+/* race desk (live): the running order scrolls inside its card, never the page; grid children may shrink */
+.race .order,
+.race .panel,
+.race-cols > *,
+.race-timing > * {
+  min-width: 0;
+}
+.race .order-strip {
+  overflow-x: auto;
+  max-width: 100%;
+}
