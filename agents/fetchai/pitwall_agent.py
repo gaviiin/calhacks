@@ -46,8 +46,8 @@ from uagents_core.contrib.protocols.payment import (  # noqa: E402
 from brain import respond  # noqa: E402
 from pitwall_client import PitWall  # noqa: E402
 
-load_dotenv()
 HERE = Path(__file__).resolve().parent
+load_dotenv(HERE / ".env")
 
 agent = Agent(
     name=os.environ.get("PITWALL_AGENT_NAME", "meridian-pit-wall"),
