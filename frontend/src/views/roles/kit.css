@@ -1,0 +1,330 @@
+/* The race-day kit: Williams garage white, navy ink, blue for a person, amber waiting, red off. */
+
+.k-panel {
+  padding: 16px 18px;
+  border: 1px solid var(--line-soft);
+  border-radius: 6px;
+  background: var(--panel);
+  box-shadow: 0 1px 2px rgba(11, 27, 51, 0.05), 0 4px 14px rgba(11, 27, 51, 0.04);
+}
+
+.k-panel-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+  margin-bottom: 12px;
+}
+
+.k-panel-head h2 {
+  margin: 0;
+  color: var(--navy);
+  font: 700 15px/1.2 var(--display);
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.k-panel-aside {
+  color: var(--muted);
+  font: 500 12px var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.k-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 9px;
+  border-radius: 999px;
+  font: 600 12px/1.2 var(--body);
+  white-space: nowrap;
+}
+
+.k-pill--ok {
+  background: var(--lime-wash);
+  color: var(--lime);
+}
+
+.k-pill--wait {
+  background: var(--hold-wash);
+  color: var(--hold);
+}
+
+.k-pill--bad {
+  background: var(--alert-wash);
+  color: var(--alert);
+}
+
+.k-pill--info {
+  background: rgba(0, 163, 224, 0.1);
+  color: #00658c;
+}
+
+.k-pill--neutral {
+  background: var(--panel-2);
+  color: var(--steel);
+}
+
+.k-fig {
+  display: grid;
+  gap: 2px;
+  min-width: 0;
+}
+
+.k-fig-label {
+  color: var(--muted);
+  font: 600 11px var(--body);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.k-fig-value {
+  color: var(--navy);
+  font: 600 22px/1.1 var(--mono);
+  font-variant-numeric: tabular-nums;
+  letter-spacing: -0.01em;
+}
+
+.k-fig--lg .k-fig-value {
+  font-size: 30px;
+}
+
+.k-fig--sm .k-fig-value {
+  font-size: 16px;
+}
+
+.k-fig-foot {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  align-items: baseline;
+  font-size: 12px;
+}
+
+.k-fig-sub {
+  color: var(--muted);
+}
+
+.k-delta {
+  font: 600 12px var(--mono);
+}
+
+.k-delta--bad {
+  color: var(--alert);
+}
+
+.k-delta--ok {
+  color: #0f7a3d;
+}
+
+.k-delta--wait {
+  color: var(--hold);
+}
+
+.k-delta--neutral,
+.k-delta--info {
+  color: var(--steel);
+}
+
+.k-stack {
+  display: grid;
+  gap: 6px;
+}
+
+.k-stack-bar {
+  display: flex;
+  overflow: hidden;
+  border-radius: 3px;
+  background: var(--line-soft);
+}
+
+.k-seg--navy {
+  background: var(--navy);
+}
+
+.k-seg--sky {
+  background: var(--sky);
+}
+
+.k-seg--gray {
+  background: #b9c4d3;
+}
+
+.k-seg--ok {
+  background: var(--lime);
+}
+
+.k-seg--wait {
+  background: #e09a2b;
+}
+
+.k-seg--bad {
+  background: var(--alert);
+}
+
+.k-seg--info {
+  background: var(--sky);
+}
+
+.k-seg--neutral {
+  background: #8fa3bf;
+}
+
+.k-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 14px;
+  color: var(--steel);
+  font-size: 12px;
+}
+
+.k-legend b {
+  font: 600 12px var(--mono);
+  color: var(--navy);
+}
+
+.k-dot {
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-right: 5px;
+  border-radius: 2px;
+  vertical-align: baseline;
+}
+
+.k-meter {
+  display: grid;
+  gap: 4px;
+}
+
+.k-meter-track {
+  position: relative;
+  height: 8px;
+  border-radius: 4px;
+  background: var(--line-soft);
+}
+
+.k-meter-fill {
+  position: absolute;
+  inset: 0 auto 0 0;
+  border-radius: 4px;
+}
+
+.k-meter-fill--info,
+.k-meter-fill--neutral {
+  background: var(--navy);
+}
+
+.k-meter-fill--ok {
+  background: var(--lime);
+}
+
+.k-meter-fill--wait {
+  background: #e09a2b;
+}
+
+.k-meter-fill--bad {
+  background: var(--alert);
+}
+
+.k-meter-limit {
+  position: absolute;
+  top: -4px;
+  bottom: -4px;
+  width: 2px;
+  background: var(--ink);
+}
+
+.k-meter-tick {
+  position: absolute;
+  top: -2px;
+  bottom: -2px;
+  width: 1px;
+  background: var(--muted);
+}
+
+.k-meter-label {
+  color: var(--steel);
+  font: 500 12px var(--mono);
+  font-variant-numeric: tabular-nums;
+}
+
+.k-axis {
+  position: relative;
+}
+
+.k-axis-line {
+  position: absolute;
+  top: 50%;
+  left: 0;
+  right: 0;
+  height: 1px;
+  background: var(--line);
+}
+
+.k-axis-mark {
+  position: absolute;
+  top: 50%;
+  width: 8px;
+  height: 8px;
+  margin: -4px 0 0 -4px;
+  border-radius: 50%;
+  box-shadow: 0 0 0 2px var(--panel);
+}
+
+.k-axis-mark--big {
+  width: 12px;
+  height: 12px;
+  margin: -6px 0 0 -6px;
+}
+
+.k-odds {
+  display: grid;
+  gap: 5px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.k-odds li {
+  display: grid;
+  grid-template-columns: minmax(0, 1.3fr) minmax(48px, 1fr) 44px;
+  align-items: center;
+  gap: 8px;
+  font-size: 13px;
+}
+
+.k-odds-label {
+  overflow: hidden;
+  color: var(--steel);
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.k-odds-bar {
+  height: 8px;
+  border-radius: 4px;
+  background: var(--line-soft);
+}
+
+.k-odds-bar span {
+  display: block;
+  height: 100%;
+  border-radius: 4px;
+  background: var(--navy);
+}
+
+.k-odds--on .k-odds-bar span {
+  background: var(--lime);
+}
+
+.k-odds--on .k-odds-label {
+  color: var(--navy);
+  font-weight: 600;
+}
+
+.k-odds-p {
+  color: var(--navy);
+  font: 600 12px var(--mono);
+  text-align: right;
+}

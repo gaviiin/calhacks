@@ -1,31 +1,34 @@
-/* Pit Wall dashboard. The landing page's world (landing/src/styles.css) tuned for work: the same
-   ground, hairlines, lime and faces, at reading sizes. Lime marks only what a person approved and
-   the primary action; amber is waiting; coral is refused. Mono is for figures, ids and codes. */
+/* Pit Wall dashboard, in the Williams garage's colours: white panels on a cool gray ground, navy ink,
+   Williams blue for what a person approved and the primary action (the token keeps its old name,
+   --lime, so every desk follows); amber is waiting; red is refused. Mono is for figures, ids and codes. */
 
 :root {
-  --bg: #07090c;
-  --panel: #0c1118;
-  --panel-2: #111823;
-  --raise: #151d29;
-  --line: #2b323a;
-  --line-soft: #1b222b;
-  --ink: #f3f3f0;
-  --steel: #aab5bc;
-  --muted: #8f98a1;
-  --lime: #c9ff4b;
-  --lime-wash: rgba(201, 255, 75, 0.1);
-  --hold: #ffb547;
-  --hold-wash: rgba(255, 181, 71, 0.1);
-  --alert: #ff725f;
-  --alert-wash: rgba(255, 114, 95, 0.1);
-  /* chart series, from the world's neutrals: lime, amber and coral are status only */
-  --s1: #6d7a84;
-  --s2: #f3f3f0;
+  --bg: #eef1f5;
+  --panel: #ffffff;
+  --panel-2: #f5f7fa;
+  --raise: #e8edf4;
+  --line: #ccd5e1;
+  --line-soft: #e2e8f0;
+  --ink: #0b1b33;
+  --steel: #3c4a60;
+  --muted: #5f6d83;
+  /* Williams blue: a person acts or signed here, and the primary action. The old name stays so every desk follows. */
+  --lime: #0a5bd8;
+  --lime-wash: rgba(10, 91, 216, 0.08);
+  --navy: #041e42;
+  --sky: #00a3e0;
+  --hold: #b45309;
+  --hold-wash: rgba(217, 119, 6, 0.1);
+  --alert: #c62828;
+  --alert-wash: rgba(198, 40, 40, 0.07);
+  /* chart series: navy and sky from the livery; blue, amber and red are status only */
+  --s1: #8fa3bf;
+  --s2: #041e42;
   --display: 'Barlow Condensed', 'Roboto Condensed', 'Arial Narrow', sans-serif;
   --body: 'DM Sans', system-ui, sans-serif;
   --mono: 'IBM Plex Mono', ui-monospace, Menlo, monospace;
   --ease: cubic-bezier(0.22, 1, 0.36, 1);
-  color-scheme: dark;
+  color-scheme: light;
 }
 
 * {
@@ -145,7 +148,7 @@ code {
   z-index: 200;
   padding: 10px 14px;
   background: var(--lime);
-  color: #06080a;
+  color: #ffffff;
   font: 600 12px var(--body);
 }
 
@@ -178,7 +181,7 @@ code {
   gap: 28px;
   min-height: 62px;
   padding: 0 24px;
-  background: rgba(7, 9, 12, 0.92);
+  background: rgba(255, 255, 255, 0.94);
   backdrop-filter: blur(10px);
   border-bottom: 1px solid var(--line);
 }
@@ -196,7 +199,7 @@ code {
   width: 38px;
   height: 26px;
   background: var(--lime);
-  color: #06080a;
+  color: #ffffff;
   font: 800 13px var(--display);
   letter-spacing: 0.04em;
   transform: skewX(-12deg);
@@ -692,7 +695,7 @@ code {
   border: 1px solid var(--line);
   border-radius: 2px;
   background: var(--raise);
-  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.45);
+  box-shadow: 0 12px 32px rgba(11, 27, 51, 0.14);
   pointer-events: none;
   font-size: 12px;
 }
@@ -1043,19 +1046,19 @@ code {
 }
 
 .flag--hold {
-  border-color: rgba(255, 181, 71, 0.45);
+  border-color: rgba(217, 119, 6, 0.45);
   background: var(--hold-wash);
   color: var(--hold);
 }
 
 .flag--ok {
-  border-color: rgba(201, 255, 75, 0.45);
+  border-color: rgba(10, 91, 216, 0.45);
   background: var(--lime-wash);
   color: var(--lime);
 }
 
 .flag--alert {
-  border-color: rgba(255, 114, 95, 0.45);
+  border-color: rgba(198, 40, 40, 0.45);
   background: var(--alert-wash);
   color: var(--alert);
 }
@@ -1371,12 +1374,12 @@ code {
 .btn--primary {
   border-color: var(--lime);
   background: var(--lime);
-  color: #0b0f10;
+  color: #ffffff;
 }
 
 .btn--primary:hover:not(:disabled) {
-  background: #d7ff74;
-  border-color: #d7ff74;
+  background: #0849ae;
+  border-color: #0849ae;
 }
 
 .btn:disabled {
@@ -1478,7 +1481,7 @@ code {
 }
 
 .row--denied td {
-  background: rgba(255, 114, 95, 0.04);
+  background: rgba(198, 40, 40, 0.04);
 }
 
 .cell-title {
@@ -2381,7 +2384,7 @@ code {
   overflow: auto;
   border: 1px solid var(--line-soft);
   border-top: 0;
-  background: #060709;
+  background: #f5f7fa;
   font: 400 11.5px/1.5 var(--mono);
   color: var(--steel);
   white-space: pre-wrap;
@@ -3080,11 +3083,11 @@ code {
 }
 
 .seg--posted i {
-  color: #0b0f10;
+  color: #ffffff;
 }
 
 .seg--proposed i {
-  color: #0b0f10;
+  color: #ffffff;
 }
 
 .seg--unclassified i,
@@ -3330,8 +3333,8 @@ code {
   border: 1px solid var(--line);
   border-radius: 2px;
   background:
-    linear-gradient(90deg, rgba(201, 255, 75, 0.05), transparent 40%),
-    repeating-linear-gradient(135deg, transparent 0 22px, rgba(255, 255, 255, 0.012) 22px 23px),
+    linear-gradient(90deg, rgba(10, 91, 216, 0.05), transparent 40%),
+    repeating-linear-gradient(135deg, transparent 0 22px, rgba(11, 27, 51, 0.025) 22px 23px),
     var(--panel);
 }
 
@@ -3746,7 +3749,7 @@ code {
   display: grid;
   gap: 14px;
   padding: 14px 16px;
-  border: 1px solid rgba(255, 114, 95, 0.4);
+  border: 1px solid rgba(198, 40, 40, 0.4);
   border-radius: 2px;
   background: var(--alert-wash);
   animation: radio-in 520ms var(--ease) both;
@@ -3849,7 +3852,7 @@ code {
   align-items: center;
   gap: 8px;
   padding: 9px 12px;
-  border: 1px solid rgba(201, 255, 75, 0.35);
+  border: 1px solid rgba(10, 91, 216, 0.35);
   border-radius: 2px;
   background: var(--lime-wash);
   color: var(--ink);
@@ -4086,7 +4089,7 @@ code {
 .f1-sponsor {
   font: 700 22px var(--display);
   letter-spacing: 0.14em;
-  fill: #e9ece9;
+  fill: #33435c;
   opacity: 0.88;
 }
 
@@ -4112,12 +4115,12 @@ code {
 .f1-stamp {
   font: 800 52px var(--display);
   letter-spacing: 0.2em;
-  fill: #ff725f;
+  fill: #c62828;
 }
 
 .f1-damage-label {
   font: 700 14px var(--body);
-  fill: #12090a;
+  fill: #fdecea;
 }
 
 .f1car--grey .f1-body,
@@ -4143,8 +4146,8 @@ code {
 }
 
 .f1car--crashed .f1-frontwing path {
-  fill: #3b1c18;
-  stroke: #ff725f;
+  fill: #fdecea;
+  stroke: #c62828;
 }
 
 .f1car--crashed .f1-body {
@@ -4192,25 +4195,25 @@ code {
 }
 
 .f1-hot-ring {
-  fill: rgba(243, 243, 240, 0.08);
-  stroke: rgba(243, 243, 240, 0.25);
+  fill: rgba(11, 27, 51, 0.08);
+  stroke: rgba(11, 27, 51, 0.25);
   stroke-width: 1.5;
   transition: fill 160ms var(--ease);
 }
 
 .f1-hot-dot {
-  fill: #f3f3f0;
+  fill: #0b1b33;
   transition: fill 160ms var(--ease), transform 220ms var(--ease);
 }
 
 .f1-hot-plus {
-  stroke: #0b0f10;
+  stroke: #ffffff;
   stroke-width: 3;
   stroke-linecap: round;
 }
 
 .f1-hot--earning .f1-hot-ring {
-  fill: rgba(201, 255, 75, 0.14);
+  fill: rgba(10, 91, 216, 0.14);
   stroke: var(--lime);
   animation: f1-pulse 1.8s ease-in-out infinite;
   transform-box: fill-box;
@@ -4397,8 +4400,8 @@ code {
   grid-template-columns: 190px minmax(0, 1fr) 270px;
   border: 1px solid var(--line);
   background:
-    radial-gradient(ellipse at 50% 70%, rgba(201, 255, 75, 0.06), transparent 60%),
-    linear-gradient(180deg, #0f151d, var(--panel));
+    radial-gradient(ellipse at 50% 70%, rgba(10, 91, 216, 0.06), transparent 60%),
+    linear-gradient(180deg, #f5f7fa, var(--panel));
   overflow: hidden;
 }
 
@@ -4633,7 +4636,7 @@ code {
 
 .carid--on {
   border-color: var(--lime);
-  background: linear-gradient(180deg, rgba(201, 255, 75, 0.07), var(--panel-2));
+  background: linear-gradient(180deg, rgba(10, 91, 216, 0.07), var(--panel-2));
 }
 
 .carid-top {
@@ -4729,7 +4732,7 @@ code {
   align-items: center;
   gap: 10px;
   padding: 12px 16px;
-  border-color: rgba(255, 181, 71, 0.35);
+  border-color: rgba(217, 119, 6, 0.35);
   background: var(--hold-wash);
   color: var(--ink);
   font-size: 13px;
@@ -4770,17 +4773,17 @@ code {
 
 .tank-top {
   font: 600 22px var(--mono);
-  fill: #0b0f10;
+  fill: #ffffff;
   paint-order: stroke;
-  stroke: rgba(243, 243, 240, 0.7);
+  stroke: rgba(11, 27, 51, 0.7);
   stroke-width: 3px;
 }
 
 .tank-sub {
   font: 500 10px var(--body);
-  fill: #0b0f10;
+  fill: #ffffff;
   paint-order: stroke;
-  stroke: rgba(243, 243, 240, 0.6);
+  stroke: rgba(11, 27, 51, 0.6);
   stroke-width: 2.5px;
 }
 
@@ -4852,7 +4855,7 @@ code {
   width: 38px;
   height: 38px;
   border-radius: 10px;
-  background: linear-gradient(135deg, #2a323b, #12161b);
+  background: linear-gradient(135deg, #e8edf4, #ccd5e1);
   border: 1px solid var(--line);
   font: 800 18px var(--display);
   color: var(--ink);
@@ -4927,7 +4930,7 @@ code {
 }
 
 .clause--hit {
-  border-color: rgba(201, 255, 75, 0.35);
+  border-color: rgba(10, 91, 216, 0.35);
   background: var(--lime-wash);
 }
 
@@ -4955,7 +4958,7 @@ code {
 }
 
 .callout--hold {
-  border: 1px solid rgba(255, 181, 71, 0.35);
+  border: 1px solid rgba(217, 119, 6, 0.35);
   background: var(--hold-wash);
 }
 
@@ -4964,7 +4967,7 @@ code {
 }
 
 .callout--ok {
-  border: 1px solid rgba(201, 255, 75, 0.35);
+  border: 1px solid rgba(10, 91, 216, 0.35);
   background: var(--lime-wash);
 }
 
@@ -5020,8 +5023,8 @@ code {
 }
 
 .order-card--ours {
-  border-color: rgba(201, 255, 75, 0.5);
-  background: linear-gradient(180deg, rgba(201, 255, 75, 0.08), var(--panel-2));
+  border-color: rgba(10, 91, 216, 0.5);
+  background: linear-gradient(180deg, rgba(10, 91, 216, 0.08), var(--panel-2));
 }
 
 .order-card--out {
@@ -5138,13 +5141,13 @@ code {
 
 .tank-top {
   fill: var(--ink);
-  stroke: rgba(7, 9, 12, 0.75);
+  stroke: rgba(255, 255, 255, 0.75);
   stroke-width: 4px;
 }
 
 .tank-sub {
   fill: var(--ink);
-  stroke: rgba(7, 9, 12, 0.75);
+  stroke: rgba(255, 255, 255, 0.75);
   stroke-width: 3px;
   font-size: 9.5px;
 }
@@ -5236,16 +5239,16 @@ code {
   border: 1px solid var(--line-soft);
   border-radius: var(--r-lg);
   background:
-    radial-gradient(ellipse at 50% 60%, rgba(201, 255, 75, 0.06), transparent 60%),
-    linear-gradient(180deg, #0f151d, var(--panel));
+    radial-gradient(ellipse at 50% 60%, rgba(10, 91, 216, 0.06), transparent 60%),
+    linear-gradient(180deg, #f5f7fa, var(--panel));
 }
 
 .car--retired_suspected {
-  border-color: rgba(255, 181, 71, 0.4);
+  border-color: rgba(217, 119, 6, 0.4);
 }
 
 .car--retired {
-  border-color: rgba(255, 114, 95, 0.4);
+  border-color: rgba(198, 40, 40, 0.4);
 }
 
 .car-stage {
@@ -5360,7 +5363,7 @@ code {
 }
 
 .tape-row--team {
-  background: linear-gradient(90deg, rgba(201, 255, 75, 0.05), transparent 70%);
+  background: linear-gradient(90deg, rgba(10, 91, 216, 0.05), transparent 70%);
 }
 
 .tape-row--loud {
@@ -5534,12 +5537,12 @@ code {
 }
 
 .tier--jev {
-  border-color: rgba(201, 255, 75, 0.45);
+  border-color: rgba(10, 91, 216, 0.45);
   color: var(--lime);
 }
 
 .tier--claude {
-  border-color: rgba(255, 181, 71, 0.45);
+  border-color: rgba(217, 119, 6, 0.45);
   color: var(--hold);
 }
 
@@ -6089,4 +6092,148 @@ code {
 
 .roletabs {
   margin-top: 0;
+}
+
+/* The blueprint is a navy engineering sheet inside the white page: it keeps the dark tokens for its own controls. */
+.bp-sheet {
+  --ink: #eaf2ff;
+  --steel: #a9c0e0;
+  --muted: #8d9cbb;
+  --line: #2a4170;
+  --line-soft: #1c2f55;
+  --panel: #07152f;
+  --panel-2: #0b1c3d;
+  --raise: #12284f;
+  color-scheme: dark;
+}
+
+/* ---------------------------------------------------------------- race day: one bar for the views and the weekend */
+
+.day-bar {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px 20px;
+  margin: 0 0 16px;
+  padding: 0 0 10px;
+  border-bottom: 1px solid var(--line);
+}
+
+.day-tabs {
+  display: flex;
+  gap: 4px;
+  padding: 3px;
+  border-radius: 8px;
+  background: var(--raise);
+}
+
+.day-tab {
+  padding: 6px 14px;
+  border-radius: 6px;
+  color: var(--steel);
+  font: 600 13px var(--body);
+  text-decoration: none;
+  white-space: nowrap;
+}
+
+.day-tab:hover {
+  color: var(--navy);
+}
+
+.day-tab--on {
+  background: var(--panel);
+  color: var(--navy);
+  box-shadow: 0 1px 2px rgba(11, 27, 51, 0.12);
+}
+
+.day-tab:focus-visible {
+  outline: 2px solid var(--lime);
+  outline-offset: 1px;
+}
+
+.day-meta {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 16px;
+}
+
+.day-weekend {
+  color: var(--navy);
+  font: 700 15px var(--display);
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+.day-clock {
+  color: var(--steel);
+  font-size: 12px;
+}
+
+.services .service {
+  color: var(--steel);
+}
+
+.service-word {
+  margin-left: 4px;
+  color: var(--muted);
+  font-size: 11px;
+}
+
+.replay-ctl {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.replay-ctl .btn {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.replay-live {
+  display: inline-flex;
+  align-items: center;
+  gap: 7px;
+  padding: 4px 10px;
+  border-radius: 999px;
+  background: var(--lime-wash);
+  color: var(--lime);
+  font: 600 12px var(--body);
+}
+
+.replay-dot {
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: var(--lime);
+  animation: replay-pulse 1.4s var(--ease) infinite;
+}
+
+@keyframes replay-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .replay-dot {
+    animation: none;
+  }
+}
+
+.replay-err {
+  color: var(--alert);
+  font-size: 12px;
+}
+
+.sr-only {
+  position: absolute;
+  width: 1px;
+  height: 1px;
+  overflow: hidden;
+  clip: rect(0 0 0 0);
+  white-space: nowrap;
 }
